@@ -8,13 +8,16 @@
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-    color: white;
+    font-family: 'Courier New', monospace;
+    background: #000000;
+    color: #00ff00;
     overflow: hidden;
     height: 100vh;
     width: 100vw;
     position: fixed;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
 }
 
 .game-container {
@@ -27,7 +30,6 @@ body {
 
 .score-panel {
     background: #000000;
-    border: 2px solid #00ff00;
     padding: 12px;
     display: flex;
     justify-content: space-around;
@@ -61,28 +63,30 @@ body {
 .restart-btn {
     background: #000000;
     color: #00ff00;
-    border: 2px solid #00ff00;
+    border: none;
     padding: 6px 12px;
-    border-radius: 0;
     font-weight: bold;
     font-size: 10px;
     font-family: 'Courier New', monospace;
     cursor: pointer;
     letter-spacing: 1px;
-    transition: all 0.2s ease;
+    transition: none;
 }
 
 .restart-btn:hover {
-    background: #00ff00;
-    color: #000000;
+    background: #333333;
+    color: #00ff00;
 }
 
 #gameCanvas {
     flex: 1;
-    background: linear-gradient(180deg, #0c0c0c, #1a1a1a);
-    border: 2px solid #333;
+    background: #000000;
+    border: none;
     touch-action: none;
     display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
 }
 
 .game-over-overlay {
@@ -101,9 +105,8 @@ body {
 .game-over-content {
     background: #000000;
     padding: 30px;
-    border-radius: 0;
     text-align: center;
-    border: 3px solid #00ff00;
+    border: none;
 }
 
 .game-over-content h2 {
