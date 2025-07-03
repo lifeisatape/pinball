@@ -1172,18 +1172,15 @@ class PinballGame {
         this.ctx.save();
         
         // Set font style
-        this.ctx.font = '12px Courier New';
+        this.ctx.font = '14px Courier New';
         this.ctx.fillStyle = '#00ff00';
-        this.ctx.textAlign = 'left';
+        this.ctx.textAlign = 'center';
         
-        // Draw score
-        this.ctx.fillText(`SCORE: ${this.gameState.score.toLocaleString()}`, 10, 25);
+        // Create single line UI string
+        const uiText = `SCORE: ${this.gameState.score.toLocaleString()}  |  BALLS: ${this.gameState.balls}  |  HIGH: ${this.gameState.highScore.toLocaleString()}`;
         
-        // Draw balls left
-        this.ctx.fillText(`BALLS: ${this.gameState.balls}`, 10, 45);
-        
-        // Draw high score
-        this.ctx.fillText(`HIGH: ${this.gameState.highScore.toLocaleString()}`, 10, 65);
+        // Draw centered at top
+        this.ctx.fillText(uiText, CONFIG.VIRTUAL_WIDTH / 2, 25);
         
         this.ctx.restore();
     }
