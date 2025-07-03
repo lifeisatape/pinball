@@ -3,11 +3,12 @@ const CONFIG = {
     GRAVITY: 0.3,
     FRICTION: 0.98,
     BOUNCE_DAMPING: 0.8,
-    FLIPPER_STRENGTH: 15,
+    FLIPPER_STRENGTH: 12,
     BALL_RADIUS: 8,
-    FLIPPER_LENGTH: 70,
+    FLIPPER_LENGTH: 60,
     FLIPPER_WIDTH: 8,
     LAUNCH_POWER: 20,
+    MAX_BALL_SPEED: 25, // Максимальная скорость мяча
     // Фиксированные виртуальные размеры игрового поля
     VIRTUAL_WIDTH: 320,
     VIRTUAL_HEIGHT: 480
@@ -74,6 +75,19 @@ class Vector2D {
     copy() {
         return new Vector2D(this.x, this.y);
     }
+
+    dot(vector) {
+        return this.x * vector.x + this.y * vector.y;
+    }
+
+    // Ограничение максимальной длины вектора
+    clamp(maxLength) {
+        const mag = this.magnitude();
+        if (mag > maxLength) {
+            this.normalize().multiply(maxLength);
+        }
+        return this;
+    }
 }
 
 // Ball Class
@@ -87,6 +101,9 @@ class Ball {
     update() {
         // Apply gravity
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
+
+        // Ограничиваем максимальную скорость
+        this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
 
         // Apply friction
         this.velocity.multiply(CONFIG.FRICTION);
@@ -108,8 +125,6 @@ class Ball {
 
         return false;
     }
-
-
 
     draw(ctx) {
         // Draw main ball
@@ -133,19 +148,244 @@ class Ball {
     }
 }
 
+// Овальная форма флиппера для реалистичной коллизии
+class FlipperShape {
+    constructor(pivotX, pivotY, length, baseWidth, tipWidth, isLeft) {
+        this.pivot = new Vector2D(pivotX, pivotY);
+        this.length = length;
+        this.baseWidth = baseWidth; // Ширина у основания
+        this.tipWidth = tipWidth;   // Ширина на конце
+        this.isLeft = isLeft;
+        this.angle = 0;
+
+        // Создаем опорные точки для овальной формы
+        this.updateShape();
+    }
+
+    updateShape() {
+        const cos = Math.cos(this.angle);
+        const sin = Math.sin(this.angle);
+
+        // Создаем точки для овальной формы с закругленными концами
+        this.points = [];
+        const segments = 12; // Сегменты для основного тела
+        const capSegments = 8; // Сегменты для закругленных концов
+
+        // 1. Создаем основное тело флиппера
+        const bodyPoints = [];
+
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const width = this.baseWidth + (this.tipWidth - this.baseWidth) * t;
+            const halfWidth = width / 2;
+            const x = this.isLeft ? t * this.length : -t * this.length;
+
+            // Верхняя и нижняя точки тела
+            bodyPoints.push({
+                top: { x: x, y: -halfWidth },
+                bottom: { x: x, y: halfWidth }
+            });
+        }
+
+        // 2. Добавляем закругленный кончик
+        const tipX = this.isLeft ? this.length : -this.length;
+        const tipRadius = this.tipWidth / 2;
+
+        // Полукруг на кончике (от нижней точки к верхней)
+        for (let i = 0; i <= capSegments; i++) {
+            const angle = this.isLeft ? 
+                Math.PI/2 - (i / capSegments) * Math.PI : // Левый: снизу вверх
+                Math.PI/2 + (i / capSegments) * Math.PI;  // Правый: снизу вверх
+
+            const capX = tipX + Math.cos(angle) * tipRadius;
+            const capY = Math.sin(angle) * tipRadius;
+
+            this.points.push({ x: capX, y: capY });
+        }
+
+        // 3. Добавляем верхнюю сторону тела (в обратном порядке)
+        for (let i = segments - 1; i >= 0; i--) {
+            this.points.push(bodyPoints[i].top);
+        }
+
+        // 4. Добавляем закругленное основание
+        const baseRadius = this.baseWidth / 2;
+
+        // Полукруг у основания (от верхней точки к нижней)
+        for (let i = 0; i <= capSegments; i++) {
+            const angle = this.isLeft ?
+                Math.PI/2 + (i / capSegments) * Math.PI : // Левый: сверху вниз  
+                Math.PI/2 - (i / capSegments) * Math.PI;   // Правый: сверху вниз
+
+            const capX = Math.cos(angle) * baseRadius;
+            const capY = Math.sin(angle) * baseRadius;
+
+            this.points.push({ x: capX, y: capY });
+        }
+
+        // 5. Добавляем нижнюю сторону тела
+        for (let i = 1; i <= segments; i++) {
+            this.points.push(bodyPoints[i].bottom);
+        }
+
+        // 6. Переводим все точки в мировые координаты
+        this.worldPoints = this.points.map(point => {
+            const worldX = this.pivot.x + cos * point.x - sin * point.y;
+            const worldY = this.pivot.y + sin * point.x + cos * point.y;
+            return new Vector2D(worldX, worldY);
+        });
+    }
+
+    // Проверка коллизии с окружностью (овальная форма с закругленными концами)
+    intersectsCircle(circle) {
+        // Переводим в локальную систему координат
+        const cos = Math.cos(-this.angle);
+        const sin = Math.sin(-this.angle);
+        const dx = circle.position.x - this.pivot.x;
+        const dy = circle.position.y - this.pivot.y;
+
+        const localX = cos * dx - sin * dy;
+        const localY = sin * dx + cos * dy;
+
+        // Проверяем коллизию с основным телом флиппера
+        let t = 0;
+        let closestX = 0;
+        let closestY = 0;
+        let minDistance = Infinity;
+        let isEndCap = false;
+
+        // 1. Проверяем коллизию с основным телом
+        if (this.isLeft) {
+            t = Math.max(0, Math.min(1, localX / this.length));
+        } else {
+            t = Math.max(0, Math.min(1, -localX / this.length));
+        }
+
+        const bodyX = this.isLeft ? t * this.length : -t * this.length;
+        const width = this.baseWidth + (this.tipWidth - this.baseWidth) * t;
+        const halfWidth = width / 2;
+
+        const bodyClosestY = Math.max(-halfWidth, Math.min(halfWidth, localY));
+        const bodyDistance = Math.sqrt((localX - bodyX) * (localX - bodyX) + (localY - bodyClosestY) * (localY - bodyClosestY));
+
+        closestX = bodyX;
+        closestY = bodyClosestY;
+        minDistance = bodyDistance;
+
+        // 2. Проверяем коллизию с закругленным кончиком
+        const tipX = this.isLeft ? this.length : -this.length;
+        const tipRadius = this.tipWidth / 2;
+        const tipDistance = Math.sqrt((localX - tipX) * (localX - tipX) + localY * localY);
+
+        if (tipDistance < minDistance && tipDistance <= tipRadius) {
+            // Коллизия с кончиком
+            if (tipDistance > 0.1) {
+                const tipNormalX = (localX - tipX) / tipDistance;
+                const tipNormalY = localY / tipDistance;
+                closestX = tipX + tipNormalX * tipRadius;
+                closestY = tipNormalY * tipRadius;
+            } else {
+                closestX = tipX;
+                closestY = 0;
+            }
+            minDistance = tipDistance;
+            isEndCap = true;
+        }
+
+        // 3. Проверяем коллизию с закругленным основанием
+        const baseRadius = this.baseWidth / 2;
+        const baseDistance = Math.sqrt(localX * localX + localY * localY);
+
+        if (baseDistance < minDistance && baseDistance <= baseRadius) {
+            // Коллизия с основанием
+            if (baseDistance > 0.1) {
+                const baseNormalX = localX / baseDistance;
+                const baseNormalY = localY / baseDistance;
+                closestX = baseNormalX * baseRadius;
+                closestY = baseNormalY * baseRadius;
+            } else {
+                closestX = 0;
+                closestY = baseRadius;
+            }
+            minDistance = baseDistance;
+            isEndCap = true;
+        }
+
+        // Проверяем, есть ли коллизия
+        if (minDistance <= circle.radius) {
+            // Вычисляем нормаль
+            let normalX, normalY;
+
+            if (isEndCap) {
+                // Для закругленных концов используем радиальную нормаль
+                if (minDistance > 0.1) {
+                    const centerX = closestX === tipX ? tipX : 0;
+                    const centerY = 0;
+                    normalX = (localX - centerX) / minDistance;
+                    normalY = (localY - centerY) / minDistance;
+                } else {
+                    normalX = localX > 0 ? 1 : -1;
+                    normalY = 0;
+                }
+            } else {
+                // Для основного тела используем перпендикулярную нормаль
+                if (minDistance > 0.1) {
+                    normalX = (localX - closestX) / minDistance;
+                    normalY = (localY - closestY) / minDistance;
+                } else {
+                    normalX = 0;
+                    normalY = localY > 0 ? 1 : -1;
+                }
+            }
+
+            // Переводим нормаль в мировые координаты
+            const worldCos = Math.cos(this.angle);
+            const worldSin = Math.sin(this.angle);
+            const worldNormalX = worldCos * normalX - worldSin * normalY;
+            const worldNormalY = worldSin * normalX + worldCos * normalY;
+
+            return {
+                hit: true,
+                normal: new Vector2D(worldNormalX, worldNormalY),
+                penetration: circle.radius - minDistance + 0.5,
+                contactPoint: new Vector2D(
+                    this.pivot.x + worldCos * closestX - worldSin * closestY,
+                    this.pivot.y + worldSin * closestX + worldCos * closestY
+                )
+            };
+        }
+
+        return { hit: false };
+    }
+}
+
 // Flipper Class
 class Flipper {
     constructor(x, y, isLeft) {
         this.position = new Vector2D(x, y);
         this.isLeft = isLeft;
-        this.angle = isLeft ? Math.PI / 6 : -Math.PI / 6;
+
+        // Уменьшенные углы поворота для более реалистичной физики
+        this.restAngle = isLeft ? Math.PI / 8 : -Math.PI / 8; // 22.5°
+        this.activeAngle = isLeft ? -Math.PI / 6 : Math.PI / 6; // 30°
+
+        this.angle = this.restAngle;
         this.targetAngle = this.angle;
-        this.restAngle = this.angle;
-        this.activeAngle = isLeft ? -Math.PI / 4 : Math.PI / 4;
         this.length = CONFIG.FLIPPER_LENGTH;
-        this.width = CONFIG.FLIPPER_WIDTH;
+        this.baseWidth = CONFIG.FLIPPER_WIDTH * 1.5; // Ширина у основания
+        this.tipWidth = CONFIG.FLIPPER_WIDTH * 0.8;  // Ширина на конце
         this.isActive = false;
         this.angularVelocity = 0;
+        this.lastAngle = this.angle;
+
+        // Создаем овальную форму флиппера
+        this.shape = new FlipperShape(x, y, this.length, this.baseWidth, this.tipWidth, isLeft);
+        this.updateShape();
+    }
+
+    updateShape() {
+        this.shape.angle = this.angle;
+        this.shape.updateShape();
     }
 
     activate() {
@@ -159,155 +399,157 @@ class Flipper {
     }
 
     update() {
+        this.lastAngle = this.angle;
+
         const angleDiff = this.targetAngle - this.angle;
-        this.angularVelocity = angleDiff * 0.3;
+        this.angularVelocity = angleDiff * 0.4; // Увеличена скорость реакции
         this.angle += this.angularVelocity;
 
         // Clamp angle
-        if (this.isLeft) {
-            this.angle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.angle));
-        } else {
-            this.angle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.angle));
-        }
+        const minAngle = Math.min(this.restAngle, this.activeAngle);
+        const maxAngle = Math.max(this.restAngle, this.activeAngle);
+        this.angle = Math.max(minAngle, Math.min(maxAngle, this.angle));
+
+        // Обновляем форму
+        this.updateShape();
     }
 
     draw(ctx) {
+        // Рисуем овальный флиппер
+        if (this.shape.points.length === 0) return;
+
         ctx.save();
-        ctx.translate(this.position.x, this.position.y);
-        ctx.rotate(this.angle);
 
-        const startX = this.isLeft ? 0 : -this.length;
-        const endX = this.isLeft ? this.length : 0;
+        // Создаем градиент для 3D эффекта
+        const cos = Math.cos(this.angle);
+        const sin = Math.sin(this.angle);
+        const midX = this.position.x + cos * (this.length / 2);
+        const midY = this.position.y + sin * (this.length / 2);
 
-        // Flipper
-        ctx.fillStyle = '#4444ff';
-        ctx.fillRect(startX, -this.width/2, this.length, this.width);
+        // Основной градиент флиппера
+        const gradient = ctx.createLinearGradient(
+            midX - sin * this.baseWidth / 2,
+            midY + cos * this.baseWidth / 2,
+            midX + sin * this.baseWidth / 2,
+            midY - cos * this.baseWidth / 2
+        );
 
-        // Flipper outline
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(startX, -this.width/2, this.length, this.width);
+        gradient.addColorStop(0, '#8888ff');
+        gradient.addColorStop(0.3, '#6666ff');
+        gradient.addColorStop(0.7, '#4444dd');
+        gradient.addColorStop(1, '#2222aa');
+
+        // Рисуем контур флиппера с закругленными концами
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+
+        if (this.shape.worldPoints && this.shape.worldPoints.length > 0) {
+            ctx.moveTo(this.shape.worldPoints[0].x, this.shape.worldPoints[0].y);
+
+            for (let i = 1; i < this.shape.worldPoints.length; i++) {
+                ctx.lineTo(this.shape.worldPoints[i].x, this.shape.worldPoints[i].y);
+            }
+
+            ctx.closePath();
+            ctx.fill();
+
+            // Добавляем блестящий ободок
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Добавляем внутренний свет
+            const innerGradient = ctx.createRadialGradient(
+                midX - cos * 10, midY - sin * 10, 0,
+                midX, midY, this.length / 3
+            );
+            innerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+            innerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            ctx.fillStyle = innerGradient;
+            ctx.fill();
+        }
 
         ctx.restore();
 
-        // Pivot point
-        ctx.fillStyle = '#00ff00';
+        // Точка поворота с металлическим эффектом
+        const pivotGradient = ctx.createRadialGradient(
+            this.position.x - 1, this.position.y - 1, 0,
+            this.position.x, this.position.y, 6
+        );
+        pivotGradient.addColorStop(0, '#ffffff');
+        pivotGradient.addColorStop(0.3, '#cccccc');
+        pivotGradient.addColorStop(0.7, '#888888');
+        pivotGradient.addColorStop(1, '#444444');
+
+        ctx.fillStyle = pivotGradient;
         ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, 4, 0, Math.PI * 2);
+        ctx.arc(this.position.x, this.position.y, 5, 0, Math.PI * 2);
         ctx.fill();
+
+        // Ободок точки поворота
+        ctx.strokeStyle = '#222222';
+        ctx.lineWidth = 1;
+        ctx.stroke();
     }
 
     checkCollision(ball) {
-        let startX, startY, endX, endY;
+        const collision = this.shape.intersectsCircle(ball);
 
-        if (this.isLeft) {
-            startX = this.position.x;
-            startY = this.position.y;
-            endX = this.position.x + Math.cos(this.angle) * this.length;
-            endY = this.position.y + Math.sin(this.angle) * this.length;
-        } else {
-            startX = this.position.x + Math.cos(this.angle + Math.PI) * this.length;
-            startY = this.position.y + Math.sin(this.angle + Math.PI) * this.length;
-            endX = this.position.x;
-            endY = this.position.y;
-        }
+        if (collision.hit) {
+            // ПОЛНОЕ выталкивание мяча + небольшой запас
+            const pushDistance = collision.penetration + 2; // Гарантируем полное разделение
+            ball.position.x += collision.normal.x * pushDistance;
+            ball.position.y += collision.normal.y * pushDistance;
 
-        const distance = this.distanceToLineSegment(ball.position, new Vector2D(startX, startY), new Vector2D(endX, endY));
+            // Вычисляем скорость флиппера в точке контакта
+            const currentAngularVelocity = this.angle - this.lastAngle;
 
-        if (distance < ball.radius + this.width / 2) {
-            const normal = this.getNormalToLineSegment(ball.position, new Vector2D(startX, startY), new Vector2D(endX, endY));
+            // Вектор от центра поворота до точки контакта
+            const contactOffset = new Vector2D(
+                collision.contactPoint.x - this.position.x,
+                collision.contactPoint.y - this.position.y
+            );
 
-            // Move ball away from flipper
-            ball.position.x += normal.x * (ball.radius + this.width / 2 - distance + 1);
-            ball.position.y += normal.y * (ball.radius + this.width / 2 - distance + 1);
+            // Тангенциальная скорость флиппера в точке контакта
+            const tangentialVelocity = new Vector2D(
+                -contactOffset.y * currentAngularVelocity * 10, // Увеличиваем влияние вращения
+                contactOffset.x * currentAngularVelocity * 10
+            );
 
-            // Reflect velocity
-            const dotProduct = ball.velocity.x * normal.x + ball.velocity.y * normal.y;
-            ball.velocity.x -= 2 * dotProduct * normal.x;
-            ball.velocity.y -= 2 * dotProduct * normal.y;
-
-            // Add flipper force when active
-            if (this.isActive) {
-                const flipperForce = CONFIG.FLIPPER_STRENGTH;
-                ball.velocity.x += normal.x * flipperForce;
-                ball.velocity.y += normal.y * flipperForce;
+            // Если мяч движется "в" флиппер, отражаем его
+            const velocityDotNormal = ball.velocity.dot(collision.normal);
+            if (velocityDotNormal < 0) {
+                // Отражение скорости мяча
+                ball.velocity.x -= 2 * velocityDotNormal * collision.normal.x;
+                ball.velocity.y -= 2 * velocityDotNormal * collision.normal.y;
             }
 
+            // Добавляем силу флиппера
+            if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
+                // Нормальная сила - отталкиваем от флиппера
+                const normalForce = CONFIG.FLIPPER_STRENGTH;
+                ball.velocity.x += collision.normal.x * normalForce;
+                ball.velocity.y += collision.normal.y * normalForce;
+
+                // Тангенциальная сила от вращения флиппера
+                ball.velocity.x += tangentialVelocity.x;
+                ball.velocity.y += tangentialVelocity.y;
+            } else {
+                // Даже когда флиппер неактивен, отталкиваем мяч
+                const minForce = CONFIG.FLIPPER_STRENGTH * 0.1;
+                ball.velocity.x += collision.normal.x * minForce;
+                ball.velocity.y += collision.normal.y * minForce;
+            }
+
+            // Применяем затухание и ограничиваем скорость
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+
             return true;
         }
+
         return false;
-    }
-
-    distanceToLineSegment(point, lineStart, lineEnd) {
-        const A = point.x - lineStart.x;
-        const B = point.y - lineStart.y;
-        const C = lineEnd.x - lineStart.x;
-        const D = lineEnd.y - lineStart.y;
-
-        const dot = A * C + B * D;
-        const lenSq = C * C + D * D;
-        let param = -1;
-        if (lenSq !== 0) {
-            param = dot / lenSq;
-        }
-
-        let xx, yy;
-        if (param < 0) {
-            xx = lineStart.x;
-            yy = lineStart.y;
-        } else if (param > 1) {
-            xx = lineEnd.x;
-            yy = lineEnd.y;
-        } else {
-            xx = lineStart.x + param * C;
-            yy = lineStart.y + param * D;
-        }
-
-        const dx = point.x - xx;
-        const dy = point.y - yy;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    getClosestPointOnLineSegment(point, lineStart, lineEnd) {
-        const A = point.x - lineStart.x;
-        const B = point.y - lineStart.y;
-        const C = lineEnd.x - lineStart.x;
-        const D = lineEnd.y - lineStart.y;
-
-        const dot = A * C + B * D;
-        const lenSq = C * C + D * D;
-        let param = -1;
-        if (lenSq !== 0) {
-            param = dot / lenSq;
-        }
-
-        let xx, yy;
-        if (param < 0) {
-            xx = lineStart.x;
-            yy = lineStart.y;
-        } else if (param > 1) {
-            xx = lineEnd.x;
-            yy = lineEnd.y;
-        } else {
-            xx = lineStart.x + param * C;
-            yy = lineStart.y + param * D;
-        }
-
-        return new Vector2D(xx, yy);
-    }
-
-    getNormalToLineSegment(point, lineStart, lineEnd) {
-        const dx = lineEnd.x - lineStart.x;
-        const dy = lineEnd.y - lineStart.y;
-        const normal = new Vector2D(-dy, dx).normalize();
-
-        const toPoint = new Vector2D(point.x - lineStart.x, point.y - lineStart.y);
-        if (normal.x * toPoint.x + normal.y * toPoint.y < 0) {
-            normal.multiply(-1);
-        }
-
-        return normal;
     }
 }
 
@@ -325,6 +567,7 @@ class Wall {
     draw(ctx) {
         ctx.strokeStyle = this.color;
         ctx.lineWidth = this.width;
+        ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(this.x1, this.y1);
         ctx.lineTo(this.x2, this.y2);
@@ -332,20 +575,19 @@ class Wall {
     }
 
     checkCollision(ball) {
-        // Вычисляем расстояние от центра шарика до линии
         const distance = this.distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
         if (distance < ball.radius + this.width / 2) {
-            // Получаем нормаль к стене
             const normal = this.getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
-            // Выталкиваем шарик из стены
-            const overlap = ball.radius + this.width / 2 - distance + 1;
-            ball.position.x += normal.x * overlap;
-            ball.position.y += normal.y * overlap;
+            // Более плавное выталкивание
+            const overlap = ball.radius + this.width / 2 - distance;
+            const pushDistance = overlap * 0.8; // Уменьшенная сила выталкивания
+            ball.position.x += normal.x * pushDistance;
+            ball.position.y += normal.y * pushDistance;
 
             // Отражаем скорость
-            const dotProduct = ball.velocity.x * normal.x + ball.velocity.y * normal.y;
+            const dotProduct = ball.velocity.dot(normal);
             ball.velocity.x -= 2 * dotProduct * normal.x;
             ball.velocity.y -= 2 * dotProduct * normal.y;
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
@@ -391,7 +633,7 @@ class Wall {
         const normal = new Vector2D(-dy, dx).normalize();
 
         const toPoint = new Vector2D(point.x - lineStart.x, point.y - lineStart.y);
-        if (normal.x * toPoint.x + normal.y * toPoint.y < 0) {
+        if (normal.dot(toPoint) < 0) {
             normal.multiply(-1);
         }
 
