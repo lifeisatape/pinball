@@ -30,18 +30,18 @@ body {
 
 .score-panel {
     background: #000000;
-    padding: 12px;
+    padding: 8px 12px;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
     z-index: 100;
-    min-height: 60px;
+    min-height: 40px;
 }
 
 .score-item {
     display: flex;
-    flex-direction: column;
     align-items: center;
+    gap: 6px;
 }
 
 .score-label {
@@ -53,7 +53,7 @@ body {
 }
 
 .score-value {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     font-family: 'Courier New', monospace;
     color: #00ff00;
@@ -135,22 +135,26 @@ body {
 
 @media (max-width: 480px) {
     .score-label {
-        font-size: 10px;
+        font-size: 9px;
     }
     
     .score-value {
-        font-size: 16px;
+        font-size: 12px;
     }
     
     .restart-btn {
-        padding: 6px 10px;
-        font-size: 10px;
+        padding: 4px 8px;
+        font-size: 9px;
+    }
+    
+    .score-item {
+        gap: 4px;
     }
 }
 
 @media (max-height: 600px) {
     .score-panel {
-        min-height: 50px;
-        padding: 8px;
+        min-height: 35px;
+        padding: 6px 12px;
     }
 }
