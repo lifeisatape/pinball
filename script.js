@@ -725,8 +725,8 @@ class PinballGame {
     }
 
     resetBall() {
-        // Start ball in center, ready to drop
-        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH / 2, 50);
+        // Start ball slightly right of center, ready to drop
+        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH * 0.6, 50);
         this.ball.velocity = new Vector2D(0, 0);
         this.gameState.ballInPlay = true;
     }
