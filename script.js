@@ -1,4 +1,4 @@
-// Game Configuration
+// Configuration
 const CONFIG = {
     GRAVITY: 0.3,
     FRICTION: 0.98,
@@ -6,38 +6,10 @@ const CONFIG = {
     FLIPPER_STRENGTH: 12,
     BALL_RADIUS: 8,
     FLIPPER_LENGTH: 50,
-    FLIPPER_WIDTH: 8,
-    LAUNCH_POWER: 20,
     MAX_BALL_SPEED: 25,
-    VIRTUAL_WIDTH: 320,
-    VIRTUAL_HEIGHT: 480
+    VIRTUAL_WIDTH: 800,
+    VIRTUAL_HEIGHT: 600
 };
-
-// Game State
-class GameState {
-    constructor() {
-        this.score = 0;
-        this.highScore = parseInt(localStorage.getItem('pinballHighScore')) || 0;
-        this.balls = 3;
-        this.isGameOver = false;
-        this.ballInPlay = false;
-    }
-
-    updateScore(points) {
-        this.score += points;
-        if (this.score > this.highScore) {
-            this.highScore = this.score;
-            localStorage.setItem('pinballHighScore', this.highScore.toString());
-        }
-    }
-
-    reset() {
-        this.score = 0;
-        this.balls = 3;
-        this.isGameOver = false;
-        this.ballInPlay = false;
-    }
-}
 
 // Vector2D Class
 class Vector2D {
@@ -71,10 +43,6 @@ class Vector2D {
         return this;
     }
 
-    copy() {
-        return new Vector2D(this.x, this.y);
-    }
-
     dot(vector) {
         return this.x * vector.x + this.y * vector.y;
     }
@@ -88,7 +56,7 @@ class Vector2D {
     }
 }
 
-// Ball Class
+// Ball Class for testing
 class Ball {
     constructor(x, y) {
         this.position = new Vector2D(x, y);
@@ -101,11 +69,14 @@ class Ball {
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
         this.velocity.multiply(CONFIG.FRICTION);
         this.position.add(this.velocity);
-        return this.handleWallCollisions();
-    }
 
-    handleWallCollisions() {
-        return this.position.y > CONFIG.VIRTUAL_HEIGHT + 50;
+        // Reset if ball goes off screen
+        if (this.position.y > CONFIG.VIRTUAL_HEIGHT + 100) {
+            this.position.x = CONFIG.VIRTUAL_WIDTH / 2;
+            this.position.y = 50;
+            this.velocity.x = 0;
+            this.velocity.y = 0;
+        }
     }
 
     draw(ctx) {
@@ -121,56 +92,109 @@ class Ball {
         ctx.beginPath();
         ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
     }
 }
 
-// Bumper Class
-class Bumper {
-    constructor(x, y, radius = 20) {
-        this.position = new Vector2D(x, y);
-        this.radius = radius;
-        this.hitAnimation = 0;
-        this.points = 100;
+// Game Objects Classes
+class EditorWall {
+    constructor(x1, y1, x2, y2, width = 20, color = '#ff4444') {
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+        this.width = width;
+        this.color = color;
     }
 
-    update() {
-        if (this.hitAnimation > 0) {
-            this.hitAnimation -= 0.1;
-        }
+    draw(ctx, isSelected = false) {
+        ctx.strokeStyle = isSelected ? '#ffff00' : this.color;
+        ctx.lineWidth = this.width;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(this.x1, this.y1);
+        ctx.lineTo(this.x2, this.y2);
+        ctx.stroke();
     }
 
     checkCollision(ball) {
-        const dx = ball.position.x - this.position.x;
-        const dy = ball.position.y - this.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < ball.radius + this.radius) {
-            const normal = new Vector2D(dx / distance, dy / distance);
-
-            const overlap = ball.radius + this.radius - distance + 2;
+        const distance = this.distanceToLineSegment(ball.position);
+        if (distance < ball.radius + this.width / 2) {
+            const normal = this.getNormalToLineSegment(ball.position);
+            const overlap = ball.radius + this.width / 2 - distance;
             ball.position.x += normal.x * overlap;
             ball.position.y += normal.y * overlap;
 
-            const bounceForce = 15;
-            ball.velocity.x = normal.x * bounceForce;
-            ball.velocity.y = normal.y * bounceForce;
-
-            this.hitAnimation = 1;
-            return this.points;
+            const dotProduct = ball.velocity.dot(normal);
+            ball.velocity.x -= 2 * dotProduct * normal.x;
+            ball.velocity.y -= 2 * dotProduct * normal.y;
+            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
         }
-        return 0;
     }
 
-    draw(ctx) {
-        const animRadius = this.radius + this.hitAnimation * 10;
+    distanceToLineSegment(point) {
+        const A = point.x - this.x1;
+        const B = point.y - this.y1;
+        const C = this.x2 - this.x1;
+        const D = this.y2 - this.y1;
+
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = lenSq !== 0 ? dot / lenSq : -1;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = this.x1;
+            yy = this.y1;
+        } else if (param > 1) {
+            xx = this.x2;
+            yy = this.y2;
+        } else {
+            xx = this.x1 + param * C;
+            yy = this.y1 + param * D;
+        }
+
+        const dx = point.x - xx;
+        const dy = point.y - yy;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    getNormalToLineSegment(point) {
+        const dx = this.x2 - this.x1;
+        const dy = this.y2 - this.y1;
+        const normal = new Vector2D(-dy, dx).normalize();
+
+        const toPoint = new Vector2D(point.x - this.x1, point.y - this.y1);
+        if (normal.dot(toPoint) < 0) {
+            normal.multiply(-1);
+        }
+        return normal;
+    }
+
+    isNear(x, y, threshold = 20) {
+        const distance = this.distanceToLineSegment(new Vector2D(x, y));
+        return distance < threshold;
+    }
+}
+
+class EditorBumper {
+    constructor(x, y, radius = 25, points = 100) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.points = points;
+        this.hitAnimation = 0;
+    }
+
+    draw(ctx, isSelected = false) {
+        if (this.hitAnimation > 0) {
+            this.hitAnimation -= 0.1;
+        }
+
+        const animRadius = this.radius + this.hitAnimation * 5;
 
         const gradient = ctx.createRadialGradient(
-            this.position.x - 5, this.position.y - 5, 0,
-            this.position.x, this.position.y, animRadius
+            this.x - 5, this.y - 5, 0,
+            this.x, this.y, animRadius
         );
         gradient.addColorStop(0, '#ffffff');
         gradient.addColorStop(0.3, '#ff4444');
@@ -178,33 +202,47 @@ class Bumper {
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, animRadius, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, animRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = isSelected ? '#ffff00' : '#ffffff';
+        ctx.lineWidth = isSelected ? 3 : 2;
         ctx.stroke();
+    }
 
-        if (this.hitAnimation > 0) {
-            ctx.shadowColor = '#ff4444';
-            ctx.shadowBlur = 20;
-            ctx.strokeStyle = '#ffff00';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
+    checkCollision(ball) {
+        const dx = ball.position.x - this.x;
+        const dy = ball.position.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < ball.radius + this.radius) {
+            const normal = new Vector2D(dx / distance, dy / distance);
+            const overlap = ball.radius + this.radius - distance + 2;
+            ball.position.x += normal.x * overlap;
+            ball.position.y += normal.y * overlap;
+
+            const bounceForce = 15;
+            ball.velocity.x = normal.x * bounceForce;
+            ball.velocity.y = normal.y * bounceForce;
+            this.hitAnimation = 1;
         }
+    }
+
+    isNear(x, y, threshold = 20) {
+        const dx = x - this.x;
+        const dy = y - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < this.radius + threshold;
     }
 }
 
-// Spinner Class
-class Spinner {
+class EditorSpinner {
     constructor(x, y, width = 30, height = 8) {
-        this.position = new Vector2D(x, y);
+        this.x = x;
+        this.y = y;
         this.width = width;
         this.height = height;
         this.angle = 0;
         this.angularVelocity = 0;
-        this.points = 50;
     }
 
     update() {
@@ -212,12 +250,36 @@ class Spinner {
         this.angularVelocity *= 0.95;
     }
 
+    draw(ctx, isSelected = false) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        const gradient = ctx.createLinearGradient(-this.width/2, 0, this.width/2, 0);
+        gradient.addColorStop(0, '#4444ff');
+        gradient.addColorStop(0.5, '#6666ff');
+        gradient.addColorStop(1, '#4444ff');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+
+        ctx.strokeStyle = isSelected ? '#ffff00' : '#ffffff';
+        ctx.lineWidth = isSelected ? 3 : 1;
+        ctx.strokeRect(-this.width/2, -this.height/2, this.width, this.height);
+        ctx.restore();
+
+        ctx.fillStyle = isSelected ? '#ffff00' : '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     checkCollision(ball) {
         const cos = Math.cos(this.angle);
         const sin = Math.sin(this.angle);
 
-        const dx = ball.position.x - this.position.x;
-        const dy = ball.position.y - this.position.y;
+        const dx = ball.position.x - this.x;
+        const dy = ball.position.y - this.y;
         const localX = cos * dx + sin * dy;
         const localY = -sin * dx + cos * dy;
 
@@ -237,46 +299,23 @@ class Spinner {
 
             ball.velocity.x += worldNormalX * 8;
             ball.velocity.y += worldNormalY * 8;
-
-            return this.points;
         }
-        return 0;
     }
 
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.position.x, this.position.y);
-        ctx.rotate(this.angle);
-
-        const gradient = ctx.createLinearGradient(-this.width/2, 0, this.width/2, 0);
-        gradient.addColorStop(0, '#4444ff');
-        gradient.addColorStop(0.5, '#6666ff');
-        gradient.addColorStop(1, '#4444ff');
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
-
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-this.width/2, -this.height/2, this.width, this.height);
-
-        ctx.restore();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, 3, 0, Math.PI * 2);
-        ctx.fill();
+    isNear(x, y, threshold = 20) {
+        const dx = x - this.x;
+        const dy = y - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < Math.max(this.width, this.height) + threshold;
     }
 }
 
-// Drop Target Class
-class DropTarget {
+class EditorDropTarget {
     constructor(x, y, width = 15, height = 30) {
-        this.position = new Vector2D(x, y);
+        this.x = x;
+        this.y = y;
         this.width = width;
         this.height = height;
         this.isActive = true;
-        this.points = 200;
         this.resetTime = 0;
     }
 
@@ -289,30 +328,12 @@ class DropTarget {
         }
     }
 
-    checkCollision(ball) {
-        if (!this.isActive) return 0;
-
-        const dx = Math.abs(ball.position.x - this.position.x);
-        const dy = Math.abs(ball.position.y - this.position.y);
-
-        if (dx < this.width/2 + ball.radius && dy < this.height/2 + ball.radius) {
-            this.isActive = false;
-            this.resetTime = 300;
-
-            const normalX = ball.position.x < this.position.x ? -1 : 1;
-            ball.velocity.x = Math.abs(ball.velocity.x) * normalX * 1.2;
-
-            return this.points;
-        }
-        return 0;
-    }
-
-    draw(ctx) {
+    draw(ctx, isSelected = false) {
         if (!this.isActive) return;
 
         const gradient = ctx.createLinearGradient(
-            this.position.x - this.width/2, this.position.y,
-            this.position.x + this.width/2, this.position.y
+            this.x - this.width/2, this.y,
+            this.x + this.width/2, this.y
         );
         gradient.addColorStop(0, '#ff8800');
         gradient.addColorStop(0.5, '#ffaa00');
@@ -320,590 +341,127 @@ class DropTarget {
 
         ctx.fillStyle = gradient;
         ctx.fillRect(
-            this.position.x - this.width/2,
-            this.position.y - this.height/2,
+            this.x - this.width/2,
+            this.y - this.height/2,
             this.width,
             this.height
         );
 
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isSelected ? '#ffff00' : '#ffffff';
+        ctx.lineWidth = isSelected ? 3 : 1;
         ctx.strokeRect(
-            this.position.x - this.width/2,
-            this.position.y - this.height/2,
+            this.x - this.width/2,
+            this.y - this.height/2,
             this.width,
             this.height
         );
-    }
-}
-
-// Ramp Class (removed green elements)
-class Ramp {
-    constructor(points, width = 10) {
-        this.points = points;
-        this.width = width;
     }
 
     checkCollision(ball) {
-        for (let i = 0; i < this.points.length - 1; i++) {
-            const start = this.points[i];
-            const end = this.points[i + 1];
+        if (!this.isActive) return;
 
-            const distance = this.distanceToLineSegment(ball.position, start, end);
+        const dx = Math.abs(ball.position.x - this.x);
+        const dy = Math.abs(ball.position.y - this.y);
 
-            if (distance < ball.radius + this.width / 2) {
-                const normal = this.getNormalToLineSegment(ball.position, start, end);
+        if (dx < this.width/2 + ball.radius && dy < this.height/2 + ball.radius) {
+            this.isActive = false;
+            this.resetTime = 300;
 
-                const overlap = ball.radius + this.width / 2 - distance;
-                ball.position.x += normal.x * overlap;
-                ball.position.y += normal.y * overlap;
-
-                const dotProduct = ball.velocity.dot(normal);
-                ball.velocity.x -= 2 * dotProduct * normal.x;
-                ball.velocity.y -= 2 * dotProduct * normal.y;
-                ball.velocity.multiply(0.9);
-
-                return true;
-            }
+            const normalX = ball.position.x < this.x ? -1 : 1;
+            ball.velocity.x = Math.abs(ball.velocity.x) * normalX * 1.2;
         }
-        return false;
     }
 
-    distanceToLineSegment(point, lineStart, lineEnd) {
-        const A = point.x - lineStart.x;
-        const B = point.y - lineStart.y;
-        const C = lineEnd.x - lineStart.x;
-        const D = lineEnd.y - lineStart.y;
-
-        const dot = A * C + B * D;
-        const lenSq = C * C + D * D;
-        let param = -1;
-        if (lenSq !== 0) {
-            param = dot / lenSq;
-        }
-
-        let xx, yy;
-        if (param < 0) {
-            xx = lineStart.x;
-            yy = lineStart.y;
-        } else if (param > 1) {
-            xx = lineEnd.x;
-            yy = lineEnd.y;
-        } else {
-            xx = lineStart.x + param * C;
-            yy = lineStart.y + param * D;
-        }
-
-        const dx = point.x - xx;
-        const dy = point.y - yy;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    getNormalToLineSegment(point, lineStart, lineEnd) {
-        const dx = lineEnd.x - lineStart.x;
-        const dy = lineEnd.y - lineStart.y;
-        const normal = new Vector2D(-dy, dx).normalize();
-
-        const toPoint = new Vector2D(point.x - lineStart.x, point.y - lineStart.y);
-        if (normal.dot(toPoint) < 0) {
-            normal.multiply(-1);
-        }
-
-        return normal;
-    }
-
-    draw(ctx) {
-        if (this.points.length < 2) return;
-
-        // Changed to green color scheme
-        ctx.strokeStyle = '#44ff88';
-        ctx.lineWidth = this.width;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-
-        for (let i = 1; i < this.points.length; i++) {
-            ctx.lineTo(this.points[i].x, this.points[i].y);
-        }
-
-        ctx.stroke();
-
-        // Changed glow effect color to green
-        ctx.shadowColor = '#44ff88';
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+    isNear(x, y, threshold = 20) {
+        const dx = Math.abs(x - this.x);
+        const dy = Math.abs(y - this.y);
+        return dx < this.width/2 + threshold && dy < this.height/2 + threshold;
     }
 }
 
-// Flipper Shape Class
-class FlipperShape {
-    constructor(pivotX, pivotY, length, baseWidth, tipWidth, isLeft) {
-        this.pivot = new Vector2D(pivotX, pivotY);
-        this.length = length;
-        this.baseWidth = baseWidth;
-        this.tipWidth = tipWidth;
-        this.isLeft = isLeft;
-        this.angle = 0;
-        this.updateShape();
-    }
-
-    updateShape() {
-        const cos = Math.cos(this.angle);
-        const sin = Math.sin(this.angle);
-
-        this.points = [];
-        const segments = 12;
-        const capSegments = 8;
-
-        const bodyPoints = [];
-
-        for (let i = 0; i <= segments; i++) {
-            const t = i / segments;
-            const width = this.baseWidth + (this.tipWidth - this.baseWidth) * t;
-            const halfWidth = width / 2;
-            const x = this.isLeft ? t * this.length : -t * this.length;
-
-            bodyPoints.push({
-                top: { x: x, y: -halfWidth },
-                bottom: { x: x, y: halfWidth }
-            });
-        }
-
-        const tipX = this.isLeft ? this.length : -this.length;
-        const tipRadius = this.tipWidth / 2;
-
-        for (let i = 0; i <= capSegments; i++) {
-            const angle = this.isLeft ? 
-                Math.PI/2 - (i / capSegments) * Math.PI :
-                Math.PI/2 + (i / capSegments) * Math.PI;
-
-            const capX = tipX + Math.cos(angle) * tipRadius;
-            const capY = Math.sin(angle) * tipRadius;
-
-            this.points.push({ x: capX, y: capY });
-        }
-
-        for (let i = segments - 1; i >= 0; i--) {
-            this.points.push(bodyPoints[i].top);
-        }
-
-        const baseRadius = this.baseWidth / 2;
-
-        for (let i = 0; i <= capSegments; i++) {
-            const angle = this.isLeft ?
-                Math.PI/2 + (i / capSegments) * Math.PI :
-                Math.PI/2 - (i / capSegments) * Math.PI;
-
-            const capX = Math.cos(angle) * baseRadius;
-            const capY = Math.sin(angle) * baseRadius;
-
-            this.points.push({ x: capX, y: capY });
-        }
-
-        for (let i = 1; i <= segments; i++) {
-            this.points.push(bodyPoints[i].bottom);
-        }
-
-        this.worldPoints = this.points.map(point => {
-            const worldX = this.pivot.x + cos * point.x - sin * point.y;
-            const worldY = this.pivot.y + sin * point.x + cos * point.y;
-            return new Vector2D(worldX, worldY);
-        });
-    }
-
-    intersectsCircle(circle) {
-        const cos = Math.cos(-this.angle);
-        const sin = Math.sin(-this.angle);
-        const dx = circle.position.x - this.pivot.x;
-        const dy = circle.position.y - this.pivot.y;
-
-        const localX = cos * dx - sin * dy;
-        const localY = sin * dx + cos * dy;
-
-        let t = 0;
-        let closestX = 0;
-        let closestY = 0;
-        let minDistance = Infinity;
-        let isEndCap = false;
-
-        if (this.isLeft) {
-            t = Math.max(0, Math.min(1, localX / this.length));
-        } else {
-            t = Math.max(0, Math.min(1, -localX / this.length));
-        }
-
-        const bodyX = this.isLeft ? t * this.length : -t * this.length;
-        const width = this.baseWidth + (this.tipWidth - this.baseWidth) * t;
-        const halfWidth = width / 2;
-
-        const bodyClosestY = Math.max(-halfWidth, Math.min(halfWidth, localY));
-        const bodyDistance = Math.sqrt((localX - bodyX) * (localX - bodyX) + (localY - bodyClosestY) * (localY - bodyClosestY));
-
-        closestX = bodyX;
-        closestY = bodyClosestY;
-        minDistance = bodyDistance;
-
-        const tipX = this.isLeft ? this.length : -this.length;
-        const tipRadius = this.tipWidth / 2;
-        const tipDistance = Math.sqrt((localX - tipX) * (localX - tipX) + localY * localY);
-
-        if (tipDistance < minDistance && tipDistance <= tipRadius) {
-            if (tipDistance > 0.1) {
-                const tipNormalX = (localX - tipX) / tipDistance;
-                const tipNormalY = localY / tipDistance;
-                closestX = tipX + tipNormalX * tipRadius;
-                closestY = tipNormalY * tipRadius;
-            } else {
-                closestX = tipX;
-                closestY = 0;
-            }
-            minDistance = tipDistance;
-            isEndCap = true;
-        }
-
-        const baseRadius = this.baseWidth / 2;
-        const baseDistance = Math.sqrt(localX * localX + localY * localY);
-
-        if (baseDistance < minDistance && baseDistance <= baseRadius) {
-            if (baseDistance > 0.1) {
-                const baseNormalX = localX / baseDistance;
-                const baseNormalY = localY / baseDistance;
-                closestX = baseNormalX * baseRadius;
-                closestY = baseNormalY * baseRadius;
-            } else {
-                closestX = 0;
-                closestY = baseRadius;
-            }
-            minDistance = baseDistance;
-            isEndCap = true;
-        }
-
-        if (minDistance <= circle.radius) {
-            let normalX, normalY;
-
-            if (isEndCap) {
-                if (minDistance > 0.1) {
-                    const centerX = closestX === tipX ? tipX : 0;
-                    const centerY = 0;
-                    normalX = (localX - centerX) / minDistance;
-                    normalY = (localY - centerY) / minDistance;
-                } else {
-                    normalX = localX > 0 ? 1 : -1;
-                    normalY = 0;
-                }
-            } else {
-                if (minDistance > 0.1) {
-                    normalX = (localX - closestX) / minDistance;
-                    normalY = (localY - closestY) / minDistance;
-                } else {
-                    normalX = 0;
-                    normalY = localY > 0 ? 1 : -1;
-                }
-            }
-
-            const worldCos = Math.cos(this.angle);
-            const worldSin = Math.sin(this.angle);
-            const worldNormalX = worldCos * normalX - worldSin * normalY;
-            const worldNormalY = worldSin * normalX + worldCos * normalY;
-
-            return {
-                hit: true,
-                normal: new Vector2D(worldNormalX, worldNormalY),
-                penetration: circle.radius - minDistance + 0.5,
-                contactPoint: new Vector2D(
-                    this.pivot.x + worldCos * closestX - worldSin * closestY,
-                    this.pivot.y + worldSin * closestX + worldCos * closestY
-                )
-            };
-        }
-
-        return { hit: false };
-    }
-}
-
-// Flipper Class
-class Flipper {
+class EditorFlipper {
     constructor(x, y, isLeft) {
-        this.position = new Vector2D(x, y);
+        this.x = x;
+        this.y = y;
         this.isLeft = isLeft;
-
-        this.restAngle = isLeft ? Math.PI / 8 : -Math.PI / 8;
-        this.activeAngle = isLeft ? -Math.PI / 6 : Math.PI / 6;
-
-        this.angle = this.restAngle;
-        this.targetAngle = this.angle;
         this.length = CONFIG.FLIPPER_LENGTH;
-        this.baseWidth = CONFIG.FLIPPER_WIDTH * 1.5;
-        this.tipWidth = CONFIG.FLIPPER_WIDTH * 0.8;
+        this.width = 8;
+        this.angle = isLeft ? Math.PI / 8 : -Math.PI / 8;
         this.isActive = false;
-        this.angularVelocity = 0;
-        this.lastAngle = this.angle;
-
-        this.shape = new FlipperShape(x, y, this.length, this.baseWidth, this.tipWidth, isLeft);
-        this.updateShape();
     }
 
-    updateShape() {
-        this.shape.angle = this.angle;
-        this.shape.updateShape();
-    }
-
-    activate() {
-        this.isActive = true;
-        this.targetAngle = this.activeAngle;
-    }
-
-    deactivate() {
-        this.isActive = false;
-        this.targetAngle = this.restAngle;
-    }
-
-    update() {
-        this.lastAngle = this.angle;
-
-        const angleDiff = this.targetAngle - this.angle;
-        this.angularVelocity = angleDiff * 0.4;
-        this.angle += this.angularVelocity;
-
-        const minAngle = Math.min(this.restAngle, this.activeAngle);
-        const maxAngle = Math.max(this.restAngle, this.activeAngle);
-        this.angle = Math.max(minAngle, Math.min(maxAngle, this.angle));
-
-        this.updateShape();
-    }
-
-    draw(ctx) {
-        if (this.shape.points.length === 0) return;
-
+    draw(ctx, isSelected = false) {
         ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
 
-        const cos = Math.cos(this.angle);
-        const sin = Math.sin(this.angle);
-        const midX = this.position.x + cos * (this.length / 2);
-        const midY = this.position.y + sin * (this.length / 2);
-
-        const gradient = ctx.createLinearGradient(
-            midX - sin * this.baseWidth / 2,
-            midY + cos * this.baseWidth / 2,
-            midX + sin * this.baseWidth / 2,
-            midY - cos * this.baseWidth / 2
-        );
-
+        const gradient = ctx.createLinearGradient(0, -this.width/2, 0, this.width/2);
         gradient.addColorStop(0, '#ff8888');
-        gradient.addColorStop(0.3, '#ff6666');
-        gradient.addColorStop(0.7, '#dd4444');
-        gradient.addColorStop(1, '#aa2222');
+        gradient.addColorStop(0.5, '#ff6666');
+        gradient.addColorStop(1, '#dd4444');
 
         ctx.fillStyle = gradient;
+
+        const points = [
+            [0, -this.width/2],
+            [this.length, -this.width/4],
+            [this.length, this.width/4],
+            [0, this.width/2]
+        ];
+
         ctx.beginPath();
-
-        if (this.shape.worldPoints && this.shape.worldPoints.length > 0) {
-            ctx.moveTo(this.shape.worldPoints[0].x, this.shape.worldPoints[0].y);
-
-            for (let i = 1; i < this.shape.worldPoints.length; i++) {
-                ctx.lineTo(this.shape.worldPoints[i].x, this.shape.worldPoints[i].y);
-            }
-
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-
-            const innerGradient = ctx.createRadialGradient(
-                midX - cos * 10, midY - sin * 10, 0,
-                midX, midY, this.length / 3
-            );
-            innerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-            innerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-            ctx.fillStyle = innerGradient;
-            ctx.fill();
+        ctx.moveTo(points[0][0], points[0][1]);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i][0], points[i][1]);
         }
-
-        ctx.restore();
-
-        const pivotGradient = ctx.createRadialGradient(
-            this.position.x - 1, this.position.y - 1, 0,
-            this.position.x, this.position.y, 6
-        );
-        pivotGradient.addColorStop(0, '#ffffff');
-        pivotGradient.addColorStop(0.3, '#cccccc');
-        pivotGradient.addColorStop(0.7, '#888888');
-        pivotGradient.addColorStop(1, '#444444');
-
-        ctx.fillStyle = pivotGradient;
-        ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, 5, 0, Math.PI * 2);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = '#222222';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isSelected ? '#ffff00' : '#ffffff';
+        ctx.lineWidth = isSelected ? 3 : 1.5;
         ctx.stroke();
-    }
+        ctx.restore();
 
-    checkCollision(ball) {
-        const collision = this.shape.intersectsCircle(ball);
-
-        if (collision.hit) {
-            const pushDistance = collision.penetration + 2;
-            ball.position.x += collision.normal.x * pushDistance;
-            ball.position.y += collision.normal.y * pushDistance;
-
-            const currentAngularVelocity = this.angle - this.lastAngle;
-
-            const contactOffset = new Vector2D(
-                collision.contactPoint.x - this.position.x,
-                collision.contactPoint.y - this.position.y
-            );
-
-            const tangentialVelocity = new Vector2D(
-                -contactOffset.y * currentAngularVelocity * 10,
-                contactOffset.x * currentAngularVelocity * 10
-            );
-
-            const velocityDotNormal = ball.velocity.dot(collision.normal);
-            if (velocityDotNormal < 0) {
-                ball.velocity.x -= 2 * velocityDotNormal * collision.normal.x;
-                ball.velocity.y -= 2 * velocityDotNormal * collision.normal.y;
-            }
-
-            if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
-                const normalForce = CONFIG.FLIPPER_STRENGTH;
-                ball.velocity.x += collision.normal.x * normalForce;
-                ball.velocity.y += collision.normal.y * normalForce;
-
-                ball.velocity.x += tangentialVelocity.x;
-                ball.velocity.y += tangentialVelocity.y;
-            } else {
-                const minForce = CONFIG.FLIPPER_STRENGTH * 0.1;
-                ball.velocity.x += collision.normal.x * minForce;
-                ball.velocity.y += collision.normal.y * minForce;
-            }
-
-            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-            ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
-
-            return true;
-        }
-
-        return false;
-    }
-}
-
-// Wall Class
-class Wall {
-    constructor(x1, y1, x2, y2, color = '#ff4444', width = 20) {
-        this.x1 = x1;
-        this.y1 = y1;
-        this.x2 = x2;
-        this.y2 = y2;
-        this.color = color;
-        this.width = width;
-    }
-
-    draw(ctx) {
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = this.width;
-        ctx.lineCap = 'round';
+        // Draw pivot
+        ctx.fillStyle = isSelected ? '#ffff00' : '#ffffff';
         ctx.beginPath();
-        ctx.moveTo(this.x1, this.y1);
-        ctx.lineTo(this.x2, this.y2);
-        ctx.stroke();
+        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+        ctx.fill();
     }
 
-    checkCollision(ball) {
-        const distance = this.distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
-
-        if (distance < ball.radius + this.width / 2) {
-            const normal = this.getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
-
-            const overlap = ball.radius + this.width / 2 - distance;
-            const pushDistance = overlap * 0.8;
-            ball.position.x += normal.x * pushDistance;
-            ball.position.y += normal.y * pushDistance;
-
-            const dotProduct = ball.velocity.dot(normal);
-            ball.velocity.x -= 2 * dotProduct * normal.x;
-            ball.velocity.y -= 2 * dotProduct * normal.y;
-            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-            return true;
-        }
-        return false;
-    }
-
-    distanceToLineSegment(point, lineStart, lineEnd) {
-        const A = point.x - lineStart.x;
-        const B = point.y - lineStart.y;
-        const C = lineEnd.x - lineStart.x;
-        const D = lineEnd.y - lineStart.y;
-
-        const dot = A * C + B * D;
-        const lenSq = C * C + D * D;
-        let param = -1;
-        if (lenSq !== 0) {
-            param = dot / lenSq;
-        }
-
-        let xx, yy;
-        if (param < 0) {
-            xx = lineStart.x;
-            yy = lineStart.y;
-        } else if (param > 1) {
-            xx = lineEnd.x;
-            yy = lineEnd.y;
-        } else {
-            xx = lineStart.x + param * C;
-            yy = lineStart.y + param * D;
-        }
-
-        const dx = point.x - xx;
-        const dy = point.y - yy;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    getNormalToLineSegment(point, lineStart, lineEnd) {
-        const dx = lineEnd.x - lineStart.x;
-        const dy = lineEnd.y - lineStart.y;
-        const normal = new Vector2D(-dy, dx).normalize();
-
-        const toPoint = new Vector2D(point.x - lineStart.x, point.y - lineStart.y);
-        if (normal.dot(toPoint) < 0) {
-            normal.multiply(-1);
-        }
-
-        return normal;
+    isNear(x, y, threshold = 20) {
+        const dx = x - this.x;
+        const dy = y - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < this.length + threshold;
     }
 }
 
-// Main Game Class
-class PinballGame {
+// Level Editor Class
+class LevelEditor {
     constructor() {
-        this.canvas = document.getElementById('gameCanvas');
+        this.canvas = document.getElementById('editorCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.gameState = new GameState();
-        this.ball = null;
-        this.flippers = [];
+
+        this.isEditMode = true;
+        this.currentTool = 'wall';
+        this.isDrawing = false;
+        this.drawStart = null;
+        this.selectedObject = null;
+
+        // Game objects
         this.walls = [];
         this.bumpers = [];
         this.spinners = [];
         this.dropTargets = [];
-        this.ramps = [];
+        this.flippers = [];
 
-        this.scale = 1;
-        this.offsetX = 0;
-        this.offsetY = 0;
+        // Test mode
+        this.ball = null;
+        this.keys = {};
 
         this.setupCanvas();
-        this.setupGameObjects();
         this.setupEventListeners();
-        this.updateUI();
-
+        this.setupToolProperties();
         this.gameLoop();
     }
 
@@ -913,8 +471,9 @@ class PinballGame {
     }
 
     resizeCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 60;
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
 
         const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
         const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
@@ -924,216 +483,360 @@ class PinballGame {
         this.offsetY = (this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale) / 2;
     }
 
-    setupGameObjects() {
-        this.resetBall();
-        this.initializeWalls();
-        this.initializeGameElements();
-
-        const flipperY = CONFIG.VIRTUAL_HEIGHT - 80;
-        this.flippers = [
-            new Flipper(CONFIG.VIRTUAL_WIDTH * 0.3, flipperY, true),
-            new Flipper(CONFIG.VIRTUAL_WIDTH * 0.7, flipperY, false)
-        ];
+    worldToScreen(x, y) {
+        return {
+            x: x * this.scale + this.offsetX,
+            y: y * this.scale + this.offsetY
+        };
     }
 
-    initializeWalls() {
-        const gameWidth = CONFIG.VIRTUAL_WIDTH;
-        const gameHeight = CONFIG.VIRTUAL_HEIGHT;
-        const flipperY = gameHeight - 80;
-        const leftWallEnd = gameWidth * 0.25;
-        const rightWallStart = gameWidth * 0.75;
-        const bottomY = gameHeight - 60;
-
-        this.walls = [
-            new Wall(5, 5, 5, gameHeight - 100),
-            new Wall(gameWidth - 5, 5, gameWidth - 5, gameHeight - 100),
-            new Wall(5, 5, gameWidth - 5, 5),
-            new Wall(gameWidth * 0.25, gameHeight - 80, gameWidth * 0, flipperY - 20),
-            new Wall(gameWidth * 1, flipperY - 20, gameWidth * 0.75, gameHeight - 80),
-           
-        ];
-    }
-
-    initializeGameElements() {
-        // Bumpers
-        this.bumpers = [
-            new Bumper(CONFIG.VIRTUAL_WIDTH * 0.3, 150, 25),
-            new Bumper(CONFIG.VIRTUAL_WIDTH * 0.7, 120, 25),
-            new Bumper(CONFIG.VIRTUAL_WIDTH * 0.5, 180, 20)
-        ];
-
-        // Spinners
-        this.spinners = [
-            new Spinner(CONFIG.VIRTUAL_WIDTH * 0.2, 250),
-            new Spinner(CONFIG.VIRTUAL_WIDTH * 0.8, 280)
-        ];
-
-        // Drop Targets
-        this.dropTargets = [
-            new DropTarget(CONFIG.VIRTUAL_WIDTH * 0.15, 320),
-            new DropTarget(CONFIG.VIRTUAL_WIDTH * 0.85, 350),
-            new DropTarget(CONFIG.VIRTUAL_WIDTH * 0.5, 300)
-        ];
-
-        // Ramps removed
-        this.ramps = [];
-    }
-
-    resetBall() {
-        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH * 0.51, 50);
-        this.ball.velocity = new Vector2D(0, 0);
-        this.gameState.ballInPlay = true;
+    screenToWorld(x, y) {
+        return {
+            x: (x - this.offsetX) / this.scale,
+            y: (y - this.offsetY) / this.scale
+        };
     }
 
     setupEventListeners() {
-        // Track active touches
-        this.activeTouches = new Set();
-        
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-            
-            // Process all new touches
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                const screenX = touch.clientX - rect.left;
-                const isLeft = screenX < this.canvas.width * 0.5;
-                
-                // Add touch to active set
-                this.activeTouches.add(touch.identifier + (isLeft ? '_left' : '_right'));
-                
-                // Activate appropriate flipper
-                if (isLeft) {
-                    this.flippers[0].activate();
-                } else {
-                    this.flippers[1].activate();
-                }
+        // Mode buttons
+        document.getElementById('editMode').addEventListener('click', () => this.setMode(true));
+        document.getElementById('testMode').addEventListener('click', () => this.setMode(false));
+
+        // Tool selection
+        document.getElementById('toolSelect').addEventListener('change', (e) => {
+            this.currentTool = e.target.value;
+            this.updateInfoText();
+            this.updatePropertyPanels();
+        });
+
+        // Action buttons
+        document.getElementById('clearAll').addEventListener('click', () => this.clearAll());
+        document.getElementById('saveLevel').addEventListener('click', () => this.saveLevel());
+        document.getElementById('loadLevel').addEventListener('click', () => this.loadLevel());
+
+        // Canvas events
+        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+
+        // Keyboard events for test mode
+        document.addEventListener('keydown', (e) => {
+            this.keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' && !this.isEditMode) {
+                e.preventDefault();
+                this.resetBall();
             }
         });
 
-        this.canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-            
-            // Process ended touches
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
-                const screenX = touch.clientX - rect.left;
-                const isLeft = screenX < this.canvas.width * 0.5;
-                
-                // Remove touch from active set
-                this.activeTouches.delete(touch.identifier + (isLeft ? '_left' : '_right'));
-            }
-            
-            // Check if any touches are still active for each flipper
-            let leftActive = false;
-            let rightActive = false;
-            
-            this.activeTouches.forEach(touchId => {
-                if (touchId.endsWith('_left')) leftActive = true;
-                if (touchId.endsWith('_right')) rightActive = true;
-            });
-            
-            // Deactivate flippers that have no active touches
-            if (!leftActive) this.flippers[0].deactivate();
-            if (!rightActive) this.flippers[1].deactivate();
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.key.toLowerCase()] = false;
         });
-
-        this.canvas.addEventListener('mousedown', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const screenX = e.clientX - rect.left;
-            this.handleInput(screenX, true);
-        });
-
-        this.canvas.addEventListener('mouseup', () => {
-            this.handleInput(0, false);
-        });
-
-        document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
-        document.getElementById('gameOverRestart').addEventListener('click', () => this.restartGame());
     }
 
-    handleInput(screenX, isPressed) {
-        if (isPressed) {
-            if (screenX < this.canvas.width * 0.5) {
-                this.flippers[0].activate();
-            } else {
-                this.flippers[1].activate();
+    setupToolProperties() {
+        // Wall properties
+        document.getElementById('wallWidth').addEventListener('input', (e) => {
+            if (this.selectedObject instanceof EditorWall) {
+                this.selectedObject.width = parseInt(e.target.value);
             }
-        } else {
-            this.flippers[0].deactivate();
-            this.flippers[1].deactivate();
+        });
+
+        document.getElementById('wallColor').addEventListener('input', (e) => {
+            if (this.selectedObject instanceof EditorWall) {
+                this.selectedObject.color = e.target.value;
+            }
+        });
+
+        // Bumper properties
+        document.getElementById('bumperRadius').addEventListener('input', (e) => {
+            if (this.selectedObject instanceof EditorBumper) {
+                this.selectedObject.radius = parseInt(e.target.value);
+            }
+        });
+
+        document.getElementById('bumperPoints').addEventListener('input', (e) => {
+            if (this.selectedObject instanceof EditorBumper) {
+                this.selectedObject.points = parseInt(e.target.value);
+            }
+        });
+
+        this.updatePropertyPanels();
+    }
+
+    setMode(isEdit) {
+        this.isEditMode = isEdit;
+
+        document.getElementById('editMode').classList.toggle('active', isEdit);
+        document.getElementById('testMode').classList.toggle('active', !isEdit);
+        document.body.classList.toggle('test-mode', !isEdit);
+
+        if (!isEdit) {
+            this.resetBall();
+            this.selectedObject = null;
         }
+
+        this.updateInfoText();
+    }
+
+    updateInfoText() {
+        const info = document.getElementById('modeInfo');
+        if (!this.isEditMode) {
+            info.textContent = 'Arrow keys to control flippers, Space to reset ball';
+        } else {
+            switch (this.currentTool) {
+                case 'wall':
+                    info.textContent = 'Click and drag to draw walls';
+                    break;
+                case 'bumper':
+                    info.textContent = 'Click to place bumpers';
+                    break;
+                case 'spinner':
+                    info.textContent = 'Click to place spinners';
+                    break;
+                case 'dropTarget':
+                    info.textContent = 'Click to place drop targets';
+                    break;
+                case 'flipper':
+                    info.textContent = 'Click to place flippers';
+                    break;
+                case 'delete':
+                    info.textContent = 'Click on objects to delete them';
+                    break;
+            }
+        }
+    }
+
+    updatePropertyPanels() {
+        const panels = ['wallProperties', 'bumperProperties', 'flipperProperties'];
+        panels.forEach(panel => {
+            document.getElementById(panel).style.display = 'none';
+        });
+
+        if (this.currentTool === 'wall') {
+            document.getElementById('wallProperties').style.display = 'block';
+        } else if (this.currentTool === 'bumper') {
+            document.getElementById('bumperProperties').style.display = 'block';
+        } else if (this.currentTool === 'flipper') {
+            document.getElementById('flipperProperties').style.display = 'block';
+        }
+    }
+
+    handleMouseDown(e) {
+        if (!this.isEditMode) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const world = this.screenToWorld(mouseX, mouseY);
+
+        if (this.currentTool === 'wall') {
+            this.isDrawing = true;
+            this.drawStart = world;
+        } else if (this.currentTool === 'delete') {
+            this.deleteObjectAt(world.x, world.y);
+        } else {
+            this.placeObject(world.x, world.y);
+        }
+    }
+
+    handleMouseMove(e) {
+        if (!this.isEditMode || !this.isDrawing || this.currentTool !== 'wall') return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        this.currentMousePos = this.screenToWorld(mouseX, mouseY);
+    }
+
+    handleMouseUp(e) {
+        if (!this.isEditMode || !this.isDrawing || this.currentTool !== 'wall') return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const world = this.screenToWorld(mouseX, mouseY);
+
+        if (this.drawStart) {
+            const width = parseInt(document.getElementById('wallWidth').value);
+            const color = document.getElementById('wallColor').value;
+
+            this.walls.push(new EditorWall(
+                this.drawStart.x, this.drawStart.y,
+                world.x, world.y,
+                width, color
+            ));
+        }
+
+        this.isDrawing = false;
+        this.drawStart = null;
+        this.currentMousePos = null;
+    }
+
+    placeObject(x, y) {
+        switch (this.currentTool) {
+            case 'bumper':
+                const radius = parseInt(document.getElementById('bumperRadius').value);
+                const points = parseInt(document.getElementById('bumperPoints').value);
+                this.bumpers.push(new EditorBumper(x, y, radius, points));
+                break;
+            case 'spinner':
+                this.spinners.push(new EditorSpinner(x, y));
+                break;
+            case 'dropTarget':
+                this.dropTargets.push(new EditorDropTarget(x, y));
+                break;
+            case 'flipper':
+                const isLeft = document.getElementById('flipperSide').value === 'left';
+                this.flippers.push(new EditorFlipper(x, y, isLeft));
+                break;
+        }
+    }
+
+    deleteObjectAt(x, y) {
+        const allObjects = [
+            ...this.walls,
+            ...this.bumpers,
+            ...this.spinners,
+            ...this.dropTargets,
+            ...this.flippers
+        ];
+
+        for (let obj of allObjects) {
+            if (obj.isNear(x, y)) {
+                if (this.walls.includes(obj)) {
+                    this.walls.splice(this.walls.indexOf(obj), 1);
+                } else if (this.bumpers.includes(obj)) {
+                    this.bumpers.splice(this.bumpers.indexOf(obj), 1);
+                } else if (this.spinners.includes(obj)) {
+                    this.spinners.splice(this.spinners.indexOf(obj), 1);
+                } else if (this.dropTargets.includes(obj)) {
+                    this.dropTargets.splice(this.dropTargets.indexOf(obj), 1);
+                } else if (this.flippers.includes(obj)) {
+                    this.flippers.splice(this.flippers.indexOf(obj), 1);
+                }
+                break;
+            }
+        }
+    }
+
+    clearAll() {
+        this.walls = [];
+        this.bumpers = [];
+        this.spinners = [];
+        this.dropTargets = [];
+        this.flippers = [];
+        this.selectedObject = null;
+    }
+
+    saveLevel() {
+        const levelData = {
+            walls: this.walls,
+            bumpers: this.bumpers,
+            spinners: this.spinners,
+            dropTargets: this.dropTargets,
+            flippers: this.flippers
+        };
+
+        const dataStr = JSON.stringify(levelData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'pinball_level.json';
+        link.click();
+
+        URL.revokeObjectURL(url);
+    }
+
+    loadLevel() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const levelData = JSON.parse(e.target.result);
+                        this.loadLevelData(levelData);
+                    } catch (error) {
+                        alert('Error loading level file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+
+        input.click();
+    }
+
+    loadLevelData(levelData) {
+        this.clearAll();
+
+        if (levelData.walls) {
+            this.walls = levelData.walls.map(w => 
+                new EditorWall(w.x1, w.y1, w.x2, w.y2, w.width, w.color));
+        }
+
+        if (levelData.bumpers) {
+            this.bumpers = levelData.bumpers.map(b => 
+                new EditorBumper(b.x, b.y, b.radius, b.points));
+        }
+
+        if (levelData.spinners) {
+            this.spinners = levelData.spinners.map(s => 
+                new EditorSpinner(s.x, s.y, s.width, s.height));
+        }
+
+        if (levelData.dropTargets) {
+            this.dropTargets = levelData.dropTargets.map(d => 
+                new EditorDropTarget(d.x, d.y, d.width, d.height));
+        }
+
+        if (levelData.flippers) {
+            this.flippers = levelData.flippers.map(f => 
+                new EditorFlipper(f.x, f.y, f.isLeft));
+        }
+    }
+
+    resetBall() {
+        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH / 2, 50);
     }
 
     update() {
-        if (this.gameState.isGameOver) return;
+        if (!this.isEditMode) {
+            // Test mode updates
+            if (this.ball) {
+                this.ball.update();
 
-        const ballLost = this.ball.update();
+                // Check collisions with all objects
+                this.walls.forEach(wall => wall.checkCollision(this.ball));
+                this.bumpers.forEach(bumper => bumper.checkCollision(this.ball));
+                this.spinners.forEach(spinner => {
+                    spinner.update();
+                    spinner.checkCollision(this.ball);
+                });
+                this.dropTargets.forEach(target => {
+                    target.update();
+                    target.checkCollision(this.ball);
+                });
 
-        this.flippers.forEach(flipper => flipper.update());
-        this.bumpers.forEach(bumper => bumper.update());
-        this.spinners.forEach(spinner => spinner.update());
-        this.dropTargets.forEach(target => target.update());
-
-        this.checkCollisions();
-
-        if (ballLost && this.gameState.ballInPlay) {
-            this.gameState.balls--;
-            this.gameState.ballInPlay = false;
-
-            if (this.gameState.balls <= 0) {
-                this.gameOver();
-            } else {
-                setTimeout(() => {
-                    this.resetBall();
-                }, 1000);
+                // Simple flipper control
+                this.flippers.forEach(flipper => {
+                    if ((flipper.isLeft && this.keys['arrowleft']) || 
+                        (!flipper.isLeft && this.keys['arrowright'])) {
+                        flipper.isActive = true;
+                        flipper.angle = flipper.isLeft ? -Math.PI / 6 : Math.PI / 6;
+                    } else {
+                        flipper.isActive = false;
+                        flipper.angle = flipper.isLeft ? Math.PI / 8 : -Math.PI / 8;
+                    }
+                });
             }
         }
-    }
-
-    checkCollisions() {
-        // Wall collisions
-        this.walls.forEach(wall => {
-            wall.checkCollision(this.ball);
-        });
-
-        // Flipper collisions
-        this.flippers.forEach(flipper => {
-            flipper.checkCollision(this.ball);
-        });
-
-        // Bumper collisions
-        this.bumpers.forEach(bumper => {
-            const points = bumper.checkCollision(this.ball);
-            if (points > 0) {
-                this.gameState.updateScore(points);
-                this.updateUI();
-            }
-        });
-
-        // Spinner collisions
-        this.spinners.forEach(spinner => {
-            const points = spinner.checkCollision(this.ball);
-            if (points > 0) {
-                this.gameState.updateScore(points);
-                this.updateUI();
-            }
-        });
-
-        // Drop Target collisions
-        this.dropTargets.forEach(target => {
-            const points = target.checkCollision(this.ball);
-            if (points > 0) {
-                this.gameState.updateScore(points);
-                this.updateUI();
-            }
-        });
-
-        // Ramp collisions
-        this.ramps.forEach(ramp => {
-            ramp.checkCollision(this.ball);
-        });
     }
 
     draw() {
@@ -1144,67 +847,63 @@ class PinballGame {
         this.ctx.translate(this.offsetX, this.offsetY);
         this.ctx.scale(this.scale, this.scale);
 
+        // Draw background
         const gradient = this.ctx.createLinearGradient(0, 0, 0, CONFIG.VIRTUAL_HEIGHT);
         gradient.addColorStop(0, '#1a1a2e');
         gradient.addColorStop(1, '#0f1419');
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, CONFIG.VIRTUAL_WIDTH, CONFIG.VIRTUAL_HEIGHT);
 
-        // Draw all game elements
-        this.walls.forEach(wall => wall.draw(this.ctx));
-        this.ramps.forEach(ramp => ramp.draw(this.ctx));
-        this.bumpers.forEach(bumper => bumper.draw(this.ctx));
-        this.spinners.forEach(spinner => spinner.draw(this.ctx));
-        this.dropTargets.forEach(target => target.draw(this.ctx));
-        this.flippers.forEach(flipper => flipper.draw(this.ctx));
+        // Draw grid in edit mode
+        if (this.isEditMode) {
+            this.ctx.strokeStyle = '#333333';
+            this.ctx.lineWidth = 1;
+            const gridSize = 50;
 
-        if (this.gameState.ballInPlay) {
+            for (let x = 0; x <= CONFIG.VIRTUAL_WIDTH; x += gridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, 0);
+                this.ctx.lineTo(x, CONFIG.VIRTUAL_HEIGHT);
+                this.ctx.stroke();
+            }
+
+            for (let y = 0; y <= CONFIG.VIRTUAL_HEIGHT; y += gridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(CONFIG.VIRTUAL_WIDTH, y);
+                this.ctx.stroke();
+            }
+        }
+
+        // Draw all objects
+        this.walls.forEach(wall => wall.draw(this.ctx, wall === this.selectedObject));
+        this.bumpers.forEach(bumper => bumper.draw(this.ctx, bumper === this.selectedObject));
+        this.spinners.forEach(spinner => spinner.draw(this.ctx, spinner === this.selectedObject));
+        this.dropTargets.forEach(target => target.draw(this.ctx, target === this.selectedObject));
+        this.flippers.forEach(flipper => flipper.draw(this.ctx, flipper === this.selectedObject));
+
+        //        // Draw current wall being drawn
+        if (this.isDrawing && this.drawStart && this.currentMousePos) {
+            const width = parseInt(document.getElementById('wallWidth').value);
+            const color = document.getElementById('wallColor').value;
+
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = width;
+            this.ctx.lineCap = 'round';
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.drawStart.x, this.drawStart.y);
+            this.ctx.lineTo(this.currentMousePos.x, this.currentMousePos.y);
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1.0;
+        }
+
+        // Draw ball in test mode
+        if (!this.isEditMode && this.ball) {
             this.ball.draw(this.ctx);
         }
 
         this.ctx.restore();
-    }
-
-    updateUI() {
-        document.getElementById('currentScore').textContent = this.gameState.score.toLocaleString();
-        document.getElementById('highScore').textContent = this.gameState.highScore.toLocaleString();
-        document.getElementById('ballsLeft').textContent = this.gameState.balls;
-    }
-
-    gameOver() {
-        this.gameState.isGameOver = true;
-
-        const overlay = document.getElementById('gameOverOverlay');
-        const finalScore = document.getElementById('finalScore');
-        const newHighScore = document.getElementById('newHighScore');
-
-        finalScore.textContent = this.gameState.score.toLocaleString();
-
-        if (this.gameState.score === this.gameState.highScore && this.gameState.score > 0) {
-            newHighScore.style.display = 'block';
-        } else {
-            newHighScore.style.display = 'none';
-        }
-
-        overlay.style.display = 'flex';
-    }
-
-    restartGame() {
-        this.gameState.reset();
-        this.resetBall();
-
-        // Reset all game elements
-        this.dropTargets.forEach(target => {
-            target.isActive = true;
-            target.resetTime = 0;
-        });
-
-        this.spinners.forEach(spinner => {
-            spinner.angularVelocity = 0;
-        });
-
-        this.updateUI();
-        document.getElementById('gameOverOverlay').style.display = 'none';
     }
 
     gameLoop() {
@@ -1214,16 +913,7 @@ class PinballGame {
     }
 }
 
-// Initialize game
+// Initialize editor
 window.addEventListener('load', () => {
-    new PinballGame();
-});
-
-// Prevent scrolling and context menu
-document.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-}, { passive: false });
-
-document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
+    new LevelEditor();
 });

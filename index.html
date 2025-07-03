@@ -1,37 +1,62 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Enhanced Pinball Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinball Level Editor</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
-        <div class="score-panel">
-            <div class="score-item">
-                <span class="score-label">SCORE</span>
-                <span class="score-value" id="currentScore">0</span>
+    <div class="editor-container">
+        <div class="toolbar">
+            <div class="mode-selector">
+                <button id="editMode" class="mode-btn active">EDIT</button>
+                <button id="testMode" class="mode-btn">TEST</button>
             </div>
-            <div class="score-item">
-                <span class="score-label">BALLS</span>
-                <span class="score-value" id="ballsLeft">3</span>
+            
+            <div class="tool-group">
+                <label>Tool:</label>
+                <select id="toolSelect">
+                    <option value="wall">Wall</option>
+                    <option value="bumper">Bumper</option>
+                    <option value="spinner">Spinner</option>
+                    <option value="dropTarget">Drop Target</option>
+                    <option value="flipper">Flipper</option>
+                    <option value="delete">Delete</option>
+                </select>
             </div>
-            <div class="score-item">
-                <span class="score-label">HIGH SCORE</span>
-                <span class="score-value" id="highScore">0</span>
+
+            <div class="tool-group">
+                <button id="clearAll">Clear All</button>
+                <button id="saveLevel">Save Level</button>
+                <button id="loadLevel">Load Level</button>
             </div>
-            <button class="restart-btn" id="restartBtn">NEW GAME</button>
+
+            <div class="info">
+                <span id="modeInfo">Click and drag to draw walls</span>
+            </div>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="editorCanvas"></canvas>
 
-        <div class="game-over-overlay" id="gameOverOverlay">
-            <div class="game-over-content">
-                <h2>GAME OVER</h2>
-                <p>Final Score: <span id="finalScore">0</span></p>
-                <p id="newHighScore" class="new-high-score">NEW HIGH SCORE!</p>
-                <button class="restart-btn" id="gameOverRestart">PLAY AGAIN</button>
+        <div class="properties-panel">
+            <h3>Properties</h3>
+            <div id="wallProperties" class="property-group">
+                <label>Wall Width: <input type="range" id="wallWidth" min="5" max="30" value="20"></label>
+                <label>Wall Color: <input type="color" id="wallColor" value="#ff4444"></label>
+            </div>
+            <div id="bumperProperties" class="property-group" style="display:none;">
+                <label>Bumper Radius: <input type="range" id="bumperRadius" min="15" max="40" value="25"></label>
+                <label>Bumper Points: <input type="number" id="bumperPoints" value="100"></label>
+            </div>
+            <div id="flipperProperties" class="property-group" style="display:none;">
+                <label>Flipper Side: 
+                    <select id="flipperSide">
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                    </select>
+                </label>
             </div>
         </div>
     </div>
