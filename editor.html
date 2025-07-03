@@ -1,0 +1,450 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #2c2c2c;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .toolbar {
+            background: #1a1a1a;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 2px solid #4CAF50;
+        }
+
+        .mode-btn {
+            background: #444;
+            color: white;
+            border: 2px solid #4CAF50;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .mode-btn.active {
+            background: #4CAF50;
+            color: black;
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: #555;
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-group button {
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .tool-group button:hover {
+            background: #555;
+        }
+
+        .info {
+            color: #ffeb3b;
+            font-style: italic;
+        }
+
+        #canvas {
+            flex: 1;
+            background: #1a1a1a;
+            cursor: crosshair;
+        }
+
+        .test-mode #canvas {
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="toolbar">
+            <button id="editMode" class="mode-btn active">EDIT MODE</button>
+            <button id="testMode" class="mode-btn">TEST MODE</button>
+            
+            <div class="tool-group">
+                <button id="clearBtn">Clear All</button>
+                <button id="saveBtn">Save Level</button>
+                <button id="loadBtn">Load Level</button>
+            </div>
+
+            <div class="info">
+                <span id="infoText">Click and drag to draw walls. Switch to TEST MODE to test with ball.</span>
+            </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        class LevelEditor {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.isEditMode = true;
+                this.isDrawing = false;
+                this.walls = [];
+                this.ball = null;
+                this.keys = {};
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+                this.gameLoop();
+            }
+
+            setupCanvas() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight - 60; // toolbar height
+            }
+
+            setupEventListeners() {
+                // Mode buttons
+                document.getElementById('editMode').addEventListener('click', () => this.setEditMode());
+                document.getElementById('testMode').addEventListener('click', () => this.setTestMode());
+                
+                // Tool buttons
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearAll());
+                document.getElementById('saveBtn').addEventListener('click', () => this.saveLevel());
+                document.getElementById('loadBtn').addEventListener('click', () => this.loadLevel());
+
+                // Canvas events
+                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+
+                // Keyboard for ball reset
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && !this.isEditMode) {
+                        e.preventDefault();
+                        this.resetBall();
+                    }
+                });
+            }
+
+            setEditMode() {
+                this.isEditMode = true;
+                document.getElementById('editMode').classList.add('active');
+                document.getElementById('testMode').classList.remove('active');
+                document.body.classList.remove('test-mode');
+                document.getElementById('infoText').textContent = 'Click and drag to draw walls. Switch to TEST MODE to test with ball.';
+                this.ball = null;
+            }
+
+            setTestMode() {
+                this.isEditMode = false;
+                document.getElementById('editMode').classList.remove('active');
+                document.getElementById('testMode').classList.add('active');
+                document.body.classList.add('test-mode');
+                document.getElementById('infoText').textContent = 'Press SPACE to reset ball. Switch to EDIT MODE to modify level.';
+                this.resetBall();
+            }
+
+            onMouseDown(e) {
+                if (!this.isEditMode) return;
+                
+                this.isDrawing = true;
+                this.startX = e.offsetX;
+                this.startY = e.offsetY;
+            }
+
+            onMouseMove(e) {
+                if (!this.isEditMode || !this.isDrawing) return;
+                
+                this.currentX = e.offsetX;
+                this.currentY = e.offsetY;
+            }
+
+            onMouseUp(e) {
+                if (!this.isEditMode || !this.isDrawing) return;
+                
+                this.isDrawing = false;
+                const endX = e.offsetX;
+                const endY = e.offsetY;
+                
+                // Only create wall if there's meaningful distance
+                const distance = Math.sqrt((endX - this.startX) ** 2 + (endY - this.startY) ** 2);
+                if (distance > 10) {
+                    this.walls.push({
+                        x1: this.startX,
+                        y1: this.startY,
+                        x2: endX,
+                        y2: endY
+                    });
+                }
+            }
+
+            resetBall() {
+                this.ball = {
+                    x: this.canvas.width / 2,
+                    y: 50,
+                    vx: 0,
+                    vy: 0,
+                    radius: 10
+                };
+            }
+
+            clearAll() {
+                this.walls = [];
+                this.ball = null;
+            }
+
+            saveLevel() {
+                const levelData = {
+                    walls: this.walls
+                };
+                
+                const dataStr = JSON.stringify(levelData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'level.json';
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+
+            loadLevel() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const levelData = JSON.parse(e.target.result);
+                                this.walls = levelData.walls || [];
+                            } catch (error) {
+                                alert('Error loading level: ' + error.message);
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                
+                input.click();
+            }
+
+            update() {
+                if (!this.isEditMode && this.ball) {
+                    // Apply gravity
+                    this.ball.vy += 0.5;
+                    
+                    // Update position
+                    this.ball.x += this.ball.vx;
+                    this.ball.y += this.ball.vy;
+                    
+                    // Apply friction
+                    this.ball.vx *= 0.99;
+                    this.ball.vy *= 0.99;
+                    
+                    // Check wall collisions
+                    this.walls.forEach(wall => {
+                        this.checkWallCollision(wall);
+                    });
+                    
+                    // Bounce off screen edges
+                    if (this.ball.x - this.ball.radius < 0 || this.ball.x + this.ball.radius > this.canvas.width) {
+                        this.ball.vx *= -0.8;
+                        this.ball.x = Math.max(this.ball.radius, Math.min(this.canvas.width - this.ball.radius, this.ball.x));
+                    }
+                    
+                    if (this.ball.y - this.ball.radius < 0) {
+                        this.ball.vy *= -0.8;
+                        this.ball.y = this.ball.radius;
+                    }
+                    
+                    // Reset if ball falls off bottom
+                    if (this.ball.y > this.canvas.height + 100) {
+                        this.resetBall();
+                    }
+                }
+            }
+
+            checkWallCollision(wall) {
+                const dist = this.distanceToLine(this.ball.x, this.ball.y, wall.x1, wall.y1, wall.x2, wall.y2);
+                
+                if (dist < this.ball.radius + 5) { // 5 is wall thickness
+                    // Calculate wall normal
+                    const wallVecX = wall.x2 - wall.x1;
+                    const wallVecY = wall.y2 - wall.y1;
+                    const wallLength = Math.sqrt(wallVecX * wallVecX + wallVecY * wallVecY);
+                    
+                    // Normal perpendicular to wall
+                    const normalX = -wallVecY / wallLength;
+                    const normalY = wallVecX / wallLength;
+                    
+                    // Choose correct normal direction
+                    const toBallX = this.ball.x - wall.x1;
+                    const toBallY = this.ball.y - wall.y1;
+                    if (normalX * toBallX + normalY * toBallY < 0) {
+                        // Flip normal
+                        const temp = normalX;
+                        normalX = -normalX;
+                        normalY = -normalY;
+                    }
+                    
+                    // Move ball away from wall
+                    const penetration = this.ball.radius + 5 - dist;
+                    this.ball.x += normalX * penetration;
+                    this.ball.y += normalY * penetration;
+                    
+                    // Reflect velocity
+                    const dotProduct = this.ball.vx * normalX + this.ball.vy * normalY;
+                    this.ball.vx -= 2 * dotProduct * normalX;
+                    this.ball.vy -= 2 * dotProduct * normalY;
+                    
+                    // Apply damping
+                    this.ball.vx *= 0.8;
+                    this.ball.vy *= 0.8;
+                }
+            }
+
+            distanceToLine(px, py, x1, y1, x2, y2) {
+                const A = px - x1;
+                const B = py - y1;
+                const C = x2 - x1;
+                const D = y2 - y1;
+
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = lenSq !== 0 ? dot / lenSq : -1;
+
+                let xx, yy;
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+
+                const dx = px - xx;
+                const dy = py - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            draw() {
+                // Clear canvas
+                this.ctx.fillStyle = '#0a0a0a';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid in edit mode
+                if (this.isEditMode) {
+                    this.ctx.strokeStyle = '#333';
+                    this.ctx.lineWidth = 1;
+                    const gridSize = 50;
+                    
+                    for (let x = 0; x < this.canvas.width; x += gridSize) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, 0);
+                        this.ctx.lineTo(x, this.canvas.height);
+                        this.ctx.stroke();
+                    }
+                    
+                    for (let y = 0; y < this.canvas.height; y += gridSize) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, y);
+                        this.ctx.lineTo(this.canvas.width, y);
+                        this.ctx.stroke();
+                    }
+                }
+                
+                // Draw walls
+                this.ctx.strokeStyle = '#ff4444';
+                this.ctx.lineWidth = 10;
+                this.ctx.lineCap = 'round';
+                
+                this.walls.forEach(wall => {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(wall.x1, wall.y1);
+                    this.ctx.lineTo(wall.x2, wall.y2);
+                    this.ctx.stroke();
+                });
+                
+                // Draw current wall being drawn
+                if (this.isEditMode && this.isDrawing && this.currentX !== undefined) {
+                    this.ctx.strokeStyle = '#ff8888';
+                    this.ctx.globalAlpha = 0.7;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.startX, this.startY);
+                    this.ctx.lineTo(this.currentX, this.currentY);
+                    this.ctx.stroke();
+                    this.ctx.globalAlpha = 1.0;
+                }
+                
+                // Draw ball in test mode
+                if (!this.isEditMode && this.ball) {
+                    const gradient = this.ctx.createRadialGradient(
+                        this.ball.x - 3, this.ball.y - 3, 0,
+                        this.ball.x, this.ball.y, this.ball.radius
+                    );
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.3, '#ffff80');
+                    gradient.addColorStop(1, '#ffcc00');
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+
+            gameLoop() {
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Start editor when page loads
+        new LevelEditor();
+    </script>
+</body>
+</html>
