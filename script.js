@@ -5,7 +5,7 @@ const CONFIG = {
     BOUNCE_DAMPING: 0.8,
     FLIPPER_STRENGTH: 12,
     BALL_RADIUS: 8,
-    FLIPPER_LENGTH: 60,
+    FLIPPER_LENGTH: 50,
     FLIPPER_WIDTH: 8,
     LAUNCH_POWER: 20,
     MAX_BALL_SPEED: 25, // Максимальная скорость мяча
