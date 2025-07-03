@@ -1061,10 +1061,7 @@ class PinballGame {
 
         // Flipper collisions
         this.flippers.forEach(flipper => {
-            if (flipper.checkCollision(this.ball)) {
-                this.gameState.updateScore(10);
-                this.updateUI();
-            }
+            flipper.checkCollision(this.ball);
         });
 
         // Bumper collisions
