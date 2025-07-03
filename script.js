@@ -415,8 +415,8 @@ class Ramp {
     draw(ctx) {
         if (this.points.length < 2) return;
 
-        // Changed from green to blue/purple color scheme
-        ctx.strokeStyle = '#8844ff';
+        // Changed to green color scheme
+        ctx.strokeStyle = '#44ff88';
         ctx.lineWidth = this.width;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -430,8 +430,8 @@ class Ramp {
 
         ctx.stroke();
 
-        // Changed glow effect color
-        ctx.shadowColor = '#8844ff';
+        // Changed glow effect color to green
+        ctx.shadowColor = '#44ff88';
         ctx.shadowBlur = 10;
         ctx.stroke();
         ctx.shadowBlur = 0;
@@ -692,10 +692,10 @@ class Flipper {
             midY - cos * this.baseWidth / 2
         );
 
-        gradient.addColorStop(0, '#8888ff');
-        gradient.addColorStop(0.3, '#6666ff');
-        gradient.addColorStop(0.7, '#4444dd');
-        gradient.addColorStop(1, '#2222aa');
+        gradient.addColorStop(0, '#ff8888');
+        gradient.addColorStop(0.3, '#ff6666');
+        gradient.addColorStop(0.7, '#dd4444');
+        gradient.addColorStop(1, '#aa2222');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
@@ -976,21 +976,8 @@ class PinballGame {
             new DropTarget(CONFIG.VIRTUAL_WIDTH * 0.5, 300)
         ];
 
-        // Ramps (changed from green to purple/blue)
-        this.ramps = [
-            new Ramp([
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.1, 380),
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.25, 350),
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.4, 340),
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.55, 350)
-            ], 12),
-            new Ramp([
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.9, 320),
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.75, 290),
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.6, 280),
-                new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.45, 290)
-            ], 12)
-        ];
+        // Ramps removed
+        this.ramps = [];
     }
 
     resetBall() {
