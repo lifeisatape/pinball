@@ -950,8 +950,7 @@ class PinballGame {
             new Wall(5, 5, gameWidth - 5, 5),
             new Wall(gameWidth * 0.25, gameHeight - 80, gameWidth * 0, flipperY - 20),
             new Wall(gameWidth * 1, flipperY - 20, gameWidth * 0.75, gameHeight - 80),
-            new Wall(5, bottomY, leftWallEnd, bottomY),
-            new Wall(rightWallStart, bottomY, gameWidth - 5, bottomY)
+           
         ];
     }
 
