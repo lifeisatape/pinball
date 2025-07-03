@@ -109,7 +109,7 @@ class Ball {
         return false;
     }
 
-    
+
 
     draw(ctx) {
         // Draw main ball
@@ -269,6 +269,34 @@ class Flipper {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    getClosestPointOnLineSegment(point, lineStart, lineEnd) {
+        const A = point.x - lineStart.x;
+        const B = point.y - lineStart.y;
+        const C = lineEnd.x - lineStart.x;
+        const D = lineEnd.y - lineStart.y;
+
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+        if (lenSq !== 0) {
+            param = dot / lenSq;
+        }
+
+        let xx, yy;
+        if (param < 0) {
+            xx = lineStart.x;
+            yy = lineStart.y;
+        } else if (param > 1) {
+            xx = lineEnd.x;
+            yy = lineEnd.y;
+        } else {
+            xx = lineStart.x + param * C;
+            yy = lineStart.y + param * D;
+        }
+
+        return new Vector2D(xx, yy);
+    }
+
     getNormalToLineSegment(point, lineStart, lineEnd) {
         const dx = lineEnd.x - lineStart.x;
         const dy = lineEnd.y - lineStart.y;
@@ -306,22 +334,22 @@ class Wall {
     checkCollision(ball) {
         // Вычисляем расстояние от центра шарика до линии
         const distance = this.distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
-        
+
         if (distance < ball.radius + this.width / 2) {
             // Получаем нормаль к стене
             const normal = this.getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
-            
+
             // Выталкиваем шарик из стены
             const overlap = ball.radius + this.width / 2 - distance + 1;
             ball.position.x += normal.x * overlap;
             ball.position.y += normal.y * overlap;
-            
+
             // Отражаем скорость
             const dotProduct = ball.velocity.x * normal.x + ball.velocity.y * normal.y;
             ball.velocity.x -= 2 * dotProduct * normal.x;
             ball.velocity.y -= 2 * dotProduct * normal.y;
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-            
+
             return true;
         }
         return false;
@@ -443,11 +471,11 @@ class PinballGame {
             new Wall(5, 5, 5, gameHeight - 100), // Left wall
             new Wall(gameWidth - 5, 5, gameWidth - 5, gameHeight - 100), // Right wall
             new Wall(5, 5, gameWidth - 5, 5), // Top wall
-            
+
             // Наклонные стенки возле флипперов
             new Wall(gameWidth * 0.25, gameHeight - 80, gameWidth * 0, flipperY - 20), // Left slope
             new Wall(gameWidth * 1, flipperY - 20, gameWidth * 0.75, gameHeight - 80), // Right slope
-            
+
             // Bottom walls (горизонтальные части)
             new Wall(5, bottomY, leftWallEnd, bottomY), // Left bottom wall
             new Wall(rightWallStart, bottomY, gameWidth - 5, bottomY) // Right bottom wall
