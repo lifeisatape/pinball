@@ -26,12 +26,12 @@ body {
 }
 
 .score-panel {
-    background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #feca57);
-    padding: 8px;
+    background: #000000;
+    border: 2px solid #00ff00;
+    padding: 12px;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     z-index: 100;
     min-height: 60px;
 }
@@ -43,34 +43,38 @@ body {
 }
 
 .score-label {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: bold;
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    font-family: 'Courier New', monospace;
+    color: #00ff00;
+    letter-spacing: 1px;
 }
 
 .score-value {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 1);
-    color: #fff;
+    font-family: 'Courier New', monospace;
+    color: #00ff00;
+    letter-spacing: 1px;
 }
 
 .restart-btn {
-    background: linear-gradient(45deg, #ff4757, #ff3742);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
+    background: #000000;
+    color: #00ff00;
+    border: 2px solid #00ff00;
+    padding: 6px 12px;
+    border-radius: 0;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
 }
 
 .restart-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    background: #00ff00;
+    color: #000000;
 }
 
 #gameCanvas {
@@ -95,29 +99,34 @@ body {
 }
 
 .game-over-content {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: #000000;
     padding: 30px;
-    border-radius: 10px;
+    border-radius: 0;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border: 2px solid #fff;
+    border: 3px solid #00ff00;
 }
 
 .game-over-content h2 {
     font-size: 24px;
     margin-bottom: 15px;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    font-family: 'Courier New', monospace;
+    color: #00ff00;
+    letter-spacing: 2px;
 }
 
 .game-over-content p {
     margin: 10px 0;
     font-size: 16px;
+    font-family: 'Courier New', monospace;
+    color: #00ff00;
+    letter-spacing: 1px;
 }
 
 .new-high-score {
-    color: #feca57;
+    color: #ffff00;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(254, 202, 87, 0.8);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
     display: none;
 }
 
