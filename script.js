@@ -10,7 +10,7 @@ const CONFIG = {
     LAUNCH_POWER: 20,
     MAX_BALL_SPEED: 25,
     VIRTUAL_WIDTH: 320,
-    VIRTUAL_HEIGHT: 480
+    VIRTUAL_HEIGHT: 520
 };
 
 // Game State
