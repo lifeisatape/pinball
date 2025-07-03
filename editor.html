@@ -739,7 +739,7 @@
             }
 
             initTestGame() {
-                this.testGame = new TestGame(this.testCanvas, this.testCtx, {
+                this.testGame = new TestGame({
                     walls: this.walls,
                     bumpers: this.bumpers,
                     spinners: this.spinners,
@@ -1163,7 +1163,7 @@
         }
 
         class TestGame {
-            constructor() {
+            constructor(levelData) {
                 this.running = true;
                 this.canvas = document.getElementById('testCanvas');
                 this.ctx = this.canvas.getContext('2d');
@@ -1191,8 +1191,8 @@
                     new Flipper(CONFIG.VIRTUAL_WIDTH * 0.7, flipperY, false)
                 ];
 
-                // Current level is accessible in TestGame now
-                currentLevel = {
+                // Store level data
+                this.levelData = levelData || {
                     walls: [],
                     bumpers: [],
                     spinners: [],
@@ -1238,6 +1238,108 @@
                 this.ball.velocity.y = 0;
             }
 
+            checkWallCollision(wall) {
+                const distance = this.distanceToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
+
+                if (distance < this.ball.radius + wall.width / 2) {
+                    const normal = this.getNormalToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
+
+                    const overlap = this.ball.radius + wall.width / 2 - distance;
+                    const pushDistance = overlap * 0.8;
+                    this.ball.position.x += normal.x * pushDistance;
+                    this.ball.position.y += normal.y * pushDistance;
+
+                    const dotProduct = this.ball.velocity.dot(normal);
+                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                }
+            }
+
+            checkBumperCollision(bumper) {
+                const dx = this.ball.position.x - bumper.x;
+                const dy = this.ball.position.y - bumper.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < this.ball.radius + bumper.radius) {
+                    const normal = new Vector2D(dx / distance, dy / distance);
+
+                    const overlap = this.ball.radius + bumper.radius - distance + 2;
+                    this.ball.position.x += normal.x * overlap;
+                    this.ball.position.y += normal.y * overlap;
+
+                    const bounceForce = 15;
+                    this.ball.velocity.x = normal.x * bounceForce;
+                    this.ball.velocity.y = normal.y * bounceForce;
+                }
+            }
+
+            checkSpinnerCollision(spinner) {
+                const dx = Math.abs(this.ball.position.x - spinner.x);
+                const dy = Math.abs(this.ball.position.y - spinner.y);
+
+                if (dx < spinner.width/2 + this.ball.radius && dy < spinner.height/2 + this.ball.radius) {
+                    const normalX = this.ball.position.x < spinner.x ? -1 : 1;
+                    const normalY = this.ball.position.y < spinner.y ? -1 : 1;
+
+                    this.ball.velocity.x += normalX * 8;
+                    this.ball.velocity.y += normalY * 8;
+                }
+            }
+
+            checkDropTargetCollision(target) {
+                const dx = Math.abs(this.ball.position.x - target.x);
+                const dy = Math.abs(this.ball.position.y - target.y);
+
+                if (dx < target.width/2 + this.ball.radius && dy < target.height/2 + this.ball.radius) {
+                    const normalX = this.ball.position.x < target.x ? -1 : 1;
+                    this.ball.velocity.x = Math.abs(this.ball.velocity.x) * normalX * 1.2;
+                }
+            }
+
+            distanceToLineSegment(point, lineStart, lineEnd) {
+                const A = point.x - lineStart.x;
+                const B = point.y - lineStart.y;
+                const C = lineEnd.x - lineStart.x;
+                const D = lineEnd.y - lineStart.y;
+
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                if (lenSq !== 0) {
+                    param = dot / lenSq;
+                }
+
+                let xx, yy;
+                if (param < 0) {
+                    xx = lineStart.x;
+                    yy = lineStart.y;
+                } else if (param > 1) {
+                    xx = lineEnd.x;
+                    yy = lineEnd.y;
+                } else {
+                    xx = lineStart.x + param * C;
+                    yy = lineStart.y + param * D;
+                }
+
+                const dx = point.x - xx;
+                const dy = point.y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            getNormalToLineSegment(point, lineStart, lineEnd) {
+                const dx = lineEnd.x - lineStart.x;
+                const dy = lineEnd.y - lineStart.y;
+                const normal = new Vector2D(-dy, dx).normalize();
+
+                const toPoint = new Vector2D(point.x - lineStart.x, point.y - lineStart.y);
+                if (normal.dot(toPoint) < 0) {
+                    normal.multiply(-1);
+                }
+
+                return normal;
+            }
+
             update() {
                 // Update flippers
                 this.flippers.forEach(flipper => flipper.update());
@@ -1270,29 +1372,31 @@
                     flipper.checkCollision(this.ball);
                 });
 
-                // Test wall collisions
-                 if (currentLevel && currentLevel.walls) {
-                    currentLevel.walls.forEach(wall => {
-                        //wall.checkCollision(this.ball); // Assuming checkCollision method exists
+                // Test wall collisions - simple implementation
+                if (this.levelData && this.levelData.walls) {
+                    this.levelData.walls.forEach(wall => {
+                        this.checkWallCollision(wall);
                     });
                 }
 
-                // Test other object collisions
-                if (currentLevel && currentLevel.bumpers) {
-                    currentLevel.bumpers.forEach(bumper => {
-                        //bumper.checkCollision(this.ball); // Assuming checkCollision method exists
+                // Test bumper collisions
+                if (this.levelData && this.levelData.bumpers) {
+                    this.levelData.bumpers.forEach(bumper => {
+                        this.checkBumperCollision(bumper);
                     });
                 }
 
-                if (currentLevel && currentLevel.spinners) {
-                    currentLevel.spinners.forEach(spinner => {
-                        //spinner.checkCollision(this.ball); // Assuming checkCollision method exists
+                // Test spinner collisions
+                if (this.levelData && this.levelData.spinners) {
+                    this.levelData.spinners.forEach(spinner => {
+                        this.checkSpinnerCollision(spinner);
                     });
                 }
 
-                if (currentLevel && currentLevel.dropTargets) {
-                    currentLevel.dropTargets.forEach(target => {
-                        //target.checkCollision(this.ball); // Assuming checkCollision method exists
+                // Test drop target collisions
+                if (this.levelData && this.levelData.dropTargets) {
+                    this.levelData.dropTargets.forEach(target => {
+                        this.checkDropTargetCollision(target);
                     });
                 }
             }
@@ -1314,8 +1418,8 @@
                 this.ctx.fillRect(0, 0, CONFIG.VIRTUAL_WIDTH, CONFIG.VIRTUAL_HEIGHT);
 
                 // Draw walls
-                if (currentLevel && currentLevel.walls) {
-                    currentLevel.walls.forEach(wall => {
+                if (this.levelData && this.levelData.walls) {
+                    this.levelData.walls.forEach(wall => {
                         this.ctx.strokeStyle = wall.color;
                         this.ctx.lineWidth = wall.width;
                         this.ctx.lineCap = 'round';
@@ -1327,8 +1431,8 @@
                 }
 
                 // Draw bumpers
-                 if (currentLevel && currentLevel.bumpers) {
-                    currentLevel.bumpers.forEach(bumper => {
+                if (this.levelData && this.levelData.bumpers) {
+                    this.levelData.bumpers.forEach(bumper => {
                         const gradient = this.ctx.createRadialGradient(
                             bumper.x - 5, bumper.y - 5, 0,
                             bumper.x, bumper.y, bumper.radius
@@ -1348,23 +1452,63 @@
                     });
                 }
 
-                // Draw other objects (simplified versions)
-                if (currentLevel && currentLevel.spinners) {
-                    currentLevel.spinners.forEach(spinner => {
-                        this.ctx.fillStyle = '#4444ff';
+                // Draw spinners
+                if (this.levelData && this.levelData.spinners) {
+                    this.levelData.spinners.forEach(spinner => {
+                        const gradient = this.ctx.createLinearGradient(
+                            spinner.x - spinner.width/2, spinner.y,
+                            spinner.x + spinner.width/2, spinner.y
+                        );
+                        gradient.addColorStop(0, '#4444ff');
+                        gradient.addColorStop(0.5, '#6666ff');
+                        gradient.addColorStop(1, '#4444ff');
+
+                        this.ctx.fillStyle = gradient;
                         this.ctx.fillRect(
                             spinner.x - spinner.width/2,
                             spinner.y - spinner.height/2,
                             spinner.width,
                             spinner.height
                         );
+
+                        this.ctx.strokeStyle = '#ffffff';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(
+                            spinner.x - spinner.width/2,
+                            spinner.y - spinner.height/2,
+                            spinner.width,
+                            spinner.height
+                        );
+
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.beginPath();
+                        this.ctx.arc(spinner.x, spinner.y, 3, 0, Math.PI * 2);
+                        this.ctx.fill();
                     });
                 }
 
-                if (currentLevel && currentLevel.dropTargets) {
-                    currentLevel.dropTargets.forEach(target => {
-                        this.ctx.fillStyle = '#ff8800';
+                // Draw drop targets
+                if (this.levelData && this.levelData.dropTargets) {
+                    this.levelData.dropTargets.forEach(target => {
+                        const gradient = this.ctx.createLinearGradient(
+                            target.x - target.width/2, target.y,
+                            target.x + target.width/2, target.y
+                        );
+                        gradient.addColorStop(0, '#ff8800');
+                        gradient.addColorStop(0.5, '#ffaa00');
+                        gradient.addColorStop(1, '#ff8800');
+
+                        this.ctx.fillStyle = gradient;
                         this.ctx.fillRect(
+                            target.x - target.width/2,
+                            target.y - target.height/2,
+                            target.width,
+                            target.height
+                        );
+
+                        this.ctx.strokeStyle = '#ffffff';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(
                             target.x - target.width/2,
                             target.y - target.height/2,
                             target.width,
