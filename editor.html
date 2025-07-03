@@ -739,11 +739,29 @@
             }
 
             initTestGame() {
+                // Initialize objects with proper properties
+                const testBumpers = this.bumpers.map(bumper => ({
+                    ...bumper,
+                    hitAnimation: 0
+                }));
+
+                const testSpinners = this.spinners.map(spinner => ({
+                    ...spinner,
+                    angle: 0,
+                    angularVelocity: 0
+                }));
+
+                const testDropTargets = this.dropTargets.map(target => ({
+                    ...target,
+                    isActive: true,
+                    resetTime: 0
+                }));
+
                 this.testGame = new TestGame({
                     walls: this.walls,
-                    bumpers: this.bumpers,
-                    spinners: this.spinners,
-                    dropTargets: this.dropTargets,
+                    bumpers: testBumpers,
+                    spinners: testSpinners,
+                    dropTargets: testDropTargets,
                     flippers: this.flippers
                 });
             }
@@ -1271,30 +1289,61 @@
                     const bounceForce = 15;
                     this.ball.velocity.x = normal.x * bounceForce;
                     this.ball.velocity.y = normal.y * bounceForce;
+
+                    // Add hit animation
+                    bumper.hitAnimation = 1;
+                    return true;
                 }
+                return false;
             }
 
             checkSpinnerCollision(spinner) {
-                const dx = Math.abs(this.ball.position.x - spinner.x);
-                const dy = Math.abs(this.ball.position.y - spinner.y);
+                const cos = Math.cos(spinner.angle || 0);
+                const sin = Math.sin(spinner.angle || 0);
 
-                if (dx < spinner.width/2 + this.ball.radius && dy < spinner.height/2 + this.ball.radius) {
-                    const normalX = this.ball.position.x < spinner.x ? -1 : 1;
-                    const normalY = this.ball.position.y < spinner.y ? -1 : 1;
+                const dx = this.ball.position.x - spinner.x;
+                const dy = this.ball.position.y - spinner.y;
+                const localX = cos * dx + sin * dy;
+                const localY = -sin * dx + cos * dy;
 
-                    this.ball.velocity.x += normalX * 8;
-                    this.ball.velocity.y += normalY * 8;
+                if (Math.abs(localX) < spinner.width / 2 + this.ball.radius &&
+                    Math.abs(localY) < spinner.height / 2 + this.ball.radius) {
+
+                    const spinDirection = localX > 0 ? 1 : -1;
+                    spinner.angularVelocity = (spinner.angularVelocity || 0) + spinDirection * 0.3;
+
+                    const normal = new Vector2D(
+                        Math.abs(localX) > Math.abs(localY) ? Math.sign(localX) : 0,
+                        Math.abs(localY) > Math.abs(localX) ? Math.sign(localY) : 0
+                    );
+
+                    const worldNormalX = cos * normal.x - sin * normal.y;
+                    const worldNormalY = sin * normal.x + cos * normal.y;
+
+                    this.ball.velocity.x += worldNormalX * 8;
+                    this.ball.velocity.y += worldNormalY * 8;
+
+                    return true;
                 }
+                return false;
             }
 
             checkDropTargetCollision(target) {
+                if (!target.isActive) return false;
+
                 const dx = Math.abs(this.ball.position.x - target.x);
                 const dy = Math.abs(this.ball.position.y - target.y);
 
                 if (dx < target.width/2 + this.ball.radius && dy < target.height/2 + this.ball.radius) {
+                    target.isActive = false;
+                    target.resetTime = 300;
+
                     const normalX = this.ball.position.x < target.x ? -1 : 1;
                     this.ball.velocity.x = Math.abs(this.ball.velocity.x) * normalX * 1.2;
+
+                    return true;
                 }
+                return false;
             }
 
             distanceToLineSegment(point, lineStart, lineEnd) {
@@ -1344,6 +1393,33 @@
                 // Update flippers
                 this.flippers.forEach(flipper => flipper.update());
 
+                // Update objects with animations
+                if (this.levelData && this.levelData.bumpers) {
+                    this.levelData.bumpers.forEach(bumper => {
+                        if (bumper.hitAnimation > 0) {
+                            bumper.hitAnimation -= 0.1;
+                        }
+                    });
+                }
+
+                if (this.levelData && this.levelData.spinners) {
+                    this.levelData.spinners.forEach(spinner => {
+                        spinner.angle = (spinner.angle || 0) + (spinner.angularVelocity || 0);
+                        spinner.angularVelocity = (spinner.angularVelocity || 0) * 0.95;
+                    });
+                }
+
+                if (this.levelData && this.levelData.dropTargets) {
+                    this.levelData.dropTargets.forEach(target => {
+                        if (!target.isActive && target.resetTime > 0) {
+                            target.resetTime--;
+                            if (target.resetTime <= 0) {
+                                target.isActive = true;
+                            }
+                        }
+                    });
+                }
+
                 // Ball physics
                 this.ball.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
                 this.ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
@@ -1372,7 +1448,7 @@
                     flipper.checkCollision(this.ball);
                 });
 
-                // Test wall collisions - simple implementation
+                // Test wall collisions
                 if (this.levelData && this.levelData.walls) {
                     this.levelData.walls.forEach(wall => {
                         this.checkWallCollision(wall);
@@ -1430,12 +1506,14 @@
                     });
                 }
 
-                // Draw bumpers
+                // Draw bumpers with hit animation
                 if (this.levelData && this.levelData.bumpers) {
                     this.levelData.bumpers.forEach(bumper => {
+                        const animRadius = bumper.radius + (bumper.hitAnimation || 0) * 10;
+
                         const gradient = this.ctx.createRadialGradient(
                             bumper.x - 5, bumper.y - 5, 0,
-                            bumper.x, bumper.y, bumper.radius
+                            bumper.x, bumper.y, animRadius
                         );
                         gradient.addColorStop(0, '#ffffff');
                         gradient.addColorStop(0.3, '#ff4444');
@@ -1443,7 +1521,7 @@
 
                         this.ctx.fillStyle = gradient;
                         this.ctx.beginPath();
-                        this.ctx.arc(bumper.x, bumper.y, bumper.radius, 0, Math.PI * 2);
+                        this.ctx.arc(bumper.x, bumper.y, animRadius, 0, Math.PI * 2);
                         this.ctx.fill();
 
                         this.ctx.strokeStyle = '#ffffff';
@@ -1452,33 +1530,26 @@
                     });
                 }
 
-                // Draw spinners
+                // Draw spinners with rotation
                 if (this.levelData && this.levelData.spinners) {
                     this.levelData.spinners.forEach(spinner => {
-                        const gradient = this.ctx.createLinearGradient(
-                            spinner.x - spinner.width/2, spinner.y,
-                            spinner.x + spinner.width/2, spinner.y
-                        );
+                        this.ctx.save();
+                        this.ctx.translate(spinner.x, spinner.y);
+                        this.ctx.rotate(spinner.angle || 0);
+
+                        const gradient = this.ctx.createLinearGradient(-spinner.width/2, 0, spinner.width/2, 0);
                         gradient.addColorStop(0, '#4444ff');
                         gradient.addColorStop(0.5, '#6666ff');
                         gradient.addColorStop(1, '#4444ff');
 
                         this.ctx.fillStyle = gradient;
-                        this.ctx.fillRect(
-                            spinner.x - spinner.width/2,
-                            spinner.y - spinner.height/2,
-                            spinner.width,
-                            spinner.height
-                        );
+                        this.ctx.fillRect(-spinner.width/2, -spinner.height/2, spinner.width, spinner.height);
 
                         this.ctx.strokeStyle = '#ffffff';
                         this.ctx.lineWidth = 1;
-                        this.ctx.strokeRect(
-                            spinner.x - spinner.width/2,
-                            spinner.y - spinner.height/2,
-                            spinner.width,
-                            spinner.height
-                        );
+                        this.ctx.strokeRect(-spinner.width/2, -spinner.height/2, spinner.width, spinner.height);
+
+                        this.ctx.restore();
 
                         this.ctx.fillStyle = '#ffffff';
                         this.ctx.beginPath();
@@ -1487,9 +1558,11 @@
                     });
                 }
 
-                // Draw drop targets
+                // Draw drop targets with active/inactive state
                 if (this.levelData && this.levelData.dropTargets) {
                     this.levelData.dropTargets.forEach(target => {
+                        if (!target.isActive) return;
+
                         const gradient = this.ctx.createLinearGradient(
                             target.x - target.width/2, target.y,
                             target.x + target.width/2, target.y
