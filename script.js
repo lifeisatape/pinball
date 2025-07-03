@@ -914,7 +914,7 @@ class PinballGame {
 
     resizeCanvas() {
         this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 60;
+        this.canvas.height = window.innerHeight;
 
         const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
         const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
@@ -1162,13 +1162,34 @@ class PinballGame {
             this.ball.draw(this.ctx);
         }
 
+        // Draw UI on canvas
+        this.drawUI();
+
+        this.ctx.restore();
+    }
+
+    drawUI() {
+        this.ctx.save();
+        
+        // Set font style
+        this.ctx.font = '12px Courier New';
+        this.ctx.fillStyle = '#00ff00';
+        this.ctx.textAlign = 'left';
+        
+        // Draw score
+        this.ctx.fillText(`SCORE: ${this.gameState.score.toLocaleString()}`, 10, 25);
+        
+        // Draw balls left
+        this.ctx.fillText(`BALLS: ${this.gameState.balls}`, 10, 45);
+        
+        // Draw high score
+        this.ctx.fillText(`HIGH: ${this.gameState.highScore.toLocaleString()}`, 10, 65);
+        
         this.ctx.restore();
     }
 
     updateUI() {
-        document.getElementById('currentScore').textContent = this.gameState.score.toLocaleString();
-        document.getElementById('highScore').textContent = this.gameState.highScore.toLocaleString();
-        document.getElementById('ballsLeft').textContent = this.gameState.balls;
+        // UI is now drawn directly on canvas in drawUI method
     }
 
     gameOver() {
