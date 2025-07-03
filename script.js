@@ -981,7 +981,7 @@ class PinballGame {
     }
 
     resetBall() {
-        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH * 0.6, 50);
+        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH * 0.51, 50);
         this.ball.velocity = new Vector2D(0, 0);
         this.gameState.ballInPlay = true;
     }
