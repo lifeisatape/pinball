@@ -10,7 +10,7 @@ const CONFIG = {
     LAUNCH_POWER: 20,
     MAX_BALL_SPEED: 25,
     VIRTUAL_WIDTH: 320,
-    VIRTUAL_HEIGHT: 520
+    VIRTUAL_HEIGHT: 480
 };
 
 // Game State
@@ -914,7 +914,7 @@ class PinballGame {
 
     resizeCanvas() {
         this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this.canvas.height = window.innerHeight - 60;
 
         const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
         const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
@@ -1162,31 +1162,13 @@ class PinballGame {
             this.ball.draw(this.ctx);
         }
 
-        // Draw UI on canvas
-        this.drawUI();
-
-        this.ctx.restore();
-    }
-
-    drawUI() {
-        this.ctx.save();
-        
-        // Set font style
-        this.ctx.font = '14px Courier New';
-        this.ctx.fillStyle = '#00ff00';
-        this.ctx.textAlign = 'center';
-        
-        // Create single line UI string
-        const uiText = `SCORE: ${this.gameState.score.toLocaleString()}  |  BALLS: ${this.gameState.balls}  |  HIGH: ${this.gameState.highScore.toLocaleString()}`;
-        
-        // Draw centered at top
-        this.ctx.fillText(uiText, CONFIG.VIRTUAL_WIDTH / 2, 25);
-        
         this.ctx.restore();
     }
 
     updateUI() {
-        // UI is now drawn directly on canvas in drawUI method
+        document.getElementById('currentScore').textContent = this.gameState.score.toLocaleString();
+        document.getElementById('highScore').textContent = this.gameState.highScore.toLocaleString();
+        document.getElementById('ballsLeft').textContent = this.gameState.balls;
     }
 
     gameOver() {
