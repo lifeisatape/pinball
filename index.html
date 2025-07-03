@@ -1,16 +1,56 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>replit</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Classic Pinball Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  Hello world
-  <script src="script.js"></script>
-</body>
+    <div class="game-container">
+        <!-- Score Display -->
+        <div class="score-panel">
+            <div class="score-item">
+                <span class="score-label">SCORE</span>
+                <span class="score-value" id="currentScore">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">BALLS</span>
+                <span class="score-value" id="ballsLeft">3</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">HIGH SCORE</span>
+                <span class="score-value" id="highScore">0</span>
+            </div>
+            <button class="restart-btn" id="restartBtn">NEW GAME</button>
+            <a href="editor.html" class="restart-btn" style="text-decoration: none; display: inline-block;">LEVEL EDITOR</a>
+        </div>
 
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Control Instructions -->
+        <div class="controls-info">
+            <div class="control-hint left-hint">TAP HERE<br>LEFT FLIPPER</div>
+            <div class="control-hint right-hint">TAP HERE<br>RIGHT FLIPPER</div>
+        </div>
+
+        <!-- Launch Instructions -->
+        <div class="launch-info">
+            <div class="launch-hint">SWIPE UP TO LAUNCH</div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div class="game-over-overlay" id="gameOverOverlay">
+            <div class="game-over-content">
+                <h2>GAME OVER</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p id="newHighScore" class="new-high-score">NEW HIGH SCORE!</p>
+                <button class="restart-btn" id="gameOverRestart">PLAY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
 </html>

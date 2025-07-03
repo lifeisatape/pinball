@@ -1,0 +1,235 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.editor-container {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr 250px;
+    height: 100vh;
+    gap: 10px;
+    padding: 10px;
+}
+
+/* Toolbar */
+.toolbar {
+    grid-column: 1 / -1;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.toolbar h2 {
+    color: #4ecdc4;
+    margin-right: 20px;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 15px;
+    border-left: 1px solid #444;
+}
+
+.tool-group:first-of-type {
+    border-left: none;
+}
+
+.tool-btn {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.tool-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.tool-btn.active {
+    background: linear-gradient(45deg, #ff6b6b, #ff5252);
+}
+
+.tool-group label {
+    font-size: 12px;
+    color: #ccc;
+}
+
+.tool-group input {
+    margin-left: 5px;
+    padding: 4px 8px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background: #333;
+    color: white;
+    width: 80px;
+}
+
+/* Canvas Area */
+.canvas-area {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#editorCanvas {
+    background: linear-gradient(180deg, #0c0c0c, #1a1a1a);
+    border: 2px solid #333;
+    border-radius: 5px;
+    cursor: crosshair;
+    flex: 1;
+}
+
+.instructions {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 3px solid #4ecdc4;
+}
+
+.instructions h3 {
+    color: #4ecdc4;
+    margin-bottom: 10px;
+}
+
+.instructions ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.instructions li {
+    margin: 8px 0;
+    padding-left: 15px;
+    position: relative;
+}
+
+.instructions li:before {
+    content: "▶";
+    position: absolute;
+    left: 0;
+    color: #ff6b6b;
+}
+
+/* Properties Panel */
+.properties-panel {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #feca57;
+}
+
+.properties-panel h3 {
+    color: #feca57;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+#objectProperties {
+    color: #ccc;
+}
+
+.property-group {
+    margin: 15px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+}
+
+.property-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.property-group input,
+.property-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background: #333;
+    color: white;
+}
+
+.color-picker {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+}
+
+.color-option.selected {
+    border-color: #fff;
+    transform: scale(1.2);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .editor-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+    }
+    
+    .properties-panel {
+        order: 2;
+    }
+    
+    .canvas-area {
+        order: 3;
+    }
+}
+
+@media (max-width: 768px) {
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .tool-group {
+        border-left: none;
+        border-top: 1px solid #444;
+        padding: 10px 0;
+        justify-content: center;
+    }
+    
+    .tool-group:first-of-type {
+        border-top: none;
+    }
+}

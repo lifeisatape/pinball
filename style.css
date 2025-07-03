@@ -1,4 +1,227 @@
-html {
-  height: 100%;
-  width: 100%;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+}
+
+.game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Score Panel */
+.score-panel {
+    background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #feca57);
+    padding: 8px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    min-height: 60px;
+}
+
+.score-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.score-label {
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+.score-value {
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 1);
+    color: #fff;
+}
+
+.restart-btn {
+    background: linear-gradient(45deg, #ff4757, #ff3742);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.restart-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Game Canvas */
+#gameCanvas {
+    flex: 1;
+    background: linear-gradient(180deg, #0c0c0c, #1a1a1a);
+    border: 2px solid #333;
+    touch-action: none;
+    display: block;
+}
+
+/* Control Instructions */
+.controls-info {
+    position: absolute;
+    bottom: 80px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.control-hint {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.2;
+    border: 1px solid #555;
+    animation: pulse 2s infinite;
+}
+
+.left-hint {
+    border-left: 3px solid #ff6b6b;
+}
+
+.right-hint {
+    border-right: 3px solid #4ecdc4;
+}
+
+/* Launch Instructions */
+.launch-info {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 50;
+}
+
+.launch-hint {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.2;
+    border: 1px solid #555;
+    border-right: 3px solid #feca57;
+    animation: pulse 2s infinite;
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+}
+
+/* Game Over Overlay */
+.game-over-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+.game-over-content {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 2px solid #fff;
+}
+
+.game-over-content h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+.game-over-content p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.new-high-score {
+    color: #feca57;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(254, 202, 87, 0.8);
+    display: none;
+}
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+    .score-label {
+        font-size: 10px;
+    }
+    
+    .score-value {
+        font-size: 16px;
+    }
+    
+    .restart-btn {
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+    
+    .control-hint,
+    .launch-hint {
+        font-size: 9px;
+        padding: 6px 8px;
+    }
+}
+
+@media (max-height: 600px) {
+    .score-panel {
+        min-height: 50px;
+        padding: 8px;
+    }
+    
+    .controls-info {
+        bottom: 60px;
+    }
 }
