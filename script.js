@@ -986,17 +986,57 @@ class PinballGame {
     }
 
     setupEventListeners() {
+        // Track active touches
+        this.activeTouches = new Set();
+        
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
-            const screenX = touch.clientX - rect.left;
-            this.handleInput(screenX, true);
+            
+            // Process all new touches
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const screenX = touch.clientX - rect.left;
+                const isLeft = screenX < this.canvas.width * 0.5;
+                
+                // Add touch to active set
+                this.activeTouches.add(touch.identifier + (isLeft ? '_left' : '_right'));
+                
+                // Activate appropriate flipper
+                if (isLeft) {
+                    this.flippers[0].activate();
+                } else {
+                    this.flippers[1].activate();
+                }
+            }
         });
 
         this.canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            this.handleInput(0, false);
+            const rect = this.canvas.getBoundingClientRect();
+            
+            // Process ended touches
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                const screenX = touch.clientX - rect.left;
+                const isLeft = screenX < this.canvas.width * 0.5;
+                
+                // Remove touch from active set
+                this.activeTouches.delete(touch.identifier + (isLeft ? '_left' : '_right'));
+            }
+            
+            // Check if any touches are still active for each flipper
+            let leftActive = false;
+            let rightActive = false;
+            
+            this.activeTouches.forEach(touchId => {
+                if (touchId.endsWith('_left')) leftActive = true;
+                if (touchId.endsWith('_right')) rightActive = true;
+            });
+            
+            // Deactivate flippers that have no active touches
+            if (!leftActive) this.flippers[0].deactivate();
+            if (!rightActive) this.flippers[1].deactivate();
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
