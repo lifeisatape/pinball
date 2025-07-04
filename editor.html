@@ -397,10 +397,35 @@
                     this.selectedObject = this.findObjectAt(worldPos);
                     if (this.selectedObject) {
                         this.isDragging = true;
-                        this.dragOffset = {
-                            x: worldPos.x - this.selectedObject.object.x,
-                            y: worldPos.y - this.selectedObject.object.y
-                        };
+                        
+                        if (this.selectedObject.type === 'wall') {
+                            // For walls, store the original position based on which part was selected
+                            if (this.selectedObject.point === 'start') {
+                                this.dragOffset = {
+                                    x: worldPos.x - this.selectedObject.object.x1,
+                                    y: worldPos.y - this.selectedObject.object.y1
+                                };
+                            } else if (this.selectedObject.point === 'end') {
+                                this.dragOffset = {
+                                    x: worldPos.x - this.selectedObject.object.x2,
+                                    y: worldPos.y - this.selectedObject.object.y2
+                                };
+                            } else {
+                                // Moving whole wall
+                                this.dragOffset = {
+                                    x: worldPos.x - this.selectedObject.object.x1,
+                                    y: worldPos.y - this.selectedObject.object.y1,
+                                    x2: worldPos.x - this.selectedObject.object.x2,
+                                    y2: worldPos.y - this.selectedObject.object.y2
+                                };
+                            }
+                        } else {
+                            // For other objects
+                            this.dragOffset = {
+                                x: worldPos.x - this.selectedObject.object.x,
+                                y: worldPos.y - this.selectedObject.object.y
+                            };
+                        }
                     }
                 } else if (this.currentTool === 'delete') {
                     this.deleteObjectAt(worldPos);
@@ -421,8 +446,24 @@
 
                 // Handle object dragging
                 if (this.isDragging && this.selectedObject) {
-                    this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
-                    this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
+                    if (this.selectedObject.type === 'wall') {
+                        if (this.selectedObject.point === 'start') {
+                            this.selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
+                        } else if (this.selectedObject.point === 'end') {
+                            this.selectedObject.object.x2 = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.y2 = worldPos.y - this.dragOffset.y;
+                        } else {
+                            // Moving whole wall
+                            this.selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
+                            this.selectedObject.object.x2 = worldPos.x - this.dragOffset.x2;
+                            this.selectedObject.object.y2 = worldPos.y - this.dragOffset.y2;
+                        }
+                    } else {
+                        this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
+                        this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
+                    }
                 }
 
                 this.render();
@@ -547,11 +588,24 @@
                     }
                 }
 
-                // Check walls (lowest priority)
+                // Check walls - check for specific points first, then line
                 for (let wall of this.walls) {
-                    const dist = this.distanceToLine(worldPos, wall);
-                    if (dist <= tolerance) {
-                        return { type: 'wall', object: wall };
+                    // Check start point
+                    const startDist = Math.sqrt((worldPos.x - wall.x1) ** 2 + (worldPos.y - wall.y1) ** 2);
+                    if (startDist <= tolerance) {
+                        return { type: 'wall', object: wall, point: 'start' };
+                    }
+                    
+                    // Check end point
+                    const endDist = Math.sqrt((worldPos.x - wall.x2) ** 2 + (worldPos.y - wall.y2) ** 2);
+                    if (endDist <= tolerance) {
+                        return { type: 'wall', object: wall, point: 'end' };
+                    }
+                    
+                    // Check line (for moving whole wall)
+                    const lineDist = this.distanceToLine(worldPos, wall);
+                    if (lineDist <= tolerance) {
+                        return { type: 'wall', object: wall, point: 'whole' };
                     }
                 }
 
@@ -697,10 +751,29 @@
                     } else if (this.selectedObject.type === 'droptarget') {
                         this.ctx.strokeRect(obj.x - obj.width/2 - 5, obj.y - obj.height/2 - 5, obj.width + 10, obj.height + 10);
                     } else if (this.selectedObject.type === 'wall') {
+                        // Highlight the wall line
                         this.ctx.beginPath();
                         this.ctx.moveTo(obj.x1, obj.y1);
                         this.ctx.lineTo(obj.x2, obj.y2);
                         this.ctx.stroke();
+                        
+                        // Highlight specific points
+                        this.ctx.fillStyle = '#00ff00';
+                        this.ctx.setLineDash([]);
+                        
+                        if (this.selectedObject.point === 'start' || this.selectedObject.point === 'whole') {
+                            this.ctx.beginPath();
+                            this.ctx.arc(obj.x1, obj.y1, 8, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+                        
+                        if (this.selectedObject.point === 'end' || this.selectedObject.point === 'whole') {
+                            this.ctx.beginPath();
+                            this.ctx.arc(obj.x2, obj.y2, 8, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+                        
+                        this.ctx.setLineDash([5, 5]);
                     }
 
                     this.ctx.setLineDash([]);
