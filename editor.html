@@ -446,18 +446,25 @@
 
                 // Handle object dragging
                 if (this.isDragging && this.selectedObject) {
-                     if (this.selectedObject.type === 'tunnel') {
-                            if (this.selectedObject.point === 'entry') {
-                                this.selectedObject.object.entryX = worldPos.x - this.dragOffset.x;
-                                this.selectedObject.object.entryY = worldPos.y - this.dragOffset.y;
-                            } else if (this.selectedObject.point === 'exit') {
-                                this.selectedObject.object.exitX = worldPos.x - this.dragOffset.x;
-                                this.selectedObject.object.exitY = worldPos.y - this.dragOffset.y;
-                            }
-                        } else {
-                            this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
-                            this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
+                    if (this.selectedObject.type === 'wall') {
+                        if (this.selectedObject.point === 'start') {
+                            this.selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
+                        } else if (this.selectedObject.point === 'end') {
+                            this.selectedObject.object.x2 = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.y2 = worldPos.y - this.dragOffset.y;
+                        } else if (this.selectedObject.point === 'whole') {
+                            const deltaX = worldPos.x - this.dragOffset.x - this.selectedObject.object.x1;
+                            const deltaY = worldPos.y - this.dragOffset.y - this.selectedObject.object.y1;
+                            this.selectedObject.object.x1 += deltaX;
+                            this.selectedObject.object.y1 += deltaY;
+                            this.selectedObject.object.x2 += deltaX;
+                            this.selectedObject.object.y2 += deltaY;
                         }
+                    } else {
+                        this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
+                        this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
+                    }
                 }
 
                 this.render();
