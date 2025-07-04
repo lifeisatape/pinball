@@ -856,8 +856,7 @@
                 };
 
                 const dataStr = JSON.stringify(levelData, null, 2);
-                const dataBlob = new Blob([dataStr], { type:```text
- 'application/json' });
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(dataBlob);
 
                 const link = document.createElement('a');
