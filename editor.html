@@ -199,6 +199,11 @@
                     </label>
                 </div>
                 <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="snapToGrid" checked> Snap to Grid
+                    </label>
+                </div>
+                <div class="input-group">
                     <label>Grid Size:</label>
                     <input type="number" id="gridSize" value="20" min="10" max="50">
                 </div>
@@ -335,11 +340,23 @@
                 };
             }
 
+            snapToGrid(worldPos) {
+                if (!document.getElementById('snapToGrid').checked) {
+                    return worldPos;
+                }
+
+                const gridSize = parseInt(document.getElementById('gridSize').value);
+                return {
+                    x: Math.round(worldPos.x / gridSize) * gridSize,
+                    y: Math.round(worldPos.y / gridSize) * gridSize
+                };
+            }
+
             handleMouseDown(e) {
                 const rect = this.canvas.getBoundingClientRect();
                 const screenX = e.clientX - rect.left;
                 const screenY = e.clientY - rect.top;
-                const worldPos = this.screenToWorld(screenX, screenY);
+                const worldPos = this.snapToGrid(this.screenToWorld(screenX, screenY));
 
                 if (this.currentTool === 'wall') {
                     this.isDrawing = true;
@@ -382,7 +399,8 @@
                 const rect = this.canvas.getBoundingClientRect();
                 const screenX = e.clientX - rect.left;
                 const screenY = e.clientY - rect.top;
-                const worldPos = this.screenToWorld(screenX, screenY);
+                const rawWorldPos = this.screenToWorld(screenX, screenY);
+                const worldPos = this.snapToGrid(rawWorldPos);
 
                 this.mousePos = worldPos;
                 document.getElementById('coordinates').textContent = `X: ${Math.round(worldPos.x)}, Y: ${Math.round(worldPos.y)}`;
@@ -395,7 +413,7 @@
                     const rect = this.canvas.getBoundingClientRect();
                     const screenX = e.clientX - rect.left;
                     const screenY = e.clientY - rect.top;
-                    const worldPos = this.screenToWorld(screenX, screenY);
+                    const worldPos = this.snapToGrid(this.screenToWorld(screenX, screenY));
 
                     const width = parseInt(document.getElementById('wallWidth').value);
                     const color = document.getElementById('wallColor').value;
