@@ -1223,6 +1223,11 @@
 
             setupControls() {
                 this.keyHandler = (e) => {
+                    // Prevent default arrow key behavior (scrolling)
+                    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+                        e.preventDefault();
+                    }
+                    
                     if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
                         if (e.type === 'keydown') {
                             this.flippers[0].activate();
