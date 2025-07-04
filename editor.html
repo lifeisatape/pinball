@@ -271,6 +271,11 @@
                 this.offsetX = 0;
                 this.offsetY = 0;
 
+                // Selection and dragging
+                this.selectedObject = null;
+                this.isDragging = false;
+                this.dragOffset = null;
+
                 this.setupCanvas();
                 this.setupEventListeners();
                 this.setupTestMode();
@@ -388,6 +393,15 @@
                         isActive: true,
                         points: 200
                     });
+                } else if (this.currentTool === 'select') {
+                    this.selectedObject = this.findObjectAt(worldPos);
+                    if (this.selectedObject) {
+                        this.isDragging = true;
+                        this.dragOffset = {
+                            x: worldPos.x - this.selectedObject.object.x,
+                            y: worldPos.y - this.selectedObject.object.y
+                        };
+                    }
                 } else if (this.currentTool === 'delete') {
                     this.deleteObjectAt(worldPos);
                 }
@@ -404,6 +418,12 @@
 
                 this.mousePos = worldPos;
                 document.getElementById('coordinates').textContent = `X: ${Math.round(worldPos.x)}, Y: ${Math.round(worldPos.y)}`;
+
+                // Handle object dragging
+                if (this.isDragging && this.selectedObject) {
+                    this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
+                    this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
+                }
 
                 this.render();
             }
@@ -429,6 +449,12 @@
 
                     this.isDrawing = false;
                     this.drawStart = null;
+                }
+
+                // Stop dragging
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.dragOffset = null;
                 }
 
                 this.render();
@@ -491,6 +517,45 @@
                 const dx = point.x - xx;
                 const dy = point.y - yy;
                 return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            findObjectAt(worldPos) {
+                const tolerance = 20;
+
+                // Check bumpers (highest priority for selection)
+                for (let bumper of this.bumpers) {
+                    const dist = Math.sqrt((worldPos.x - bumper.x) ** 2 + (worldPos.y - bumper.y) ** 2);
+                    if (dist <= bumper.radius + tolerance) {
+                        return { type: 'bumper', object: bumper };
+                    }
+                }
+
+                // Check spinners
+                for (let spinner of this.spinners) {
+                    const dist = Math.sqrt((worldPos.x - spinner.x) ** 2 + (worldPos.y - spinner.y) ** 2);
+                    if (dist <= spinner.width / 2 + tolerance) {
+                        return { type: 'spinner', object: spinner };
+                    }
+                }
+
+                // Check drop targets
+                for (let target of this.dropTargets) {
+                    const dx = Math.abs(worldPos.x - target.x);
+                    const dy = Math.abs(worldPos.y - target.y);
+                    if (dx <= target.width / 2 + tolerance && dy <= target.height / 2 + tolerance) {
+                        return { type: 'droptarget', object: target };
+                    }
+                }
+
+                // Check walls (lowest priority)
+                for (let wall of this.walls) {
+                    const dist = this.distanceToLine(worldPos, wall);
+                    if (dist <= tolerance) {
+                        return { type: 'wall', object: wall };
+                    }
+                }
+
+                return null;
             }
 
             updateModeIndicator() {
@@ -615,6 +680,31 @@
                         target.height
                     );
                 });
+
+                // Draw selection highlight
+                if (this.selectedObject && this.currentTool === 'select') {
+                    this.ctx.strokeStyle = '#00ff00';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.setLineDash([5, 5]);
+
+                    const obj = this.selectedObject.object;
+                    if (this.selectedObject.type === 'bumper') {
+                        this.ctx.beginPath();
+                        this.ctx.arc(obj.x, obj.y, obj.radius + 5, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                    } else if (this.selectedObject.type === 'spinner') {
+                        this.ctx.strokeRect(obj.x - obj.width/2 - 5, obj.y - obj.height/2 - 5, obj.width + 10, obj.height + 10);
+                    } else if (this.selectedObject.type === 'droptarget') {
+                        this.ctx.strokeRect(obj.x - obj.width/2 - 5, obj.y - obj.height/2 - 5, obj.width + 10, obj.height + 10);
+                    } else if (this.selectedObject.type === 'wall') {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(obj.x1, obj.y1);
+                        this.ctx.lineTo(obj.x2, obj.y2);
+                        this.ctx.stroke();
+                    }
+
+                    this.ctx.setLineDash([]);
+                }
 
                 // Draw flippers
                 this.flippers.forEach(flipper => {
