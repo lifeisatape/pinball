@@ -397,7 +397,7 @@
                     this.selectedObject = this.findObjectAt(worldPos);
                     if (this.selectedObject) {
                         this.isDragging = true;
-                        
+
                         if (this.selectedObject.type === 'wall') {
                             // For walls, store the original position based on which part was selected
                             if (this.selectedObject.point === 'start') {
@@ -446,24 +446,18 @@
 
                 // Handle object dragging
                 if (this.isDragging && this.selectedObject) {
-                    if (this.selectedObject.type === 'wall') {
-                        if (this.selectedObject.point === 'start') {
-                            this.selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
-                            this.selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
-                        } else if (this.selectedObject.point === 'end') {
-                            this.selectedObject.object.x2 = worldPos.x - this.dragOffset.x;
-                            this.selectedObject.object.y2 = worldPos.y - this.dragOffset.y;
+                     if (this.selectedObject.type === 'tunnel') {
+                            if (this.selectedObject.point === 'entry') {
+                                this.selectedObject.object.entryX = worldPos.x - this.dragOffset.x;
+                                this.selectedObject.object.entryY = worldPos.y - this.dragOffset.y;
+                            } else if (this.selectedObject.point === 'exit') {
+                                this.selectedObject.object.exitX = worldPos.x - this.dragOffset.x;
+                                this.selectedObject.object.exitY = worldPos.y - this.dragOffset.y;
+                            }
                         } else {
-                            // Moving whole wall
-                            this.selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
-                            this.selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
-                            this.selectedObject.object.x2 = worldPos.x - this.dragOffset.x2;
-                            this.selectedObject.object.y2 = worldPos.y - this.dragOffset.y2;
+                            this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
                         }
-                    } else {
-                        this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
-                        this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
-                    }
                 }
 
                 this.render();
@@ -595,13 +589,13 @@
                     if (startDist <= tolerance) {
                         return { type: 'wall', object: wall, point: 'start' };
                     }
-                    
+
                     // Check end point
                     const endDist = Math.sqrt((worldPos.x - wall.x2) ** 2 + (worldPos.y - wall.y2) ** 2);
                     if (endDist <= tolerance) {
                         return { type: 'wall', object: wall, point: 'end' };
                     }
-                    
+
                     // Check line (for moving whole wall)
                     const lineDist = this.distanceToLine(worldPos, wall);
                     if (lineDist <= tolerance) {
@@ -756,23 +750,1275 @@
                         this.ctx.moveTo(obj.x1, obj.y1);
                         this.ctx.lineTo(obj.x2, obj.y2);
                         this.ctx.stroke();
-                        
+
                         // Highlight specific points
                         this.ctx.fillStyle = '#00ff00';
                         this.ctx.setLineDash([]);
-                        
+
                         if (this.selectedObject.point === 'start' || this.selectedObject.point === 'whole') {
                             this.ctx.beginPath();
                             this.ctx.arc(obj.x1, obj.y1, 8, 0, Math.PI * 2);
                             this.ctx.fill();
                         }
-                        
+
                         if (this.selectedObject.point === 'end' || this.selectedObject.point === 'whole') {
                             this.ctx.beginPath();
                             this.ctx.arc(obj.x2, obj.y2, 8, 0, Math.PI * 2);
                             this.ctx.fill();
                         }
-                        
+
+                        this.ctx.setLineDash([5, 5]);
+                    }
+
+                    this.ctx.setLineDash([]);
+                }
+
+                // Draw flippers
+                this.flippers.forEach(flipper => {
+                    this.ctx.fillStyle = '#ff6666';
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 1.5;
+
+                    const length = CONFIG.FLIPPER_LENGTH;
+                    const width = CONFIG.FLIPPER_WIDTH;
+                    const angle = flipper.isLeft ? Math.PI / 8 : -Math.PI / 8;
+
+                    this.ctx.save();
+                    this.ctx.translate(flipper.x, flipper.y);
+                    this.ctx.rotate(angle);
+
+                    this.ctx.fillRect(-width/2, 0, width, length);
+                    this.ctx.strokeRect(-width/2, 0, width, length);
+
+                    this.ctx.restore();
+
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(flipper.x, flipper.y, 5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                // Draw current drawing line
+                if (this.isDrawing && this.drawStart) {
+                    const width = parseInt(document.getElementById('wallWidth').value);
+                    const color = document.getElementById('wallColor').value;
+
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = width;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.drawStart.x, this.drawStart.y);
+                    this.ctx.lineTo(this.mousePos.x, this.mousePos.y);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                }
+
+                this.ctx.restore();
+            }
+
+            drawGrid() {
+                const gridSize = parseInt(document.getElementById('gridSize').value);
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 1;
+
+                for (let x = 0; x <= CONFIG.VIRTUAL_WIDTH; x += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, CONFIG.VIRTUAL_HEIGHT);
+                    this.ctx.stroke();
+                }
+
+                for (let y = 0; y <= CONFIG.VIRTUAL_HEIGHT; y += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(CONFIG.VIRTUAL_WIDTH, y);
+                    this.ctx.stroke();
+                }
+            }
+
+            clearLevel() {
+                if (confirm('Clear all objects? This cannot be undone.')) {
+                    this.walls = [];
+                    this.bumpers = [];
+                    this.spinners = [];
+                    this.dropTargets = [];
+                    this.render();
+                }
+            }
+
+            saveLevel() {
+                const levelData = {
+                    walls: this.walls,
+                    bumpers: this.bumpers,
+                    spinners: this.spinners,
+                    dropTargets: this.dropTargets
+                };
+
+                const dataStr = JSON.stringify(levelData, null, 2);
+                const dataBlob = new Blob([dataStr], { type:```text
+ 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'pinball_level.json';
+                link.click();
+
+                URL.revokeObjectURL(url);
+            }
+
+            loadLevel() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const levelData = JSON.parse(e.target.result);
+                                this.walls = levelData.walls || [];
+                                this.bumpers = levelData.bumpers || [];
+                                this.spinners = levelData.spinners || [];
+                                this.dropTargets = levelData.dropTargets || [];
+                                this.render();
+                            } catch (error) {
+                                alert('Error loading level file: ' + error.message);
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+
+                input.click();
+            }
+
+            setupTestMode() {
+                // Test mode will use simplified versions of game classes
+                this.testGame = null;
+            }
+
+            enterTestMode() {
+                document.getElementById('testModeOverlay').style.display = 'block';
+                this.initTestGame();
+            }
+
+            exitTestMode() {
+                document.getElementById('testModeOverlay').style.display = 'none';
+                if (this.testGame) {
+                    this.testGame.stop();
+                    this.testGame = null;
+                }
+            }
+
+            initTestGame() {
+                // Initialize objects with proper properties
+                const testBumpers = this.bumpers.map(bumper => ({
+                    ...bumper,
+                    hitAnimation: 0
+                }));
+
+                const testSpinners = this.spinners.map(spinner => ({
+                    ...spinner,
+                    angle: 0,
+                    angularVelocity: 0
+                }));
+
+                const testDropTargets = this.dropTargets.map(target => ({
+                    ...target,
+                    isActive: true,
+                    resetTime: 0
+                }));
+
+                this.testGame = new TestGame({
+                    walls: this.walls,
+                    bumpers: testBumpers,
+                    spinners: testSpinners,
+                    dropTargets: testDropTargets,
+                    flippers: this.flippers
+                });
+            }
+
+            resetTestBall() {
+                if (this.testGame) {
+                    this.testGame.resetBall();
+                }
+            }
+        }
+
+        // Simplified Test Game for level testing
+        // Vector2D Class (copy from original)
+        class Vector2D {
+            constructor(x = 0, y = 0) {
+                this.x = x;
+                this.y = y;
+            }
+
+            add(vector) {
+                this.x += vector.x;
+                this.y += vector.y;
+                return this;
+            }
+
+            multiply(scalar) {
+                this.x *= scalar;
+                this.y *= scalar;
+                return this;
+            }
+
+            magnitude() {
+                return Math.sqrt(this.x * this.x + this.y * this.y);
+            }
+
+            normalize() {
+                const mag = this.magnitude();
+                if (mag > 0) {
+                    this.x /= mag;
+                    this.y /= mag;
+                }
+                return this;
+            }
+
+            copy() {
+                return new Vector2D(this.x, this.y);
+            }
+
+            dot(vector) {
+                return this.x * vector.x + this.y * vector.y;
+            }
+
+            clamp(maxLength) {
+                const mag = this.magnitude();
+                if (mag > maxLength) {
+                    this.normalize().multiply(maxLength);
+                }
+                return this;
+            }
+        }
+
+        // FlipperShape Class (exact copy from original)
+        class FlipperShape {
+            constructor(pivotX, pivotY, length, baseWidth, tipWidth, isLeft) {
+                this.pivot = new Vector2D(pivotX, pivotY);
+                this.length = length;
+                this.baseWidth = baseWidth;
+                this.tipWidth = tipWidth;
+                this.isLeft = isLeft;
+                this.angle = 0;
+                this.updateShape();
+            }
+
+            updateShape() {
+                const cos = Math.cos(this.angle);
+                const sin = Math.sin(this.angle);
+
+                this.points = [];
+                const segments = 12;
+                const capSegments = 8;
+
+                const bodyPoints = [];
+
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const width = this.baseWidth + (this.tipWidth - this.baseWidth) * t;
+                    const halfWidth = width / 2;
+                    const x = this.isLeft ? t * this.length : -t * this.length;
+
+                    bodyPoints.push({
+                        top: { x: x, y: -halfWidth },
+                        bottom: { x: x, y: halfWidth }
+                    });
+                }
+
+                const tipX = this.isLeft ? this.length : -this.length;
+                const tipRadius = this.tipWidth / 2;
+
+                for (let i = 0; i <= capSegments; i++) {
+                    const angle = this.isLeft ? 
+                        Math.PI/2 - (i / capSegments) * Math.PI :
+                        Math.PI/2 + (i / capSegments) * Math.PI;
+
+                    const capX = tipX + Math.cos(angle) * tipRadius;
+                    const capY = Math.sin(angle) * tipRadius;
+
+                    this.points.push({ x: capX, y: capY });
+                }
+
+                for (let i = segments - 1; i >= 0; i--) {
+                    this.points.push(bodyPoints[i].top);
+                }
+
+                const baseRadius = this.baseWidth / 2;
+
+                for (let i = 0; i <= capSegments; i++) {
+                    const angle = this.isLeft ?
+                        Math.PI/2 + (i / capSegments) * Math.PI :
+                        Math.PI/2 - (i / capSegments) * Math.PI;
+
+                    const capX = Math.cos(angle) * baseRadius;
+                    const capY = Math.sin(angle) * baseRadius;
+
+                    this.points.push({ x: capX, y: capY });
+                }
+
+                for (let i = 1; i <= segments; i++) {
+                    this.points.push(bodyPoints[i].bottom);
+                }
+
+                this.worldPoints = this.points.map(point => {
+                    const worldX = this.pivot.x + cos * point.x - sin * point.y;
+                    const worldY = this.pivot.y + sin * point.x + cos * point.y;
+                    return new Vector2D(worldX, worldY);
+                });
+            }
+
+            intersectsCircle(circle) {
+                const cos = Math.cos(-this.angle);
+                const sin = Math.sin(-this.angle);
+                const dx = circle.position.x - this.pivot.x;
+                const dy = circle.position.y - this.pivot.y;
+
+                const localX = cos * dx - sin * dy;
+                const localY = sin * dx + cos * dy;
+
+                let t = 0;
+                let closestX = 0;
+                let closestY = 0;
+                let minDistance = Infinity;
+                let isEndCap = false;
+
+                if (this.isLeft) {
+                    t = Math.max(0, Math.min(1, localX / this.length));
+                } else {
+                    t = Math.max(0, Math.min(1, -localX / this.length));
+                }
+
+                const bodyX = this.isLeft ? t * this.length : -t * this.length;
+                const width = this.baseWidth + (this.tipWidth - this.baseWidth) * t;
+                const halfWidth = width / 2;
+
+                const bodyClosestY = Math.max(-halfWidth, Math.min(halfWidth, localY));
+                const bodyDistance = Math.sqrt((localX - bodyX) * (localX - bodyX) + (localY - bodyClosestY) * (localY - bodyClosestY));
+
+                closestX = bodyX;
+                closestY = bodyClosestY;
+                minDistance = bodyDistance;
+
+                const tipX = this.isLeft ? this.length : -this.length;
+                const tipRadius = this.tipWidth / 2;
+                const tipDistance = Math.sqrt((localX - tipX) * (localX - tipX) + localY * localY);
+
+                if (tipDistance < minDistance && tipDistance <= tipRadius) {
+                    if (tipDistance > 0.1) {
+                        const tipNormalX = (localX - tipX) / tipDistance;
+                        const tipNormalY = localY / tipDistance;
+                        closestX = tipX + tipNormalX * tipRadius;
+                        closestY = tipNormalY * tipRadius;
+                    } else {
+                        closestX = tipX;
+                        closestY = 0;
+                    }
+                    minDistance = tipDistance;
+                    isEndCap = true;
+                }
+
+                const baseRadius = this.baseWidth / 2;
+                const baseDistance = Math.sqrt(localX * localX + localY * localY);
+
+                if (baseDistance < minDistance && baseDistance <= baseRadius) {
+                    if (baseDistance > 0.1) {
+                        const baseNormalX = localX / baseDistance;
+                        const baseNormalY = localY / baseDistance;
+                        closestX = baseNormalX * baseRadius;
+                        closestY = baseNormalY * baseRadius;
+                    } else {
+                        closestX = 0;
+                        closestY = baseRadius;
+                    }
+                    minDistance = baseDistance;
+                    isEndCap = true;
+                }
+
+                if (minDistance <= circle.radius) {
+                    let normalX, normalY;
+
+                    if (isEndCap) {
+                        if (minDistance > 0.1) {
+                            const centerX = closestX === tipX ? tipX : 0;
+                            const centerY = 0;
+                            normalX = (localX - centerX) / minDistance;
+                            normalY = (localY - centerY) / minDistance;
+                        } else {
+                            normalX = localX > 0 ? 1 : -1;
+                            normalY = 0;
+                        }
+                    } else {
+                        if (minDistance > 0.1) {
+                            normalX = (localX - closestX) / minDistance;
+                            normalY = (localY - closestY) / minDistance;
+                        } else {
+                            normalX = 0;
+                            normalY = localY > 0 ? 1 : -1;
+                        }
+                    }
+
+                    const worldCos = Math.cos(this.angle);
+                    const worldSin = Math.sin(this.angle);
+                    const worldNormalX = worldCos * normalX - worldSin * normalY;
+                    const worldNormalY = worldSin * normalX + worldCos * normalY;
+
+                    return {
+                        hit: true,
+                        normal: new Vector2D(worldNormalX, worldNormalY),
+                        penetration: circle.radius - minDistance + 0.5,
+                        contactPoint: new Vector2D(
+                            this.pivot.x + worldCos * closestX - worldSin * closestY,
+                            this.pivot.y + worldSin * closestX + worldCos * closestY
+                        )
+                    };
+                }
+
+                return { hit: false };
+            }
+        }
+
+        // Flipper Class (exact copy from original)
+        class Flipper {
+            constructor(x, y, isLeft) {
+                this.position = new Vector2D(x, y);
+                this.isLeft = isLeft;
+
+                this.restAngle = isLeft ? Math.PI / 8 : -Math.PI / 8;
+                this.activeAngle = isLeft ? -Math.PI / 6 : Math.PI / 6;
+
+                this.angle = this.restAngle;
+                this.targetAngle = this.angle;
+                this.length = CONFIG.FLIPPER_LENGTH;
+                this.baseWidth = CONFIG.FLIPPER_WIDTH * 1.5;
+                this.tipWidth = CONFIG.FLIPPER_WIDTH * 0.8;
+                this.isActive = false;
+                this.angularVelocity = 0;
+                this.lastAngle = this.angle;
+
+                this.shape = new FlipperShape(x, y, this.length, this.baseWidth, this.tipWidth, isLeft);
+                this.updateShape();
+            }
+
+            updateShape() {
+                this.shape.angle = this.angle;
+                this.shape.updateShape();
+            }
+
+            activate() {
+                this.isActive = true;
+                this.targetAngle = this.activeAngle;
+            }
+
+            deactivate() {
+                this.isActive = false;
+                this.targetAngle = this.restAngle;
+            }
+
+            update() {
+                this.lastAngle = this.angle;
+
+                const angleDiff = this.targetAngle - this.angle;
+                this.angularVelocity = angleDiff * 0.4;
+                this.angle += this.angularVelocity;
+
+                const minAngle = Math.min(this.restAngle, this.activeAngle);
+                const maxAngle = Math.max(this.restAngle, this.activeAngle);
+                this.angle = Math.max(minAngle, Math.min(maxAngle, this.angle));
+
+                this.updateShape();
+            }
+
+            draw(ctx) {
+                if (this.shape.points.length === 0) return;
+
+                ctx.save();
+
+                const cos = Math.cos(this.angle);
+                const sin = Math.sin(this.angle);
+                const midX = this.position.x + cos * (this.length / 2);
+                const midY = this.position.y + sin * (this.length / 2);
+
+                const gradient = ctx.createLinearGradient(
+                    midX - sin * this.baseWidth / 2,
+                    midY + cos * this.baseWidth / 2,
+                    midX + sin * this.baseWidth / 2,
+                    midY - cos * this.baseWidth / 2
+                );
+
+                gradient.addColorStop(0, '#ff8888');
+                gradient.addColorStop(0.3, '#ff6666');
+                gradient.addColorStop(0.7, '#dd4444');
+                gradient.addColorStop(1, '#aa2222');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+
+                if (this.shape.worldPoints && this.shape.worldPoints.length > 0) {
+                    ctx.moveTo(this.shape.worldPoints[0].x, this.shape.worldPoints[0].y);
+
+                    for (let i = 1; i < this.shape.worldPoints.length; i++) {
+                        ctx.lineTo(this.shape.worldPoints[i].x, this.shape.worldPoints[i].y);
+                    }
+
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    const innerGradient = ctx.createRadialGradient(
+                        midX - cos * 10, midY - sin * 10, 0,
+                        midX, midY, this.length / 3
+                    );
+                    innerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                    innerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                    ctx.fillStyle = innerGradient;
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                const pivotGradient = ctx.createRadialGradient(
+                    this.position.x - 1, this.position.y - 1, 0,
+                    this.position.x, this.position.y, 6
+                );
+                pivotGradient.addColorStop(0, '#ffffff');
+                pivotGradient.addColorStop(0.3, '#cccccc');
+                pivotGradient.addColorStop(0.7, '#888888');
+                pivotGradient.addColorStop(1, '#444444');
+
+                ctx.fillStyle = pivotGradient;
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#222222';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            checkCollision(ball) {
+                const collision = this.shape.intersectsCircle(ball);
+
+                if (collision.hit) {
+                    const pushDistance = collision.penetration + 2;
+                    ball.position.x += collision.normal.x * pushDistance;
+                    ball.position.y += collision.normal.y * pushDistance;
+
+                    const currentAngularVelocity = this.angle - this.lastAngle;
+
+                    const contactOffset = new Vector2D(
+                        collision.contactPoint.x - this.position.x,
+                        collision.contactPoint.y - this.position.y
+                    );
+
+                    const tangentialVelocity = new Vector2D(
+                        -contactOffset.y * currentAngularVelocity * 10,
+                        contactOffset.x * currentAngularVelocity * 10
+                    );
+
+                    const velocityDotNormal = ball.velocity.dot(collision.normal);
+                    if (velocityDotNormal < 0) {
+                        ball.velocity.x -= 2 * velocityDotNormal * collision.normal.x;
+                        ball.velocity.y -= 2 * velocityDotNormal * collision.normal.y;
+                    }
+
+                    if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
+                        const normalForce = CONFIG.FLIPPER_STRENGTH;
+                        ball.velocity.x += collision.normal.x * normalForce;
+                        ball.velocity.y += collision.normal.y * normalForce;
+
+                        ball.velocity.x += tangentialVelocity.x;
+                        ball.velocity.y += tangentialVelocity.y;
+                    } else {
+                        const minForce = CONFIG.FLIPPER_STRENGTH * 0.1;
+                        ball.velocity.x += collision.normal.x * minForce;
+                        ball.velocity.y += collision.normal.y * minForce;
+                    }
+
+                    ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                    ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        class TestGame {
+            constructor(levelData) {
+                this.running = true;
+                this.canvas = document.getElementById('testCanvas');
+                this.ctx = this.canvas.getContext('2d');
+
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight - 300;
+
+                const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
+                const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
+                this.scale = Math.min(scaleX, scaleY);
+
+                this.offsetX = (this.canvas.width - CONFIG.VIRTUAL_WIDTH * this.scale) / 2;
+                this.offsetY = (this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale) / 2;
+
+                this.ball = {
+                    position: new Vector2D(CONFIG.VIRTUAL_WIDTH * 0.5, 50),
+                    velocity: new Vector2D(0, 0),
+                    radius: CONFIG.BALL_RADIUS
+                };
+
+                // Create flippers exactly like in original
+                const flipperY = CONFIG.VIRTUAL_HEIGHT - 80;
+                this.flippers = [
+                    new Flipper(CONFIG.VIRTUAL_WIDTH * 0.3, flipperY, true),
+                    new Flipper(CONFIG.VIRTUAL_WIDTH * 0.7, flipperY, false)
+                ];
+
+                // Store level data
+                this.levelData = levelData || {
+                    walls: [],
+                    bumpers: [],
+                    spinners: [],
+                    dropTargets: []
+                };
+
+                this.setupControls();
+                this.gameLoop();
+            }
+
+            setupControls() {
+                this.keyHandler = (e) => {
+                    // Prevent default arrow key behavior (scrolling)
+                    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+                        e.preventDefault();
+                    }
+
+                    if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                        if (e.type === 'keydown') {
+                            this.flippers[0].activate();
+                        } else {
+                            this.flippers[0].deactivate();
+                        }
+                    }
+                    if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                        if (e.type === 'keydown') {
+                            this.flippers[1].activate();
+                        } else {
+                            this.flippers[1].deactivate();
+                        }
+                    }
+                };
+
+                document.addEventListener('keydown', this.keyHandler);
+                document.addEventListener('keyup', this.keyHandler);
+            }
+
+            stop() {
+                this.running = false;
+                document.removeEventListener('keydown', this.keyHandler);
+                document.removeEventListener('keyup', this.keyHandler);
+            }
+
+            resetBall() {
+                this.ball.position.x = CONFIG.VIRTUAL_WIDTH * 0.5;
+                this.ball.position.y = 50;
+                this.ball.velocity.x = 0;
+                this.ball.velocity.y = 0;
+            }
+
+            checkWallCollision(wall) {
+                const distance = this.distanceToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
+
+                if (distance < this.ball.radius + wall.width / 2) {
+                    const normal = this.getNormalToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
+
+                    const overlap = this.ball.radius + wall.width / 2 - distance;
+                    const pushDistance = overlap * 0.8;
+                    this.ball.position.x += normal.x * pushDistance;
+                    this.ball.position.y += normal.y * pushDistance;
+
+                    const dotProduct = this.ball.velocity.dot(normal);
+                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                }
+            }
+
+            checkBumperCollision(bumper) {
+                const dx = this.ball.position.x - bumper.x;
+                const dy = this.ball.position.y - bumper.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < this.ball.radius + bumper.radius) {
+                    const normal = new Vector2D(dx / distance, dy / distance);
+
+                    const overlap = this.ball.radius + bumper.radius - distance + 2;
+                    this.ball.position.x += normal.x * overlap;
+                    this.ball.position.y += normal.y * overlap;
+
+                    const bounceForce = 15;
+                    this.ball.velocity.x = normal.x * bounceForce;
+                    this.ball.velocity.y = normal.y * bounceForce;
+
+                    // Add hit animation
+                    bumper.hitAnimation = 1;
+                    return true;
+                }
+                return false;
+            }
+
+            checkSpinnerCollision(spinner) {
+                const cos = Math.cos(spinner.angle || 0);
+                const sin = Math.sin(spinner.angle || 0);
+
+                const dx = this.ball.position.x - spinner.x;
+                const dy = this.ball.position.y - spinner.y;
+                const localX = cos * dx + sin * dy;
+                const localY = -sin * dx + cos * dy;
+
+                if (Math.abs(localX) < spinner.width / 2 + this.ball.radius &&
+                    Math.abs(localY) < spinner.height / 2 + this.ball.radius) {
+
+                    const spinDirection = localX > 0 ? 1 : -1;
+                    spinner.angularVelocity = (spinner.angularVelocity || 0) + spinDirection * 0.3;
+
+                    const normal = new Vector2D(
+                        Math.abs(localX) > Math.abs(localY) ? Math.sign(localX) : 0,
+                        Math.abs(localY) > Math.abs(localX) ? Math.sign(localY) : 0
+                    );
+
+                    const worldNormalX = cos * normal.x - sin * normal.y;
+                    const worldNormalY = sin * normal.x + cos * normal.y;
+
+                    this.ball.velocity.x += worldNormalX * 8;
+                    this.ball.velocity.y += worldNormalY * 8;
+
+                    return true;
+                }
+                return false;
+            }
+
+            checkDropTargetCollision(target) {
+                if (!target.isActive) return false;
+
+                const dx = Math.abs(this.ball.position.x - target.x);
+                const dy = Math.abs(this.ball.position.y - target.y);
+
+                if (dx < target.width/2 + this.ball.radius && dy < target.height/2 + this.ball.radius) {
+                    target.isActive = false;
+                    target.resetTime = 300;
+
+                    const normalX = this.ball.position.x < target.x ? -1 : 1;
+                    this.ball.velocity.x = Math.abs(this.ball.velocity.x) * normalX * 1.2;
+
+                    return true;
+                }
+                return false;
+            }
+
+            distanceToLineSegment(point, lineStart, lineEnd) {
+                const A = point.x - lineStart.x;
+                const B = point.y - lineStart.y;
+                const C = lineEnd.x - lineStart.x;
+                const D = lineEnd.y - lineStart.y;
+
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                if (lenSq !== 0) {
+                    param = dot / lenSq;
+                }
+
+                let xx, yy;
+                if (param < 0) {
+                    xx = lineStart.x;
+                    yy = lineStart.y;
+                } else if (param > 1) {
+                    xx = lineEnd.x;
+                    yy = lineEnd.y;
+                } else {
+                    xx = lineStart.x + param * C;
+                    yy = lineStart.y + param * D;
+                }
+
+                const dx = point.x - xx;
+                const dy = point.y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            getNormalToLineSegment(point, lineStart, lineEnd) {
+                const dx = lineEnd.x - lineStart.x;
+                const dy = lineEnd.y - lineStart.y;
+                const normal = new Vector2D(-dy, dx).normalize();
+
+                const toPoint = new Vector2D(point.x - lineStart.x, point.y - lineStart.y);
+                if (normal.dot(toPoint) < 0) {
+                    normal.multiply(-1);
+                }
+
+                return normal;
+            }
+
+            update() {
+                // Update flippers
+                this.flippers.forEach(flipper => flipper.update());
+
+                // Update objects with animations
+                if (this.levelData && this.levelData.bumpers) {
+                    this.levelData.bumpers.forEach(bumper => {
+                        if (bumper.hitAnimation > 0) {
+                            bumper.hitAnimation -= 0.1;
+                        }
+                    });
+                }
+
+                if (this.levelData && this.levelData.spinners) {
+                    this.levelData.spinners.forEach(spinner => {
+                        spinner.angle = (spinner.angle || 0) + (spinner.angularVelocity || 0);
+                        spinner.angularVelocity = (spinner.angularVelocity || 0) * 0.95;
+                    });
+                }
+
+                if (this.levelData && this.levelData.dropTargets) {
+                    this.levelData.dropTargets.forEach(target => {
+                        if (!target.isActive && target.resetTime > 0) {
+                            target.resetTime--;
+                            if (target.resetTime <= 0) {
+                                target.isActive = true;
+                            }
+                        }
+                    });
+                }
+
+                // Ball physics
+                this.ball.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
+                this.ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+                this.ball.velocity.multiply(CONFIG.FRICTION);
+                this.ball.position.add(this.ball.velocity);
+
+                // Boundary collisions
+                if (this.ball.position.x < this.ball.radius) {
+                    this.ball.position.x = this.ball.radius;
+                    this.ball.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+                }
+                if (this.ball.position.x > CONFIG.VIRTUAL_WIDTH - this.ball.radius) {
+                    this.ball.position.x = CONFIG.VIRTUAL_WIDTH - this.ball.radius;
+                    this.ball.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+                }
+                if (this.ball.position.y < this.ball.radius) {
+                    this.ball.position.y = this.ball.radius;
+                    this.ball.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+                }
+                if (this.ball.position.y > CONFIG.VIRTUAL_HEIGHT + 50) {
+                    this.resetBall();
+                }
+
+                // Flipper collisions
+                this.flippers.forEach(flipper => {
+                    flipper.checkCollision(this.ball);
+                });
+
+                // Test wall collisions
+                if (this.levelData && this.levelData.walls) {
+                    this.levelData.walls.forEach(wall => {
+                        this.checkWallCollision(wall);
+                    });
+                }
+
+                // Test bumper collisions
+                if (this.levelData && this.levelData.bumpers) {
+                    this.levelData.bumpers.forEach(bumper => {
+                        this.checkBumperCollision(bumper);
+                    });
+                }
+
+                // Test spinner collisions
+                if (this.levelData && this.levelData.spinners) {
+                    this.levelData.spinners.forEach(spinner => {
+                        this.checkSpinnerCollision(spinner);
+                    });
+                }
+
+                // Test drop target collisions
+                if (this.levelData && this.levelData.dropTargets) {
+                    this.levelData.dropTargets.forEach(target => {
+                        this.checkDropTargetCollision(target);
+                    });
+                }
+            }
+
+            draw() {
+                // Clear canvas
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.save();
+                this.ctx.translate(this.offsetX, this.offsetY);
+                this.ctx.scale(this.scale, this.scale);
+
+                // Draw background
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, CONFIG.VIRTUAL_HEIGHT);
+                gradient.addColorStop(0, '#1a1a2e');
+                gradient.addColorStop(1, '#0f1419');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, CONFIG.VIRTUAL_WIDTH, CONFIG.VIRTUAL_HEIGHT);
+
+                // Draw walls
+                if (this.levelData && this.levelData.walls) {
+                    this.levelData.walls.forEach(wall => {
+                        this.ctx.strokeStyle = wall.color;
+                        this.ctx.lineWidth = wall.width;
+                        this.ctx.lineCap = 'round';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(wall.x1, wall.y1);
+                        this.ctx.lineTo(wall.x2, wall.y2);
+                        this.ctx.stroke();
+                    });
+                }
+
+                // Draw bumpers with hit animation
+                if (this.levelData && this.levelData.bumpers) {
+                    this.levelData.bumpers.forEach(bumper => {
+                        const animRadius = bumper.radius + (bumper.hitAnimation || 0) * 10;
+
+                        const gradient = this.ctx.createRadialGradient(
+                            this.mousePos = worldPos;
+                document.getElementById('coordinates').textContent = `X: ${Math.round(worldPos.x)}, Y: ${Math.round(worldPos.y)}`;
+
+                // Handle object dragging
+                if (this.isDragging && this.selectedObject) {
+                    if (this.selectedObject.type === 'tunnel') {
+                        if (this.selectedObject.point === 'entry') {
+                            this.selectedObject.object.entryX = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.entryY = worldPos.y - this.dragOffset.y;
+                        } else if (this.selectedObject.point === 'exit') {
+                            this.selectedObject.object.exitX = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.exitY = worldPos.y - this.dragOffset.y;
+                        }
+                    } else {
+                        this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
+                        this.selectedObject.object.y = worldPos.y - this.dragOffset.y;
+                    }
+                }
+
+                this.render();
+            }
+
+            handleMouseUp(e) {
+                if (this.isDrawing && this.currentTool === 'wall') {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const screenX = e.clientX - rect.left;
+                    const screenY = e.clientY - rect.top;
+                    const worldPos = this.snapToGrid(this.screenToWorld(screenX, screenY));
+
+                    const width = parseInt(document.getElementById('wallWidth').value);
+                    const color = document.getElementById('wallColor').value;
+
+                    this.walls.push({
+                        x1: this.drawStart.x,
+                        y1: this.drawStart.y,
+                        x2: worldPos.x,
+                        y2: worldPos.y,
+                        width: width,
+                        color: color
+                    });
+
+                    this.isDrawing = false;
+                    this.drawStart = null;
+                }
+
+                // Stop dragging
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.dragOffset = null;
+                }
+
+                this.render();
+            }
+
+            deleteObjectAt(worldPos) {
+                const tolerance = 20;
+
+                // Check walls
+                this.walls = this.walls.filter(wall => {
+                    const dist = this.distanceToLine(worldPos, wall);
+                    return dist > tolerance;
+                });
+
+                // Check bumpers
+                this.bumpers = this.bumpers.filter(bumper => {
+                    const dist = Math.sqrt((worldPos.x - bumper.x) ** 2 + (worldPos.y - bumper.y) ** 2);
+                    return dist > bumper.radius;
+                });
+
+                // Check spinners
+                this.spinners = this.spinners.filter(spinner => {
+                    const dist = Math.sqrt((worldPos.x - spinner.x) ** 2 + (worldPos.y - spinner.y) ** 2);
+                    return dist > spinner.width / 2;
+                });
+
+                // Check drop targets
+                this.dropTargets = this.dropTargets.filter(target => {
+                    const dx = Math.abs(worldPos.x - target.x);
+                    const dy = Math.abs(worldPos.y - target.y);
+                    return dx > target.width / 2 || dy > target.height / 2;
+                });
+            }
+
+            distanceToLine(point, wall) {
+                const A = point.x - wall.x1;
+                const B = point.y - wall.y1;
+                const C = wall.x2 - wall.x1;
+                const D = wall.y2 - wall.y1;
+
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+
+                if (lenSq === 0) return Math.sqrt(A * A + B * B);
+
+                const param = dot / lenSq;
+                let xx, yy;
+
+                if (param < 0) {
+                    xx = wall.x1;
+                    yy = wall.y1;
+                } else if (param > 1) {
+                    xx = wall.x2;
+                    yy = wall.y2;
+                } else {
+                    xx = wall.x1 + param * C;
+                    yy = wall.y1 + param * D;
+                }
+
+                const dx = point.x - xx;
+                const dy = point.y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            findObjectAt(worldPos) {
+                const tolerance = 20;
+
+                // Check bumpers (highest priority for selection)
+                for (let bumper of this.bumpers) {
+                    const dist = Math.sqrt((worldPos.x - bumper.x) ** 2 + (worldPos.y - bumper.y) ** 2);
+                    if (dist <= bumper.radius + tolerance) {
+                        return { type: 'bumper', object: bumper };
+                    }
+                }
+
+                // Check spinners
+                for (let spinner of this.spinners) {
+                    const dist = Math.sqrt((worldPos.x - spinner.x) ** 2 + (worldPos.y - spinner.y) ** 2);
+                    if (dist <= spinner.width / 2 + tolerance) {
+                        return { type: 'spinner', object: spinner };
+                    }
+                }
+
+                // Check drop targets
+                for (let target of this.dropTargets) {
+                    const dx = Math.abs(worldPos.x - target.x);
+                    const dy = Math.abs(worldPos.y - target.y);
+                    if (dx <= target.width / 2 + tolerance && dy <= target.height / 2 + tolerance) {
+                        return { type: 'droptarget', object: target };
+                    }
+                }
+
+                // Check walls - check for specific points first, then line
+                for (let wall of this.walls) {
+                    // Check start point
+                    const startDist = Math.sqrt((worldPos.x - wall.x1) ** 2 + (worldPos.y - wall.y1) ** 2);
+                    if (startDist <= tolerance) {
+                        return { type: 'wall', object: wall, point: 'start' };
+                    }
+
+                    // Check end point
+                    const endDist = Math.sqrt((worldPos.x - wall.x2) ** 2 + (worldPos.y - wall.y2) ** 2);
+                    if (endDist <= tolerance) {
+                        return { type: 'wall', object: wall, point: 'end' };
+                    }
+
+                    // Check line (for moving whole wall)
+                    const lineDist = this.distanceToLine(worldPos, wall);
+                    if (lineDist <= tolerance) {
+                        return { type: 'wall', object: wall, point: 'whole' };
+                    }
+                }
+
+                return null;
+            }
+
+            updateModeIndicator() {
+                const modes = {
+                    wall: 'WALL MODE',
+                    bumper: 'BUMPER MODE',
+                    spinner: 'SPINNER MODE',
+                    droptarget: 'DROP TARGET MODE',
+                    select: 'SELECT MODE',
+                    delete: 'DELETE MODE'
+                };
+                document.getElementById('modeIndicator').textContent = modes[this.currentTool] || 'UNKNOWN MODE';
+            }
+
+            render() {
+                // Clear canvas
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.save();
+                this.ctx.translate(this.offsetX, this.offsetY);
+                this.ctx.scale(this.scale, this.scale);
+
+                // Draw background
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, CONFIG.VIRTUAL_HEIGHT);
+                gradient.addColorStop(0, '#1a1a2e');
+                gradient.addColorStop(1, '#0f1419');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, CONFIG.VIRTUAL_WIDTH, CONFIG.VIRTUAL_HEIGHT);
+
+                // Draw grid
+                if (document.getElementById('showGrid').checked) {
+                    this.drawGrid();
+                }
+
+                // Draw game boundaries
+                this.ctx.strokeStyle = '#666';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(0, 0, CONFIG.VIRTUAL_WIDTH, CONFIG.VIRTUAL_HEIGHT);
+
+                // Draw walls
+                this.walls.forEach(wall => {
+                    this.ctx.strokeStyle = wall.color;
+                    this.ctx.lineWidth = wall.width;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(wall.x1, wall.y1);
+                    this.ctx.lineTo(wall.x2, wall.y2);
+                    this.ctx.stroke();
+                });
+
+                // Draw bumpers
+                this.bumpers.forEach(bumper => {
+                    const gradient = this.ctx.createRadialGradient(
+                        bumper.x - 5, bumper.y - 5, 0,
+                        bumper.x, bumper.y, bumper.radius
+                    );
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.3, '#ff4444');
+                    gradient.addColorStop(1, '#aa0000');
+
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(bumper.x, bumper.y, bumper.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                });
+
+                // Draw spinners
+                this.spinners.forEach(spinner => {
+                    this.ctx.save();
+                    this.ctx.translate(spinner.x, spinner.y);
+                    this.ctx.rotate(spinner.angle || 0);
+
+                    const gradient = this.ctx.createLinearGradient(-spinner.width/2, 0, spinner.width/2, 0);
+                    gradient.addColorStop(0, '#4444ff');
+                    gradient.addColorStop(0.5, '#6666ff');
+                    gradient.addColorStop(1, '#4444ff');
+
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(-spinner.width/2, -spinner.height/2, spinner.width, spinner.height);
+
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(-spinner.width/2, -spinner.height/2, spinner.width, spinner.height);
+
+                    this.ctx.restore();
+
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(spinner.x, spinner.y, 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                // Draw drop targets
+                this.dropTargets.forEach(target => {
+                    const gradient = this.ctx.createLinearGradient(
+                        target.x - target.width/2, target.y,
+                        target.x + target.width/2, target.y
+                    );
+                    gradient.addColorStop(0, '#ff8800');
+                    gradient.addColorStop(0.5, '#ffaa00');
+                    gradient.addColorStop(1, '#ff8800');
+
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(
+                        target.x - target.width/2,
+                        target.y - target.height/2,
+                        target.width,
+                        target.height
+                    );
+
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(
+                        target.x - target.width/2,
+                        target.y - target.height/2,
+                        target.width,
+                        target.height
+                    );
+                });
+
+                // Draw selection highlight
+                if (this.selectedObject && this.currentTool === 'select') {
+                    this.ctx.strokeStyle = '#00ff00';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.setLineDash([5, 5]);
+
+                    const obj = this.selectedObject.object;
+                    if (this.selectedObject.type === 'bumper') {
+                        this.ctx.beginPath();
+                        this.ctx.arc(obj.x, obj.y, obj.radius + 5, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                    } else if (this.selectedObject.type === 'spinner') {
+                        this.ctx.strokeRect(obj.x - obj.width/2 - 5, obj.y - obj.height/2 - 5, obj.width + 10, obj.height + 10);
+                    } else if (this.selectedObject.type === 'droptarget') {
+                        this.ctx.strokeRect(obj.x - obj.width/2 - 5, obj.y - obj.height/2 - 5, obj.width + 10, obj.height + 10);
+                    } else if (this.selectedObject.type === 'wall') {
+                        // Highlight the wall line
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(obj.x1, obj.y1);
+                        this.ctx.lineTo(obj.x2, obj.y2);
+                        this.ctx.stroke();
+
+                        // Highlight specific points
+                        this.ctx.fillStyle = '#00ff00';
+                        this.ctx.setLineDash([]);
+
+                        if (this.selectedObject.point === 'start' || this.selectedObject.point === 'whole') {
+                            this.ctx.beginPath();
+                            this.ctx.arc(obj.x1, obj.y1, 8, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+
+                        if (this.selectedObject.point === 'end' || this.selectedObject.point === 'whole') {
+                            this.ctx.beginPath();
+                            this.ctx.arc(obj.x2, obj.y2, 8, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+
                         this.ctx.setLineDash([5, 5]);
                     }
 
@@ -1408,7 +2654,7 @@
                     if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
                         e.preventDefault();
                     }
-                    
+
                     if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
                         if (e.type === 'keydown') {
                             this.flippers[0].activate();
