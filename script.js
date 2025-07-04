@@ -989,6 +989,30 @@ class PinballGame {
         // Track active touches
         this.activeTouches = new Set();
         
+        // Add keyboard support for flippers
+        document.addEventListener('keydown', (e) => {
+            // Prevent default arrow key behavior (scrolling)
+            if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+                e.preventDefault();
+            }
+            
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                this.flippers[0].activate();
+            }
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                this.flippers[1].activate();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                this.flippers[0].deactivate();
+            }
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                this.flippers[1].deactivate();
+            }
+        });
+        
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const rect = this.canvas.getBoundingClientRect();
