@@ -1079,11 +1079,8 @@ class PinballGame {
         // Ramps removed
         this.ramps = [];
 
-        // Tunnels
-        this.tunnels = [
-            new Tunnel(CONFIG.VIRTUAL_WIDTH * 0.1, 200, CONFIG.VIRTUAL_WIDTH * 0.9, 350),
-            new Tunnel(CONFIG.VIRTUAL_WIDTH * 0.8, 150, CONFIG.VIRTUAL_WIDTH * 0.2, 400)
-        ];
+        // Tunnels - removed from main game but logic preserved
+        this.tunnels = [];
     }
 
     resetBall() {
@@ -1206,7 +1203,7 @@ class PinballGame {
         this.bumpers.forEach(bumper => bumper.update());
         this.spinners.forEach(spinner => spinner.update());
         this.dropTargets.forEach(target => target.update());
-        this.tunnels.forEach(tunnel => tunnel.update());
+        // Tunnel updates removed - no tunnels in main game
 
         this.checkCollisions();
 
@@ -1267,10 +1264,7 @@ class PinballGame {
             ramp.checkCollision(this.ball);
         });
 
-        // Tunnel collisions
-        this.tunnels.forEach(tunnel => {
-            tunnel.checkCollision(this.ball);
-        });
+        // Tunnel collisions removed - no tunnels in main game
     }
 
     draw() {
@@ -1290,7 +1284,7 @@ class PinballGame {
         // Draw all game elements
         this.walls.forEach(wall => wall.draw(this.ctx));
         this.ramps.forEach(ramp => ramp.draw(this.ctx));
-        this.tunnels.forEach(tunnel => tunnel.draw(this.ctx));
+        // Tunnel drawing removed - no tunnels in main game
         this.bumpers.forEach(bumper => bumper.draw(this.ctx));
         this.spinners.forEach(spinner => spinner.draw(this.ctx));
         this.dropTargets.forEach(target => target.draw(this.ctx));
