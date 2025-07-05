@@ -155,6 +155,7 @@
                 <button class="tool-btn" data-tool="bumper">Place Bumper</button>
                 <button class="tool-btn" data-tool="spinner">Place Spinner</button>
                 <button class="tool-btn" data-tool="droptarget">Place Drop Target</button>
+                <button class="tool-btn" data-tool="tunnel">Place Tunnel</button>
                 <button class="tool-btn" data-tool="select">Select/Move</button>
                 <button class="tool-btn" data-tool="delete">Delete</button>
             </div>
@@ -180,6 +181,10 @@
                 <div class="input-group">
                     <label>Spinner Width:</label>
                     <input type="number" id="spinnerWidth" value="30" min="20" max="50">
+                </div>
+                <div class="input-group">
+                    <label>Tunnel Radius:</label>
+                    <input type="number" id="tunnelRadius" value="15" min="10" max="30">
                 </div>
             </div>
 
@@ -260,6 +265,7 @@
                 this.bumpers = [];
                 this.spinners = [];
                 this.dropTargets = [];
+                this.tunnels = [];
 
                 // Fixed flipper positions
                 this.flippers = [
@@ -275,6 +281,10 @@
                 this.selectedObject = null;
                 this.isDragging = false;
                 this.dragOffset = null;
+                
+                // Tunnel creation state
+                this.tunnelCreationStep = 0; // 0: none, 1: placing entry, 2: placing exit
+                this.tunnelEntry = null;
 
                 this.setupCanvas();
                 this.setupEventListeners();
@@ -311,6 +321,13 @@
                         document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         this.currentTool = btn.dataset.tool;
+                        
+                        // Reset tunnel creation state when switching tools
+                        if (this.currentTool !== 'tunnel') {
+                            this.tunnelCreationStep = 0;
+                            this.tunnelEntry = null;
+                        }
+                        
                         this.updateModeIndicator();
                     });
                 });
@@ -393,6 +410,31 @@
                         isActive: true,
                         points: 200
                     });
+                } else if (this.currentTool === 'tunnel') {
+                    const radius = parseInt(document.getElementById('tunnelRadius').value);
+                    
+                    if (this.tunnelCreationStep === 0) {
+                        // First click - place entry
+                        this.tunnelEntry = worldPos;
+                        this.tunnelCreationStep = 1;
+                    } else if (this.tunnelCreationStep === 1) {
+                        // Second click - place exit and create tunnel
+                        this.tunnels.push({
+                            entryX: this.tunnelEntry.x,
+                            entryY: this.tunnelEntry.y,
+                            exitX: worldPos.x,
+                            exitY: worldPos.y,
+                            radius: radius,
+                            cooldown: 0,
+                            maxCooldown: 60,
+                            entryAnimation: 0,
+                            exitAnimation: 0
+                        });
+                        
+                        // Reset tunnel creation state
+                        this.tunnelCreationStep = 0;
+                        this.tunnelEntry = null;
+                    }
                 } else if (this.currentTool === 'select') {
                     this.selectedObject = this.findObjectAt(worldPos);
                     if (this.selectedObject) {
@@ -417,6 +459,19 @@
                                     y: worldPos.y - this.selectedObject.object.y1,
                                     x2: worldPos.x - this.selectedObject.object.x2,
                                     y2: worldPos.y - this.selectedObject.object.y2
+                                };
+                            }
+                        } else if (this.selectedObject.type === 'tunnel') {
+                            // For tunnels
+                            if (this.selectedObject.point === 'entry') {
+                                this.dragOffset = {
+                                    x: worldPos.x - this.selectedObject.object.entryX,
+                                    y: worldPos.y - this.selectedObject.object.entryY
+                                };
+                            } else {
+                                this.dragOffset = {
+                                    x: worldPos.x - this.selectedObject.object.exitX,
+                                    y: worldPos.y - this.selectedObject.object.exitY
                                 };
                             }
                         } else {
@@ -459,6 +514,14 @@
                             this.selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
                             this.selectedObject.object.x2 = worldPos.x - this.dragOffset.x2;
                             this.selectedObject.object.y2 = worldPos.y - this.dragOffset.y2;
+                        }
+                    } else if (this.selectedObject.type === 'tunnel') {
+                        if (this.selectedObject.point === 'entry') {
+                            this.selectedObject.object.entryX = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.entryY = worldPos.y - this.dragOffset.y;
+                        } else {
+                            this.selectedObject.object.exitX = worldPos.x - this.dragOffset.x;
+                            this.selectedObject.object.exitY = worldPos.y - this.dragOffset.y;
                         }
                     } else {
                         this.selectedObject.object.x = worldPos.x - this.dragOffset.x;
@@ -528,6 +591,13 @@
                     const dy = Math.abs(worldPos.y - target.y);
                     return dx > target.width / 2 || dy > target.height / 2;
                 });
+
+                // Check tunnels
+                this.tunnels = this.tunnels.filter(tunnel => {
+                    const entryDist = Math.sqrt((worldPos.x - tunnel.entryX) ** 2 + (worldPos.y - tunnel.entryY) ** 2);
+                    const exitDist = Math.sqrt((worldPos.x - tunnel.exitX) ** 2 + (worldPos.y - tunnel.exitY) ** 2);
+                    return entryDist > tunnel.radius && exitDist > tunnel.radius;
+                });
             }
 
             distanceToLine(point, wall) {
@@ -588,6 +658,19 @@
                     }
                 }
 
+                // Check tunnels
+                for (let tunnel of this.tunnels) {
+                    const entryDist = Math.sqrt((worldPos.x - tunnel.entryX) ** 2 + (worldPos.y - tunnel.entryY) ** 2);
+                    const exitDist = Math.sqrt((worldPos.x - tunnel.exitX) ** 2 + (worldPos.y - tunnel.exitY) ** 2);
+                    
+                    if (entryDist <= tunnel.radius + tolerance) {
+                        return { type: 'tunnel', object: tunnel, point: 'entry' };
+                    }
+                    if (exitDist <= tunnel.radius + tolerance) {
+                        return { type: 'tunnel', object: tunnel, point: 'exit' };
+                    }
+                }
+
                 // Check walls - check for specific points first, then line
                 for (let wall of this.walls) {
                     // Check start point
@@ -618,6 +701,7 @@
                     bumper: 'BUMPER MODE',
                     spinner: 'SPINNER MODE',
                     droptarget: 'DROP TARGET MODE',
+                    tunnel: this.tunnelCreationStep === 0 ? 'TUNNEL MODE - Click for Entry' : 'TUNNEL MODE - Click for Exit',
                     select: 'SELECT MODE',
                     delete: 'DELETE MODE'
                 };
@@ -735,6 +819,22 @@
                     );
                 });
 
+                // Draw tunnels
+                this.tunnels.forEach(tunnel => {
+                    this.drawTunnelPortal(tunnel.entryX, tunnel.entryY, tunnel.radius, '#8B00FF', '#4B0082');
+                    this.drawTunnelPortal(tunnel.exitX, tunnel.exitY, tunnel.radius, '#00FFFF', '#0080FF');
+                    
+                    // Draw connection line
+                    this.ctx.strokeStyle = '#666666';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(tunnel.entryX, tunnel.entryY);
+                    this.ctx.lineTo(tunnel.exitX, tunnel.exitY);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                });
+
                 // Draw selection highlight
                 if (this.selectedObject && this.currentTool === 'select') {
                     this.ctx.strokeStyle = '#00ff00';
@@ -771,6 +871,22 @@
                             this.ctx.beginPath();
                             this.ctx.arc(obj.x2, obj.y2, 8, 0, Math.PI * 2);
                             this.ctx.fill();
+                        }
+                        
+                        this.ctx.setLineDash([5, 5]);
+                    } else if (this.selectedObject.type === 'tunnel') {
+                        // Highlight tunnel portals
+                        this.ctx.setLineDash([]);
+                        this.ctx.fillStyle = '#00ff00';
+                        
+                        if (this.selectedObject.point === 'entry') {
+                            this.ctx.beginPath();
+                            this.ctx.arc(obj.entryX, obj.entryY, obj.radius + 5, 0, Math.PI * 2);
+                            this.ctx.stroke();
+                        } else if (this.selectedObject.point === 'exit') {
+                            this.ctx.beginPath();
+                            this.ctx.arc(obj.exitX, obj.exitY, obj.radius + 5, 0, Math.PI * 2);
+                            this.ctx.stroke();
                         }
                         
                         this.ctx.setLineDash([5, 5]);
@@ -820,6 +936,27 @@
                     this.ctx.setLineDash([]);
                 }
 
+                // Draw tunnel creation preview
+                if (this.currentTool === 'tunnel' && this.tunnelCreationStep === 1) {
+                    const radius = parseInt(document.getElementById('tunnelRadius').value);
+                    
+                    // Draw entry portal
+                    this.drawTunnelPortal(this.tunnelEntry.x, this.tunnelEntry.y, radius, '#8B00FF', '#4B0082');
+                    
+                    // Draw preview line to mouse
+                    this.ctx.strokeStyle = '#666666';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.tunnelEntry.x, this.tunnelEntry.y);
+                    this.ctx.lineTo(this.mousePos.x, this.mousePos.y);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                    
+                    // Draw preview exit portal
+                    this.drawTunnelPortal(this.mousePos.x, this.mousePos.y, radius, '#00FFFF', '#0080FF');
+                }
+
                 this.ctx.restore();
             }
 
@@ -843,12 +980,42 @@
                 }
             }
 
+            drawTunnelPortal(x, y, radius, innerColor, outerColor) {
+                // Outer glow
+                const gradient = this.ctx.createRadialGradient(
+                    x, y, 0,
+                    x, y, radius
+                );
+                gradient.addColorStop(0, innerColor);
+                gradient.addColorStop(0.6, outerColor);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Inner portal
+                this.ctx.fillStyle = '#000000';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius * 0.6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Portal edge
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.stroke();
+            }
+
             clearLevel() {
                 if (confirm('Clear all objects? This cannot be undone.')) {
                     this.walls = [];
                     this.bumpers = [];
                     this.spinners = [];
                     this.dropTargets = [];
+                    this.tunnels = [];
                     this.render();
                 }
             }
@@ -858,7 +1025,8 @@
                     walls: this.walls,
                     bumpers: this.bumpers,
                     spinners: this.spinners,
-                    dropTargets: this.dropTargets
+                    dropTargets: this.dropTargets,
+                    tunnels: this.tunnels
                 };
 
                 const dataStr = JSON.stringify(levelData, null, 2);
@@ -889,6 +1057,7 @@
                                 this.bumpers = levelData.bumpers || [];
                                 this.spinners = levelData.spinners || [];
                                 this.dropTargets = levelData.dropTargets || [];
+                                this.tunnels = levelData.tunnels || [];
                                 this.render();
                             } catch (error) {
                                 alert('Error loading level file: ' + error.message);
@@ -938,11 +1107,23 @@
                     resetTime: 0
                 }));
 
+                // Convert tunnels to test format
+                const testTunnels = this.tunnels.map(tunnel => ({
+                    entry: { x: tunnel.entryX, y: tunnel.entryY },
+                    exit: { x: tunnel.exitX, y: tunnel.exitY },
+                    radius: tunnel.radius,
+                    cooldown: 0,
+                    maxCooldown: 60,
+                    entryAnimation: 0,
+                    exitAnimation: 0
+                }));
+
                 this.testGame = new TestGame({
                     walls: this.walls,
                     bumpers: testBumpers,
                     spinners: testSpinners,
                     dropTargets: testDropTargets,
+                    tunnels: testTunnels,
                     flippers: this.flippers
                 });
             }
@@ -1532,6 +1713,33 @@
                 return false;
             }
 
+            checkTunnelCollision(tunnel) {
+                if (tunnel.cooldown > 0) return false;
+
+                const dx = this.ball.position.x - tunnel.entry.x;
+                const dy = this.ball.position.y - tunnel.entry.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < this.ball.radius + tunnel.radius) {
+                    // Teleport ball to exit
+                    this.ball.position.x = tunnel.exit.x;
+                    this.ball.position.y = tunnel.exit.y;
+                    
+                    // Preserve velocity with slight boost
+                    this.ball.velocity.multiply(1.1);
+                    
+                    // Start animations
+                    tunnel.entryAnimation = 1;
+                    tunnel.exitAnimation = 1;
+                    
+                    // Set cooldown
+                    tunnel.cooldown = tunnel.maxCooldown;
+                    
+                    return true;
+                }
+                return false;
+            }
+
             distanceToLineSegment(point, lineStart, lineEnd) {
                 const A = point.x - lineStart.x;
                 const B = point.y - lineStart.y;
@@ -1606,6 +1814,20 @@
                     });
                 }
 
+                if (this.levelData && this.levelData.tunnels) {
+                    this.levelData.tunnels.forEach(tunnel => {
+                        if (tunnel.cooldown > 0) {
+                            tunnel.cooldown--;
+                        }
+                        if (tunnel.entryAnimation > 0) {
+                            tunnel.entryAnimation -= 0.05;
+                        }
+                        if (tunnel.exitAnimation > 0) {
+                            tunnel.exitAnimation -= 0.05;
+                        }
+                    });
+                }
+
                 // Ball physics
                 this.ball.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
                 this.ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
@@ -1659,6 +1881,13 @@
                 if (this.levelData && this.levelData.dropTargets) {
                     this.levelData.dropTargets.forEach(target => {
                         this.checkDropTargetCollision(target);
+                    });
+                }
+
+                // Test tunnel collisions
+                if (this.levelData && this.levelData.tunnels) {
+                    this.levelData.tunnels.forEach(tunnel => {
+                        this.checkTunnelCollision(tunnel);
                     });
                 }
             }
@@ -1776,6 +2005,14 @@
                     });
                 }
 
+                // Draw tunnels with animations
+                if (this.levelData && this.levelData.tunnels) {
+                    this.levelData.tunnels.forEach(tunnel => {
+                        this.drawTunnelPortal(tunnel.entry.x, tunnel.entry.y, tunnel.radius, tunnel.entryAnimation, '#8B00FF', '#4B0082');
+                        this.drawTunnelPortal(tunnel.exit.x, tunnel.exit.y, tunnel.radius, tunnel.exitAnimation, '#00FFFF', '#0080FF');
+                    });
+                }
+
                 // Draw flippers using original render method
                 this.flippers.forEach(flipper => {
                     flipper.draw(this.ctx);
@@ -1805,6 +2042,46 @@
                 this.ctx.fillStyle = '#00ff00';
                 this.ctx.font = '14px Courier New';
                 this.ctx.fillText('Controls: A/← = Left Flipper, D/→ = Right Flipper', 10, 30);
+            }
+
+            drawTunnelPortal(x, y, radius, animation, innerColor, outerColor) {
+                const animRadius = radius + (animation || 0) * 5;
+                
+                // Outer glow
+                const gradient = this.ctx.createRadialGradient(
+                    x, y, 0,
+                    x, y, animRadius
+                );
+                gradient.addColorStop(0, innerColor);
+                gradient.addColorStop(0.6, outerColor);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, animRadius, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Inner portal
+                this.ctx.fillStyle = '#000000';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius * 0.6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Animated ring
+                if ((animation || 0) > 0) {
+                    this.ctx.strokeStyle = innerColor;
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, radius + (animation || 0) * 10, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+                
+                // Portal edge
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.stroke();
             }
 
             gameLoop() {
