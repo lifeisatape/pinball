@@ -4,16 +4,24 @@ class LevelManager {
         this.currentLevel = null;
     }
 
-    createDefaultLevel() {
-        return {
-            walls: this.createDefaultWalls(),
-            flippers: this.createDefaultFlippers(),
-            bumpers: this.createDefaultBumpers(),
-            spinners: this.createDefaultSpinners(),
-            dropTargets: this.createDefaultDropTargets(),
-            ramps: this.createDefaultRamps(),
-            tunnels: this.createDefaultTunnels()
-        };
+    async createDefaultLevel() {
+        try {
+            const response = await fetch('rooms/degen.json');
+            const levelData = await response.json();
+            return this.loadLevelFromData(levelData);
+        } catch (error) {
+            console.error('Error loading degen.json, falling back to built-in level:', error);
+            // Fallback to original default level
+            return {
+                walls: this.createDefaultWalls(),
+                flippers: this.createDefaultFlippers(),
+                bumpers: this.createDefaultBumpers(),
+                spinners: this.createDefaultSpinners(),
+                dropTargets: this.createDefaultDropTargets(),
+                ramps: this.createDefaultRamps(),
+                tunnels: this.createDefaultTunnels()
+            };
+        }
     }
 
     createDefaultWalls() {

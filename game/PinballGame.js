@@ -5,20 +5,32 @@ class PinballGame {
         this.gameState = new GameState();
 
         this.levelManager = new LevelManager();
-        this.currentLevel = this.levelManager.createDefaultLevel();
+        this.currentLevel = null;
 
         this.renderer = new GameRenderer(this.canvas);
-        this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
+        this.inputManager = null;
 
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
 
         this.ball = null;
-        this.resetBall();
+        this.gameStarted = false;
 
         this.setupEventListeners();
-        this.updateUI();
-        this.gameLoop();
+        this.initializeGame();
+    }
+
+    async initializeGame() {
+        try {
+            this.currentLevel = await this.levelManager.createDefaultLevel();
+            this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
+            this.resetBall();
+            this.updateUI();
+            this.gameStarted = true;
+            this.gameLoop();
+        } catch (error) {
+            console.error('Failed to initialize game:', error);
+        }
     }
 
     resetBall() {
@@ -133,17 +145,22 @@ class PinballGame {
         this.gameOverOverlay.show(this.gameState);
     }
 
-    restartGame() {
+    async restartGame() {
         this.gameState.reset();
-        this.resetBall();
-        this.levelManager.resetLevel(this.currentLevel);
-        this.updateUI();
         this.gameOverOverlay.hide();
+        
+        // Перезагружаем уровень
+        this.currentLevel = await this.levelManager.createDefaultLevel();
+        this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
+        this.resetBall();
+        this.updateUI();
     }
 
     gameLoop() {
-        this.update();
-        this.draw();
+        if (this.gameStarted && this.currentLevel) {
+            this.update();
+            this.draw();
+        }
         requestAnimationFrame(() => this.gameLoop());
     }
 }
