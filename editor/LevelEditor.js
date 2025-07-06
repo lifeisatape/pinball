@@ -207,14 +207,14 @@ class LevelEditor {
             dropTargets: this.dropTargets,
             tunnels: this.tunnels
         };
-
+        
         if (this.backgroundImage) {
             data.background = {
                 image: this.backgroundImage.src,
                 opacity: this.backgroundOpacity
             };
         }
-
+        
         return data;
     }
 
@@ -281,35 +281,7 @@ class LevelEditor {
     }
 
     saveLevel() {
-        // Add boundary walls first
-        const gameWidth = CONFIG.VIRTUAL_WIDTH;
-        const gameHeight = CONFIG.VIRTUAL_HEIGHT;
-
-        const boundaryWalls = [
-            { x1: 5, y1: 5, x2: 5, y2: gameHeight - 100, width: 20, color: '#ff4444' }, // Left wall
-            { x1: gameWidth - 5, y1: 5, x2: gameWidth - 5, y2: gameHeight - 100, width: 20, color: '#ff4444' }, // Right wall
-            { x1: 5, y1: 5, x2: gameWidth - 5, y2: 5, width: 20, color: '#ff4444' }, // Top wall
-            { x1: gameWidth * 0.25, y1: gameHeight - 80, x2: gameWidth * 0, y2: gameHeight - 100, width: 20, color: '#ff4444' }, // Bottom left
-            { x1: gameWidth * 1, y1: gameHeight - 100, x2: gameWidth * 0.75, y2: gameHeight - 80, width: 20, color: '#ff4444' } // Bottom right
-        ];
-
-        const levelData = {
-            walls: [
-                ...boundaryWalls,
-                ...this.walls.map(wall => ({
-                    x1: wall.x1,
-                    y1: wall.y1,
-                    x2: wall.x2,
-                    y2: wall.y2,
-                    width: wall.width,
-                    color: wall.color
-                }))
-            ],
-            bumpers: this.bumpers,
-            spinners: this.spinners,
-            dropTargets: this.dropTargets,
-            tunnels: this.tunnels
-        };
+        const levelData = this.getLevelData();
         const dataStr = JSON.stringify(levelData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -339,14 +311,14 @@ class LevelEditor {
                         this.spinners = levelData.spinners || [];
                         this.dropTargets = levelData.dropTargets || [];
                         this.tunnels = levelData.tunnels || [];
-
+                        
                         if (levelData.background) {
                             this.loadBackgroundFromData(levelData.background);
                         } else {
                             this.backgroundImage = null;
                             this.backgroundOpacity = 0.5;
                         }
-
+                        
                         this.render();
                     } catch (error) {
                         alert('Error loading level file: ' + error.message);
