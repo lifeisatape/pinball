@@ -133,31 +133,20 @@ body {
     display: none;
 }
 
-.game-over-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.restart-btn:last-child:hover {
-    background: #616161 !important;
-}
-
 @media (max-width: 480px) {
     .score-label {
         font-size: 9px;
     }
-
+    
     .score-value {
         font-size: 12px;
     }
-
+    
     .restart-btn {
         padding: 4px 8px;
         font-size: 9px;
     }
-
+    
     .score-item {
         gap: 4px;
     }

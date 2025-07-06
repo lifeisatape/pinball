@@ -36,15 +36,6 @@ class Flipper {
         this.targetAngle = this.restAngle;
     }
 
-    reset() {
-        this.angle = this.restAngle;
-        this.targetAngle = this.restAngle;
-        this.isActive = false;
-        this.angularVelocity = 0;
-        this.lastAngle = this.angle;
-        this.updateShape();
-    }
-
     update() {
         this.lastAngle = this.angle;
 

@@ -23,8 +23,4 @@ class ScorePanel {
         this.updateHighScore(gameState.highScore);
         this.updateBalls(gameState.balls);
     }
-
-    updateDisplay(gameState) {
-        this.updateAll(gameState);
-    }
 }

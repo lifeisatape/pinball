@@ -11,9 +11,8 @@ class GameRenderer {
     }
 
     setupCanvas() {
-        const container = this.canvas.parentElement;
-        this.canvas.width = container.clientWidth;
-        this.canvas.height = container.clientHeight;
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight - 60;
 
         const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
         const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
@@ -21,20 +20,6 @@ class GameRenderer {
 
         this.offsetX = (this.canvas.width - CONFIG.VIRTUAL_WIDTH * this.scale) / 2;
         this.offsetY = (this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale) / 2;
-    }
-
-    screenToWorld(screenX, screenY) {
-        return {
-            x: (screenX - this.offsetX) / this.scale,
-            y: (screenY - this.offsetY) / this.scale
-        };
-    }
-
-    worldToScreen(worldX, worldY) {
-        return {
-            x: worldX * this.scale + this.offsetX,
-            y: worldY * this.scale + this.offsetY
-        };
     }
 
     clear() {
@@ -59,32 +44,7 @@ class GameRenderer {
         this.ctx.restore();
     }
 
-    renderBackgroundImage(backgroundImage, opacity) {
-        if (!backgroundImage) return;
-
-        this.ctx.save();
-        this.ctx.globalAlpha = opacity || 0.5;
-
-        // Calculate scale to fit the image within the game area while maintaining aspect ratio
-        const scaleX = CONFIG.VIRTUAL_WIDTH / backgroundImage.width;
-        const scaleY = CONFIG.VIRTUAL_HEIGHT / backgroundImage.height;
-        const scale = Math.min(scaleX, scaleY);
-
-        const scaledWidth = backgroundImage.width * scale;
-        const scaledHeight = backgroundImage.height * scale;
-        const offsetX = (CONFIG.VIRTUAL_WIDTH - scaledWidth) / 2;
-        const offsetY = (CONFIG.VIRTUAL_HEIGHT - scaledHeight) / 2;
-
-        this.ctx.drawImage(backgroundImage, offsetX, offsetY, scaledWidth, scaledHeight);
-        this.ctx.restore();
-    }
-
     renderGameObjects(gameObjects) {
-        // Render background image first if available
-        if (gameObjects.backgroundImage) {
-            this.renderBackgroundImage(gameObjects.backgroundImage, gameObjects.backgroundOpacity);
-        }
-
         gameObjects.walls.forEach(wall => wall.draw(this.ctx));
         gameObjects.ramps.forEach(ramp => ramp.draw(this.ctx));
         gameObjects.tunnels.forEach(tunnel => tunnel.draw(this.ctx));

@@ -39,11 +39,6 @@ class DropTarget {
         return 0;
     }
 
-    reset() {
-        this.isActive = true;
-        this.resetTime = 0;
-    }
-
     draw(ctx) {
         if (!this.isActive) return;
 
