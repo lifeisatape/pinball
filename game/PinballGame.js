@@ -11,9 +11,7 @@ class PinballGame {
         this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
-        this.levelSelectOverlay = new LevelSelectOverlay(this.levelSelector, (level) => {
-            this.loadSelectedLevel(level);
-        });
+        this.startScreen = document.getElementById('startScreen');
 
         this.ball = null;
         this.gameStarted = false;
@@ -62,19 +60,63 @@ class PinballGame {
         });
 
         document.getElementById('gameOverRestart').addEventListener('click', () => this.restartGame());
+
+        document.getElementById('startLevel').addEventListener('click', () => {
+            const selectedLevel = this.levelSelector.getCurrentLevel();
+            if (selectedLevel) {
+                this.loadSelectedLevel(selectedLevel);
+            } else {
+                alert('Please select a level first!');
+            }
+        });
     }
 
-    showStartScreen() {
+    async showStartScreen() {
         // Hide game elements and show level selection
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
-        this.levelSelectOverlay.show();
+        
+        // Populate level list
+        const levels = await this.levelSelector.getAvailableLevels();
+        this.populateLevelList(levels);
+        
+        this.startScreen.style.display = 'flex';
     }
 
     hideStartScreen() {
         // Show game elements
         this.canvas.style.display = 'block';
         document.querySelector('.score-panel').style.display = 'flex';
+        this.startScreen.style.display = 'none';
+    }
+
+    populateLevelList(levels) {
+        const levelList = document.getElementById('levelList');
+        levelList.innerHTML = '';
+
+        levels.forEach((level, index) => {
+            const levelItem = document.createElement('div');
+            levelItem.className = `level-item ${index === this.levelSelector.currentLevelIndex ? 'selected' : ''}`;
+            levelItem.innerHTML = `
+                <div class="level-info">
+                    <div class="level-name">${level.name}</div>
+                    <div class="level-description">${level.description}</div>
+                </div>
+            `;
+
+            levelItem.addEventListener('click', () => {
+                // Remove previous selection
+                document.querySelectorAll('.level-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Select new level
+                levelItem.classList.add('selected');
+                this.levelSelector.selectLevel(index);
+            });
+
+            levelList.appendChild(levelItem);
+        });
     }
 
     update() {
@@ -192,10 +234,10 @@ class PinballGame {
         this.gameState.ballInPlay = false;
     }
 
-    showLevelSelect() {
+    async showLevelSelect() {
         // Pause game when showing level select during gameplay
         this.gameStarted = false;
-        this.levelSelectOverlay.show();
+        await this.showStartScreen();
     }
 
     async loadSelectedLevel(selectedLevel) {
