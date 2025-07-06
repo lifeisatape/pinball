@@ -1,4 +1,3 @@
-
 // Main Menu UI Component
 class MainMenu {
     constructor() {
@@ -30,7 +29,7 @@ class MainMenu {
                 <h1 style="font-size: 3rem; margin-bottom: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                     🎯 PINBALL GAME
                 </h1>
-                
+
                 <div class="menu-buttons" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
                     <button id="defaultLevelBtn" class="menu-btn" style="
                         padding: 1rem 2rem;
@@ -46,7 +45,22 @@ class MainMenu {
                     ">
                         🎮 Play Default Level
                     </button>
-                    
+
+                    <button id="degenLevelBtn" class="menu-btn" style="
+                        padding: 1rem 2rem;
+                        font-size: 1.2rem;
+                        background: #E91E63;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        min-width: 200px;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                    ">
+                        😈 Play Degen Level
+                    </button>
+
                     <button id="customLevelBtn" class="menu-btn" style="
                         padding: 1rem 2rem;
                         font-size: 1.2rem;
@@ -61,7 +75,7 @@ class MainMenu {
                     ">
                         🎨 Play Custom Level
                     </button>
-                    
+
                     <button id="editorBtn" class="menu-btn" style="
                         padding: 1rem 2rem;
                         font-size: 1.2rem;
@@ -77,7 +91,7 @@ class MainMenu {
                         🛠️ Level Editor
                     </button>
                 </div>
-                
+
                 <div class="level-info" style="margin-top: 2rem; max-width: 400px;">
                     <p style="color: #ccc; font-size: 0.9rem;">
                         Choose your adventure! Play the default level, load a custom level, or create your own in the editor.
@@ -107,6 +121,10 @@ class MainMenu {
             this.startGame('default');
         });
 
+        document.getElementById('degenLevelBtn').addEventListener('click', () => {
+            this.loadDegenLevel();
+        });
+
         document.getElementById('customLevelBtn').addEventListener('click', () => {
             this.loadCustomLevel();
         });
@@ -114,6 +132,19 @@ class MainMenu {
         document.getElementById('editorBtn').addEventListener('click', () => {
             this.openEditor();
         });
+    }
+
+    loadDegenLevel() {
+        fetch('./levels/degen.json')
+            .then(response => response.json())
+            .then(levelData => {
+                this.startGame('custom', levelData);
+            })
+            .catch(error => {
+                console.error('Error loading degen level:', error);
+                // Fallback to default level
+                this.startGame('default');
+            });
     }
 
     startGame(levelType, levelData = null) {
