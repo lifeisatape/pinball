@@ -12,7 +12,9 @@ class LevelManager {
             spinners: this.createDefaultSpinners(),
             dropTargets: this.createDefaultDropTargets(),
             ramps: this.createDefaultRamps(),
-            tunnels: this.createDefaultTunnels()
+            tunnels: this.createDefaultTunnels(),
+            backgroundImage: null,
+            backgroundOpacity: 0.5
         };
     }
 
@@ -76,8 +78,20 @@ class LevelManager {
             spinners: [],
             dropTargets: [],
             ramps: [],
-            tunnels: []
+            tunnels: [],
+            backgroundImage: null,
+            backgroundOpacity: 0.5
         };
+
+        // Load background image
+        if (levelData.background && levelData.background.image) {
+            const img = new Image();
+            img.onload = () => {
+                level.backgroundImage = img;
+            };
+            img.src = levelData.background.image;
+            level.backgroundOpacity = levelData.background.opacity || 0.5;
+        }
 
         // Load walls
         if (levelData.walls) {
