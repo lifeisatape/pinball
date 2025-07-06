@@ -6,12 +6,14 @@ class PinballGame {
 
         // Initialize game systems
         this.gameState = new GameState();
-        this.inputManager = new InputManager();
         this.levelManager = new LevelManager();
         this.gameRenderer = new GameRenderer(this.canvas);
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
         this.mainMenu = new MainMenu();
+        
+        // InputManager will be initialized when level is loaded
+        this.inputManager = null;
 
         this.currentLevel = null;
         this.gameStarted = false;
@@ -80,6 +82,11 @@ class PinballGame {
         } else {
             // Fallback to default
             this.currentLevel = this.levelManager.createDefaultLevel();
+        }
+
+        // Initialize InputManager with the level's flippers
+        if (!this.inputManager) {
+            this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
         }
 
         this.gameStarted = true;
