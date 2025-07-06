@@ -16,6 +16,25 @@ class Ball {
     }
 
     handleWallCollisions() {
+        // Левая граница
+        if (this.position.x < this.radius) {
+            this.position.x = this.radius;
+            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+        }
+        
+        // Правая граница
+        if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
+            this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
+            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+        }
+        
+        // Верхняя граница
+        if (this.position.y < this.radius) {
+            this.position.y = this.radius;
+            this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+        }
+        
+        // Проверка на потерю мяча (низ экрана)
         return this.position.y > CONFIG.VIRTUAL_HEIGHT + 50;
     }
 
