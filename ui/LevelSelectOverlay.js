@@ -38,6 +38,8 @@ class LevelSelectOverlay {
             if (selectedLevel && this.onLevelSelected) {
                 this.onLevelSelected(selectedLevel);
                 this.hide();
+            } else {
+                alert('Please select a level first!');
             }
         });
     }

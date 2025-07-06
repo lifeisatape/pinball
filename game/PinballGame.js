@@ -17,19 +17,29 @@ class PinballGame {
 
         this.ball = null;
         this.gameStarted = false;
+        this.currentLevel = null;
 
         this.setupEventListeners();
-        this.initializeGame();
+        this.showStartScreen();
     }
 
     async initializeGame() {
         try {
-            this.currentLevel = await this.levelManager.createDefaultLevel();
+            // If no level is selected, don't initialize
+            if (!this.currentLevel) {
+                return;
+            }
+
+            this.hideStartScreen();
             this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
             this.resetBall();
             this.updateUI();
             this.gameStarted = true;
-            this.gameLoop();
+            
+            if (!this.gameLoopRunning) {
+                this.gameLoopRunning = true;
+                this.gameLoop();
+            }
         } catch (error) {
             console.error('Failed to initialize game:', error);
         }
@@ -52,6 +62,19 @@ class PinballGame {
         });
 
         document.getElementById('gameOverRestart').addEventListener('click', () => this.restartGame());
+    }
+
+    showStartScreen() {
+        // Hide game elements and show level selection
+        this.canvas.style.display = 'none';
+        document.querySelector('.score-panel').style.display = 'none';
+        this.levelSelectOverlay.show();
+    }
+
+    hideStartScreen() {
+        // Show game elements
+        this.canvas.style.display = 'block';
+        document.querySelector('.score-panel').style.display = 'flex';
     }
 
     update() {
@@ -170,6 +193,8 @@ class PinballGame {
     }
 
     showLevelSelect() {
+        // Pause game when showing level select during gameplay
+        this.gameStarted = false;
         this.levelSelectOverlay.show();
     }
 
@@ -178,14 +203,15 @@ class PinballGame {
             // Load the selected level data
             this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
 
-            // Reset game state
-            this.restartGame();
+            // Initialize game with selected level
+            await this.initializeGame();
 
             console.log(`Loaded level: ${selectedLevel.name}`);
         } catch (error) {
             console.error('Error loading selected level:', error);
             // Fallback to default level
             this.currentLevel = await this.levelManager.createDefaultLevel();
+            await this.initializeGame();
         }
     }
 
@@ -194,6 +220,8 @@ class PinballGame {
             this.update();
             this.draw();
         }
-        requestAnimationFrame(() => this.gameLoop());
+        if (this.gameLoopRunning) {
+            requestAnimationFrame(() => this.gameLoop());
+        }
     }
 }
