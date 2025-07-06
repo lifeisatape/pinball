@@ -229,8 +229,7 @@ class PinballGame {
         this.ball.reset();
         this.levelManager.resetLevel(this.currentLevel);
         this.gameOverOverlay.hide();
-        this.scorePanel.updateScore(0);
-        this.scorePanel.updateBalls(3);
+        this.updateUI(); // Обновляем весь UI включая high score
         this.gameState.ballInPlay = false;
     }
 
@@ -245,6 +244,9 @@ class PinballGame {
             // Load the selected level data
             this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
 
+            // Set current level in game state for high score tracking
+            this.gameState.setCurrentLevel(selectedLevel.name);
+
             // Initialize game with selected level
             await this.initializeGame();
 
@@ -253,6 +255,7 @@ class PinballGame {
             console.error('Error loading selected level:', error);
             // Fallback to default level
             this.currentLevel = await this.levelManager.createDefaultLevel();
+            this.gameState.setCurrentLevel('default');
             await this.initializeGame();
         }
     }
