@@ -17,9 +17,10 @@ class Ball {
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
         this.velocity.multiply(CONFIG.FRICTION);
         
-        // Sub-stepping for high-speed collisions
+        // More aggressive sub-stepping for high-speed collisions
         const speed = this.velocity.magnitude();
-        const steps = Math.max(1, Math.ceil(speed / (this.radius * 0.5)));
+        // Use smaller step size for better collision detection
+        const steps = Math.max(1, Math.ceil(speed / (this.radius * 0.25)));
         
         const stepVelocity = new Vector2D(
             this.velocity.x / steps,
@@ -27,10 +28,35 @@ class Ball {
         );
         
         for (let i = 0; i < steps; i++) {
+            // Store position before step
+            const beforeStep = this.position.copy();
+            
             this.position.add(stepVelocity);
             
             if (this.handleWallCollisions()) {
                 return true; // Ball lost
+            }
+            
+            // Additional safety check: ensure we didn't move too far
+            const stepDistance = beforeStep.distanceTo(this.position);
+            if (stepDistance > this.radius) {
+                // If step was too large, interpolate more carefully
+                const safeSteps = Math.ceil(stepDistance / (this.radius * 0.1));
+                const safeStepVelocity = new Vector2D(
+                    stepVelocity.x / safeSteps,
+                    stepVelocity.y / safeSteps
+                );
+                
+                // Reset to before step and take smaller steps
+                this.position.x = beforeStep.x;
+                this.position.y = beforeStep.y;
+                
+                for (let j = 0; j < safeSteps; j++) {
+                    this.position.add(safeStepVelocity);
+                    if (this.handleWallCollisions()) {
+                        return true;
+                    }
+                }
             }
         }
         

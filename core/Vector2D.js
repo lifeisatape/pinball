@@ -46,4 +46,10 @@ class Vector2D {
         }
         return this;
     }
+
+    distanceTo(other) {
+        const dx = this.x - other.x;
+        const dy = this.y - other.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 }
