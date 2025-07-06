@@ -130,6 +130,11 @@ class PinballGame {
         this.renderer.clear();
         this.renderer.startVirtualRendering();
 
+        // Draw background image if available
+        if (this.currentLevel.backgroundImage) {
+            this.renderer.drawBackgroundImage(this.currentLevel.backgroundImage, this.currentLevel.backgroundOpacity);
+        }
+
         this.renderer.renderGameObjects(this.currentLevel);
         this.renderer.renderBall(this.ball, this.gameState.ballInPlay);
 

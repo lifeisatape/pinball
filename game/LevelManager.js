@@ -84,7 +84,9 @@ class LevelManager {
             spinners: [],
             dropTargets: [],
             ramps: [],
-            tunnels: []
+            tunnels: [],
+            backgroundImage: null,
+            backgroundOpacity: 0.5
         };
 
         // Load walls
@@ -120,6 +122,16 @@ class LevelManager {
             level.tunnels = levelData.tunnels.map(tunnelData => 
                 new Tunnel(tunnelData.entryX, tunnelData.entryY, tunnelData.exitX, tunnelData.exitY, tunnelData.radius)
             );
+        }
+
+        // Load background image
+        if (levelData.background && levelData.background.image) {
+            const img = new Image();
+            img.onload = () => {
+                level.backgroundImage = img;
+            };
+            img.src = levelData.background.image;
+            level.backgroundOpacity = levelData.background.opacity || 0.5;
         }
 
         return level;

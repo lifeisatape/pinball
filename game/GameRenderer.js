@@ -40,6 +40,25 @@ class GameRenderer {
         this.ctx.fillRect(0, 0, CONFIG.VIRTUAL_WIDTH, CONFIG.VIRTUAL_HEIGHT);
     }
 
+    drawBackgroundImage(backgroundImage, opacity) {
+        if (!backgroundImage) return;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = opacity || 0.5;
+
+        const scaleX = CONFIG.VIRTUAL_WIDTH / backgroundImage.width;
+        const scaleY = CONFIG.VIRTUAL_HEIGHT / backgroundImage.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        const scaledWidth = backgroundImage.width * scale;
+        const scaledHeight = backgroundImage.height * scale;
+        const offsetX = (CONFIG.VIRTUAL_WIDTH - scaledWidth) / 2;
+        const offsetY = (CONFIG.VIRTUAL_HEIGHT - scaledHeight) / 2;
+
+        this.ctx.drawImage(backgroundImage, offsetX, offsetY, scaledWidth, scaledHeight);
+        this.ctx.restore();
+    }
+
     endVirtualRendering() {
         this.ctx.restore();
     }
