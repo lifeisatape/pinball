@@ -38,6 +38,13 @@ class Ball {
         return this.position.y > CONFIG.VIRTUAL_HEIGHT + 50;
     }
 
+    reset() {
+        this.position.x = CONFIG.VIRTUAL_WIDTH * 0.51;
+        this.position.y = 50;
+        this.velocity.x = 0;
+        this.velocity.y = 0;
+    }
+
     draw(ctx) {
         const gradient = ctx.createRadialGradient(
             this.position.x - 3, this.position.y - 3, 0,
