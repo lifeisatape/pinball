@@ -7,7 +7,7 @@ class PinballGame {
         this.levelManager = new LevelManager();
         this.levelSelector = new LevelSelector();
         this.renderer = new GameRenderer(this.canvas);
-        this.inputManager = new InputManager();
+        this.inputManager = null; // Will be initialized in initializeGame()
         this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
