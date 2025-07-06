@@ -11,8 +11,9 @@ class GameRenderer {
     }
 
     setupCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 60;
+        const container = this.canvas.parentElement;
+        this.canvas.width = container.clientWidth;
+        this.canvas.height = container.clientHeight;
 
         const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
         const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
@@ -20,6 +21,20 @@ class GameRenderer {
 
         this.offsetX = (this.canvas.width - CONFIG.VIRTUAL_WIDTH * this.scale) / 2;
         this.offsetY = (this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale) / 2;
+    }
+
+    screenToWorld(screenX, screenY) {
+        return {
+            x: (screenX - this.offsetX) / this.scale,
+            y: (screenY - this.offsetY) / this.scale
+        };
+    }
+
+    worldToScreen(worldX, worldY) {
+        return {
+            x: worldX * this.scale + this.offsetX,
+            y: worldY * this.scale + this.offsetY
+        };
     }
 
     clear() {
