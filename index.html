@@ -22,6 +22,7 @@
                 <span class="score-value" id="highScore">0</span>
             </div>
             <button class="restart-btn" id="restartBtn">NEW GAME</button>
+            <button class="restart-btn" id="selectLevelBtn">SELECT LEVEL</button>
         </div>
 
         <canvas id="gameCanvas"></canvas>
@@ -58,11 +59,13 @@
     <!-- UI components -->
     <script src="ui/ScorePanel.js"></script>
     <script src="ui/GameOverOverlay.js"></script>
+    <script src="ui/LevelSelectOverlay.js"></script>
     
     <!-- Game engine (depends on everything above) -->
     <script src="game/GameRenderer.js"></script>
     <script src="game/InputManager.js"></script>
     <script src="game/LevelManager.js"></script>
+    <script src="game/LevelSelector.js"></script>
     <script src="game/PinballGame.js"></script>
     
     <!-- Initialize game -->

@@ -2,16 +2,18 @@
 class PinballGame {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
-        this.gameState = new GameState();
+        this.ctx = this.canvas.getContext('2d');
 
         this.levelManager = new LevelManager();
-        this.currentLevel = null;
-
-        this.renderer = new GameRenderer(this.canvas);
-        this.inputManager = null;
-
+        this.levelSelector = new LevelSelector();
+        this.renderer = new GameRenderer(this.ctx);
+        this.inputManager = new InputManager();
+        this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
+        this.levelSelectOverlay = new LevelSelectOverlay(this.levelSelector, (level) => {
+            this.loadSelectedLevel(level);
+        });
 
         this.ball = null;
         this.gameStarted = false;
@@ -41,7 +43,14 @@ class PinballGame {
     }
 
     setupEventListeners() {
-        document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            this.restartGame();
+        });
+
+        document.getElementById('selectLevelBtn').addEventListener('click', () => {
+            this.showLevelSelect();
+        });
+
         document.getElementById('gameOverRestart').addEventListener('click', () => this.restartGame());
     }
 
@@ -150,15 +159,34 @@ class PinballGame {
         this.gameOverOverlay.show(this.gameState);
     }
 
-    async restartGame() {
-        this.gameState.reset();
+    restartGame() {
+        this.gameState.resetGame();
+        this.ball.reset();
+        this.levelManager.resetLevel(this.currentLevel);
         this.gameOverOverlay.hide();
-        
-        // Перезагружаем уровень
-        this.currentLevel = await this.levelManager.createDefaultLevel();
-        this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
-        this.resetBall();
-        this.updateUI();
+        this.scorePanel.updateScore(0);
+        this.scorePanel.updateBalls(3);
+        this.gameState.ballInPlay = false;
+    }
+
+    showLevelSelect() {
+        this.levelSelectOverlay.show();
+    }
+
+    async loadSelectedLevel(selectedLevel) {
+        try {
+            // Load the selected level data
+            this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
+
+            // Reset game state
+            this.restartGame();
+
+            console.log(`Loaded level: ${selectedLevel.name}`);
+        } catch (error) {
+            console.error('Error loading selected level:', error);
+            // Fallback to default level
+            this.currentLevel = await this.levelManager.createDefaultLevel();
+        }
     }
 
     gameLoop() {
