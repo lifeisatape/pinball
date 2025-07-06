@@ -16,6 +16,25 @@ class Ball {
     }
 
     handleWallCollisions() {
+        // Left boundary
+        if (this.position.x < this.radius) {
+            this.position.x = this.radius;
+            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+        }
+        
+        // Right boundary
+        if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
+            this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
+            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+        }
+        
+        // Top boundary
+        if (this.position.y < this.radius) {
+            this.position.y = this.radius;
+            this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+        }
+        
+        // Bottom boundary (ball lost)
         return this.position.y > CONFIG.VIRTUAL_HEIGHT + 50;
     }
 

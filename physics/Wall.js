@@ -26,15 +26,18 @@ class Wall {
         if (distance < ball.radius + this.width / 2) {
             const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
+            // Полностью вытолкнуть шарик из стенки
             const overlap = ball.radius + this.width / 2 - distance;
-            const pushDistance = overlap * 0.8;
-            ball.position.x += normal.x * pushDistance;
-            ball.position.y += normal.y * pushDistance;
+            ball.position.x += normal.x * (overlap + 1);
+            ball.position.y += normal.y * (overlap + 1);
 
+            // Отражение скорости
             const dotProduct = ball.velocity.dot(normal);
-            ball.velocity.x -= 2 * dotProduct * normal.x;
-            ball.velocity.y -= 2 * dotProduct * normal.y;
-            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            if (dotProduct < 0) { // Только если шарик движется к стенке
+                ball.velocity.x -= 2 * dotProduct * normal.x;
+                ball.velocity.y -= 2 * dotProduct * normal.y;
+                ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            }
 
             return true;
         }
