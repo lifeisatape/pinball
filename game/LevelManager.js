@@ -87,24 +87,11 @@ class LevelManager {
             tunnels: []
         };
 
-        // Add boundary walls first
-        const gameWidth = CONFIG.VIRTUAL_WIDTH;
-        const gameHeight = CONFIG.VIRTUAL_HEIGHT;
-        
-        level.walls.push(
-            new Wall(5, 5, 5, gameHeight - 100), // Left wall
-            new Wall(gameWidth - 5, 5, gameWidth - 5, gameHeight - 100), // Right wall
-            new Wall(5, 5, gameWidth - 5, 5), // Top wall
-            new Wall(gameWidth * 0.25, gameHeight - 80, gameWidth * 0, gameHeight - 100), // Bottom left
-            new Wall(gameWidth * 1, gameHeight - 100, gameWidth * 0.75, gameHeight - 80) // Bottom right
-        );
-
-        // Load custom walls from level data
+        // Load walls
         if (levelData.walls) {
-            const customWalls = levelData.walls.map(wallData => 
+            level.walls = levelData.walls.map(wallData => 
                 new Wall(wallData.x1, wallData.y1, wallData.x2, wallData.y2, wallData.color, wallData.width)
             );
-            level.walls.push(...customWalls);
         }
 
         // Load bumpers
