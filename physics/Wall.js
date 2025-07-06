@@ -21,25 +21,15 @@ class Wall {
     }
 
     checkCollision(ball) {
-        // Проверяем коллизию с учетом предыдущей позиции шарика
-        const prevPosition = new Vector2D(
-            ball.position.x - ball.velocity.x,
-            ball.position.y - ball.velocity.y
-        );
-        
         const distance = distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
-        const prevDistance = distanceToLineSegment(prevPosition, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
-        
-        // Проверяем, пересекает ли траектория шарика стенку
-        const collisionRadius = ball.radius + this.width / 2;
-        
-        if (distance < collisionRadius || (prevDistance > collisionRadius && distance < prevDistance)) {
+
+        if (distance < ball.radius + this.width / 2) {
             const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
             // Полностью вытолкнуть шарик из стенки
-            const overlap = Math.max(0, collisionRadius - distance);
-            ball.position.x += normal.x * (overlap + 2);
-            ball.position.y += normal.y * (overlap + 2);
+            const overlap = ball.radius + this.width / 2 - distance;
+            ball.position.x += normal.x * (overlap + 1);
+            ball.position.y += normal.y * (overlap + 1);
 
             // Отражение скорости
             const dotProduct = ball.velocity.dot(normal);
