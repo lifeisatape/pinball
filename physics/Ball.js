@@ -1,37 +1,70 @@
 
-// Ball Class
+// Ball Class with enhanced collision detection
 class Ball {
     constructor(x, y) {
         this.position = new Vector2D(x, y);
         this.velocity = new Vector2D(0, 0);
         this.radius = CONFIG.BALL_RADIUS;
+        this.prevPosition = new Vector2D(x, y);
     }
 
     update() {
+        // Store previous position for continuous collision detection
+        this.prevPosition.x = this.position.x;
+        this.prevPosition.y = this.position.y;
+        
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
         this.velocity.multiply(CONFIG.FRICTION);
-        this.position.add(this.velocity);
-        return this.handleWallCollisions();
+        
+        // Sub-stepping for high-speed collisions
+        const speed = this.velocity.magnitude();
+        const steps = Math.max(1, Math.ceil(speed / (this.radius * 0.5)));
+        
+        const stepVelocity = new Vector2D(
+            this.velocity.x / steps,
+            this.velocity.y / steps
+        );
+        
+        for (let i = 0; i < steps; i++) {
+            this.position.add(stepVelocity);
+            
+            if (this.handleWallCollisions()) {
+                return true; // Ball lost
+            }
+        }
+        
+        return false;
     }
 
     handleWallCollisions() {
+        let velocityChanged = false;
+        
         // Left boundary
         if (this.position.x < this.radius) {
             this.position.x = this.radius;
-            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            if (this.velocity.x < 0) {
+                this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+                velocityChanged = true;
+            }
         }
         
         // Right boundary
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
             this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
-            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            if (this.velocity.x > 0) {
+                this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+                velocityChanged = true;
+            }
         }
         
         // Top boundary
         if (this.position.y < this.radius) {
             this.position.y = this.radius;
-            this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+            if (this.velocity.y < 0) {
+                this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+                velocityChanged = true;
+            }
         }
         
         // Bottom boundary (ball lost)
