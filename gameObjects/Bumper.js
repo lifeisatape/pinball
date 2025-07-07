@@ -28,9 +28,8 @@ class Bumper {
             ball.position.x += normal.x * overlap;
             ball.position.y += normal.y * overlap;
 
-            const bounceForce = 15;
-            ball.velocity.x = normal.x * bounceForce;
-            ball.velocity.y = normal.y * bounceForce;
+            ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
+            ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
 
             this.hitAnimation = 1;
             return this.points;

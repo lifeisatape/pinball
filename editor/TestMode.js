@@ -173,9 +173,8 @@ class TestMode {
             this.ball.position.x += normal.x * overlap;
             this.ball.position.y += normal.y * overlap;
 
-            const bounceForce = 15;
-            this.ball.velocity.x = normal.x * bounceForce;
-            this.ball.velocity.y = normal.y * bounceForce;
+            this.ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
+            this.ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
 
             // Add hit animation
             bumper.hitAnimation = 1;
