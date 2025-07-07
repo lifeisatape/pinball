@@ -11,8 +11,29 @@ class Ball {
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
         this.velocity.multiply(CONFIG.FRICTION);
-        this.position.add(this.velocity);
+        
+        // Use continuous collision detection for high-speed movement
+        this.updatePositionWithCCD();
         return this.handleWallCollisions();
+    }
+
+    updatePositionWithCCD() {
+        const speed = this.velocity.magnitude();
+        
+        // If moving fast, break movement into smaller steps
+        if (speed > this.radius) {
+            const steps = Math.ceil(speed / (this.radius * 0.5));
+            const stepVelocity = new Vector2D(this.velocity.x / steps, this.velocity.y / steps);
+            
+            for (let i = 0; i < steps; i++) {
+                this.position.add(stepVelocity);
+                
+                // Check boundaries after each micro-step
+                this.handleWallCollisions();
+            }
+        } else {
+            this.position.add(this.velocity);
+        }
     }
 
     handleWallCollisions() {

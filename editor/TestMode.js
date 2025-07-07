@@ -144,18 +144,36 @@ class TestMode {
                     // Collision detected
                     const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
 
-                    // Push ball to correct side
-                    const overlap = (wall.width / 2 + this.ball.radius) - Math.abs(currentDistance - targetRadius);
-                    const pushDirection = currentDistance < targetRadius ? -1 : 1;
-                    
-                    this.ball.position.x += normal.x * overlap * pushDirection * 0.8;
-                    this.ball.position.y += normal.y * overlap * pushDirection * 0.8;
+                    // Determine collision type and adjust normal
+                    const isInside = currentDistance < targetRadius;
+                    if (isInside) {
+                        normal.x *= -1;
+                        normal.y *= -1;
+                    }
 
-                    // Reflect velocity
+                    // Calculate required separation distance
+                    const requiredDistance = isInside ? 
+                        (targetRadius - wall.width / 2 - this.ball.radius) :
+                        (targetRadius + wall.width / 2 + this.ball.radius);
+
+                    const safetyMargin = 2;
+
+                    // Push ball to safe position
+                    if (isInside) {
+                        this.ball.position.x = wall.centerX + normal.x * (targetRadius - wall.width / 2 - this.ball.radius - safetyMargin);
+                        this.ball.position.y = wall.centerY + normal.y * (targetRadius - wall.width / 2 - this.ball.radius - safetyMargin);
+                    } else {
+                        this.ball.position.x = wall.centerX + normal.x * (targetRadius + wall.width / 2 + this.ball.radius + safetyMargin);
+                        this.ball.position.y = wall.centerY + normal.y * (targetRadius + wall.width / 2 + this.ball.radius + safetyMargin);
+                    }
+
+                    // Reflect velocity only if moving towards surface
                     const dotProduct = this.ball.velocity.dot(normal);
-                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
-                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
-                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                    if (dotProduct < 0) {
+                        this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                        this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                        this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                    }
                 }
             }
         }

@@ -65,23 +65,39 @@ class Wall {
                         // Collision detected
                         const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
                         
-                        // If ball is inside the arc, flip normal
-                        if (currentDistance < targetRadius) {
+                        // Determine collision type and adjust normal
+                        const isInside = currentDistance < targetRadius;
+                        if (isInside) {
                             normal.x *= -1;
                             normal.y *= -1;
                         }
 
-                        // Push ball away from arc
-                        const overlap = ball.radius + this.width / 2 - Math.abs(currentDistance - targetRadius);
-                        const pushDistance = overlap * 0.8;
-                        ball.position.x += normal.x * pushDistance;
-                        ball.position.y += normal.y * pushDistance;
+                        // Calculate required separation distance
+                        const requiredDistance = isInside ? 
+                            (targetRadius - this.width / 2 - ball.radius) :
+                            (targetRadius + this.width / 2 + ball.radius);
+                        
+                        const separationDistance = Math.abs(requiredDistance - currentDistance);
+                        
+                        // Push ball to safe position with extra margin
+                        const safetyMargin = 2;
+                        const pushDistance = separationDistance + safetyMargin;
+                        
+                        if (isInside) {
+                            ball.position.x = this.centerX + normal.x * (targetRadius - this.width / 2 - ball.radius - safetyMargin);
+                            ball.position.y = this.centerY + normal.y * (targetRadius - this.width / 2 - ball.radius - safetyMargin);
+                        } else {
+                            ball.position.x = this.centerX + normal.x * (targetRadius + this.width / 2 + ball.radius + safetyMargin);
+                            ball.position.y = this.centerY + normal.y * (targetRadius + this.width / 2 + ball.radius + safetyMargin);
+                        }
 
-                        // Reflect velocity
+                        // Reflect velocity only if moving towards surface
                         const dotProduct = ball.velocity.dot(normal);
-                        ball.velocity.x -= 2 * dotProduct * normal.x;
-                        ball.velocity.y -= 2 * dotProduct * normal.y;
-                        ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                        if (dotProduct < 0) {
+                            ball.velocity.x -= 2 * dotProduct * normal.x;
+                            ball.velocity.y -= 2 * dotProduct * normal.y;
+                            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                        }
 
                         return true;
                     }
@@ -94,15 +110,23 @@ class Wall {
             if (distance < ball.radius + this.width / 2) {
                 const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
-                const overlap = ball.radius + this.width / 2 - distance;
-                const pushDistance = overlap * 0.8;
-                ball.position.x += normal.x * pushDistance;
-                ball.position.y += normal.y * pushDistance;
+                // Calculate exact separation needed
+                const requiredDistance = ball.radius + this.width / 2;
+                const separationNeeded = requiredDistance - distance;
+                const safetyMargin = 2;
+                
+                // Push ball to completely safe position
+                const totalPush = separationNeeded + safetyMargin;
+                ball.position.x += normal.x * totalPush;
+                ball.position.y += normal.y * totalPush;
 
+                // Reflect velocity only if moving towards wall
                 const dotProduct = ball.velocity.dot(normal);
-                ball.velocity.x -= 2 * dotProduct * normal.x;
-                ball.velocity.y -= 2 * dotProduct * normal.y;
-                ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                if (dotProduct < 0) {
+                    ball.velocity.x -= 2 * dotProduct * normal.x;
+                    ball.velocity.y -= 2 * dotProduct * normal.y;
+                    ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                }
 
                 return true;
             }
