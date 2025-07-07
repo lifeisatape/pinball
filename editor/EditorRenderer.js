@@ -331,40 +331,43 @@ class EditorRenderer {
             }
 
             this.ctx.setLineDash([5, 5]);
-        } else if (selectedObject.type === 'semicircle' || selectedObject.type === 'quarter') {
-                // Draw arc selection
-                this.ctx.strokeStyle = '#00ff00';
-                this.ctx.lineWidth = 3;
-                this.ctx.setLineDash([5, 5]);
-                this.ctx.beginPath();
-                this.ctx.arc(obj.centerX, obj.centerY, obj.radius, obj.startAngle, obj.endAngle);
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
+        }
 
-                // Draw center point
-                this.ctx.fillStyle = '#00ff00';
-                this.ctx.beginPath();
-                this.ctx.arc(obj.centerX, obj.centerY, 4, 0, Math.PI * 2);
-                this.ctx.fill();
+        // Handle arc walls separately
+        if (selectedObject.type === 'wall' && (obj.type === 'semicircle' || obj.type === 'quarter')) {
+            // Draw arc selection
+            this.ctx.strokeStyle = '#00ff00';
+            this.ctx.lineWidth = 3;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.beginPath();
+            this.ctx.arc(obj.centerX, obj.centerY, obj.radius, obj.startAngle, obj.endAngle);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
 
-                // Draw rotation handles at start and end of arc
-                const startX = obj.centerX + Math.cos(obj.startAngle) * obj.radius;
-                const startY = obj.centerY + Math.sin(obj.startAngle) * obj.radius;
-                const endX = obj.centerX + Math.cos(obj.endAngle) * obj.radius;
-                const endY = obj.centerY + Math.sin(obj.endAngle) * obj.radius;
+            // Draw center point
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.beginPath();
+            this.ctx.arc(obj.centerX, obj.centerY, 4, 0, Math.PI * 2);
+            this.ctx.fill();
 
-                // Start handle (blue)
-                this.ctx.fillStyle = '#0088ff';
-                this.ctx.beginPath();
-                this.ctx.arc(startX, startY, 6, 0, Math.PI * 2);
-                this.ctx.fill();
+            // Draw rotation handles at start and end of arc
+            const startX = obj.centerX + Math.cos(obj.startAngle) * obj.radius;
+            const startY = obj.centerY + Math.sin(obj.startAngle) * obj.radius;
+            const endX = obj.centerX + Math.cos(obj.endAngle) * obj.radius;
+            const endY = obj.centerY + Math.sin(obj.endAngle) * obj.radius;
 
-                // End handle (red)
-                this.ctx.fillStyle = '#ff4444';
-                this.ctx.beginPath();
-                this.ctx.arc(endX, endY, 6, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
+            // Start handle (blue)
+            this.ctx.fillStyle = '#0088ff';
+            this.ctx.beginPath();
+            this.ctx.arc(startX, startY, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // End handle (red)
+            this.ctx.fillStyle = '#ff4444';
+            this.ctx.beginPath();
+            this.ctx.arc(endX, endY, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
 
         this.ctx.setLineDash([]);
     }
