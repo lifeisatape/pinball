@@ -162,6 +162,10 @@ class Flipper {
 
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+            
+            // Stop micro-bouncing on flipper collisions
+            if (Math.abs(ball.velocity.x) < 0.5) ball.velocity.x = 0;
+            if (Math.abs(ball.velocity.y) < 0.5) ball.velocity.y = 0;
 
             return true;
         }
