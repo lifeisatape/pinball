@@ -93,15 +93,21 @@ class TestMode {
             if (distance < this.ball.radius + wall.width / 2) {
                 const normal = getNormalToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
 
-                const overlap = this.ball.radius + wall.width / 2 - distance;
-                const pushDistance = overlap * 0.8;
-                this.ball.position.x += normal.x * pushDistance;
-                this.ball.position.y += normal.y * pushDistance;
+                const requiredDistance = this.ball.radius + wall.width / 2;
+                const separationNeeded = requiredDistance - distance;
+                const safetyMargin = 0.5;
+                
+                const totalPush = separationNeeded + safetyMargin;
+                this.ball.position.x += normal.x * totalPush;
+                this.ball.position.y += normal.y * totalPush;
 
+                // Reflect velocity only if moving towards wall
                 const dotProduct = this.ball.velocity.dot(normal);
-                this.ball.velocity.x -= 2 * dotProduct * normal.x;
-                this.ball.velocity.y -= 2 * dotProduct * normal.y;
-                this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                if (dotProduct < 0) {
+                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                }
             }
         } else if (wall.type === 'semicircle' || wall.type === 'quarter') {
             // Handle arc walls
@@ -156,15 +162,17 @@ class TestMode {
                         (targetRadius - wall.width / 2 - this.ball.radius) :
                         (targetRadius + wall.width / 2 + this.ball.radius);
 
-                    const safetyMargin = 2;
+                    const safetyMargin = 0.5;
 
                     // Push ball to safe position
                     if (isInside) {
-                        this.ball.position.x = wall.centerX + normal.x * (targetRadius - wall.width / 2 - this.ball.radius - safetyMargin);
-                        this.ball.position.y = wall.centerY + normal.y * (targetRadius - wall.width / 2 - this.ball.radius - safetyMargin);
+                        const targetDistance = targetRadius - wall.width / 2 - this.ball.radius - safetyMargin;
+                        this.ball.position.x = wall.centerX + normal.x * targetDistance;
+                        this.ball.position.y = wall.centerY + normal.y * targetDistance;
                     } else {
-                        this.ball.position.x = wall.centerX + normal.x * (targetRadius + wall.width / 2 + this.ball.radius + safetyMargin);
-                        this.ball.position.y = wall.centerY + normal.y * (targetRadius + wall.width / 2 + this.ball.radius + safetyMargin);
+                        const targetDistance = targetRadius + wall.width / 2 + this.ball.radius + safetyMargin;
+                        this.ball.position.x = wall.centerX + normal.x * targetDistance;
+                        this.ball.position.y = wall.centerY + normal.y * targetDistance;
                     }
 
                     // Reflect velocity only if moving towards surface

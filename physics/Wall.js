@@ -79,16 +79,17 @@ class Wall {
                         
                         const separationDistance = Math.abs(requiredDistance - currentDistance);
                         
-                        // Push ball to safe position with extra margin
-                        const safetyMargin = 2;
-                        const pushDistance = separationDistance + safetyMargin;
+                        // Push ball to safe position with minimal margin
+                        const safetyMargin = 0.5;
                         
                         if (isInside) {
-                            ball.position.x = this.centerX + normal.x * (targetRadius - this.width / 2 - ball.radius - safetyMargin);
-                            ball.position.y = this.centerY + normal.y * (targetRadius - this.width / 2 - ball.radius - safetyMargin);
+                            const targetDistance = targetRadius - this.width / 2 - ball.radius - safetyMargin;
+                            ball.position.x = this.centerX + normal.x * targetDistance;
+                            ball.position.y = this.centerY + normal.y * targetDistance;
                         } else {
-                            ball.position.x = this.centerX + normal.x * (targetRadius + this.width / 2 + ball.radius + safetyMargin);
-                            ball.position.y = this.centerY + normal.y * (targetRadius + this.width / 2 + ball.radius + safetyMargin);
+                            const targetDistance = targetRadius + this.width / 2 + ball.radius + safetyMargin;
+                            ball.position.x = this.centerX + normal.x * targetDistance;
+                            ball.position.y = this.centerY + normal.y * targetDistance;
                         }
 
                         // Reflect velocity only if moving towards surface
@@ -113,9 +114,9 @@ class Wall {
                 // Calculate exact separation needed
                 const requiredDistance = ball.radius + this.width / 2;
                 const separationNeeded = requiredDistance - distance;
-                const safetyMargin = 2;
+                const safetyMargin = 0.5;
                 
-                // Push ball to completely safe position
+                // Push ball to safe position
                 const totalPush = separationNeeded + safetyMargin;
                 ball.position.x += normal.x * totalPush;
                 ball.position.y += normal.y * totalPush;
