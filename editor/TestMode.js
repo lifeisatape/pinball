@@ -157,22 +157,18 @@ class TestMode {
                         normal.y *= -1;
                     }
 
-                    // Calculate required separation distance
-                    const requiredDistance = isInside ? 
-                        (targetRadius - wall.width / 2 - this.ball.radius) :
-                        (targetRadius + wall.width / 2 + this.ball.radius);
-
-                    const safetyMargin = 0.5;
-
-                    // Push ball to safe position
-                    if (isInside) {
-                        const targetDistance = targetRadius - wall.width / 2 - this.ball.radius - safetyMargin;
-                        this.ball.position.x = wall.centerX + normal.x * targetDistance;
-                        this.ball.position.y = wall.centerY + normal.y * targetDistance;
-                    } else {
-                        const targetDistance = targetRadius + wall.width / 2 + this.ball.radius + safetyMargin;
-                        this.ball.position.x = wall.centerX + normal.x * targetDistance;
-                        this.ball.position.y = wall.centerY + normal.y * targetDistance;
+                    // Calculate overlap and push ball out gradually
+                    const targetSurface = isInside ? 
+                        (targetRadius - wall.width / 2) :
+                        (targetRadius + wall.width / 2);
+                    
+                    const overlap = Math.abs(targetSurface - currentDistance) - this.ball.radius;
+                    
+                    if (overlap > 0) {
+                        // Push ball out by the overlap amount plus small safety margin
+                        const pushDistance = overlap + 1.0;
+                        this.ball.position.x += normal.x * pushDistance;
+                        this.ball.position.y += normal.y * pushDistance;
                     }
 
                     // Reflect velocity only if moving towards surface

@@ -72,24 +72,18 @@ class Wall {
                             normal.y *= -1;
                         }
 
-                        // Calculate required separation distance
-                        const requiredDistance = isInside ? 
-                            (targetRadius - this.width / 2 - ball.radius) :
-                            (targetRadius + this.width / 2 + ball.radius);
+                        // Calculate overlap and push ball out gradually
+                        const targetSurface = isInside ? 
+                            (targetRadius - this.width / 2) :
+                            (targetRadius + this.width / 2);
                         
-                        const separationDistance = Math.abs(requiredDistance - currentDistance);
+                        const overlap = Math.abs(targetSurface - currentDistance) - ball.radius;
                         
-                        // Push ball to safe position with minimal margin
-                        const safetyMargin = 0.5;
-                        
-                        if (isInside) {
-                            const targetDistance = targetRadius - this.width / 2 - ball.radius - safetyMargin;
-                            ball.position.x = this.centerX + normal.x * targetDistance;
-                            ball.position.y = this.centerY + normal.y * targetDistance;
-                        } else {
-                            const targetDistance = targetRadius + this.width / 2 + ball.radius + safetyMargin;
-                            ball.position.x = this.centerX + normal.x * targetDistance;
-                            ball.position.y = this.centerY + normal.y * targetDistance;
+                        if (overlap > 0) {
+                            // Push ball out by the overlap amount plus small safety margin
+                            const pushDistance = overlap + 1.0;
+                            ball.position.x += normal.x * pushDistance;
+                            ball.position.y += normal.y * pushDistance;
                         }
 
                         // Reflect velocity only if moving towards surface
