@@ -40,8 +40,8 @@ class Spinner {
             const worldNormalX = cos * normal.x - sin * normal.y;
             const worldNormalY = sin * normal.x + cos * normal.y;
 
-            ball.velocity.x += worldNormalX * 8;
-            ball.velocity.y += worldNormalY * 8;
+            ball.velocity.x += worldNormalX * CONFIG.SPINNER_BOUNCE_FORCE;
+            ball.velocity.y += worldNormalY * CONFIG.SPINNER_BOUNCE_FORCE;
 
             return this.points;
         }

@@ -206,8 +206,8 @@ class TestMode {
             const worldNormalX = cos * normal.x - sin * normal.y;
             const worldNormalY = sin * normal.x + cos * normal.y;
 
-            this.ball.velocity.x += worldNormalX * 8;
-            this.ball.velocity.y += worldNormalY * 8;
+            this.ball.velocity.x += worldNormalX * CONFIG.SPINNER_BOUNCE_FORCE;
+            this.ball.velocity.y += worldNormalY * CONFIG.SPINNER_BOUNCE_FORCE;
 
             return true;
         }
