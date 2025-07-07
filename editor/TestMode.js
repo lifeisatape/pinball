@@ -96,7 +96,7 @@ class TestMode {
                 const requiredDistance = this.ball.radius + wall.width / 2;
                 const separationNeeded = requiredDistance - distance;
                 const safetyMargin = 0.5;
-
+                
                 const totalPush = separationNeeded + safetyMargin;
                 this.ball.position.x += normal.x * totalPush;
                 this.ball.position.y += normal.y * totalPush;
@@ -161,9 +161,9 @@ class TestMode {
                     const targetSurface = isInside ? 
                         (targetRadius - wall.width / 2) :
                         (targetRadius + wall.width / 2);
-
+                    
                     const overlap = Math.abs(targetSurface - currentDistance) - this.ball.radius;
-
+                    
                     if (overlap > 0) {
                         // Push ball out by the overlap amount plus small safety margin
                         const pushDistance = overlap + 1.0;
@@ -354,8 +354,40 @@ class TestMode {
             flipper.checkCollision(this.ball);
         });
 
-        // Process collision buffer for corner trapping
-        this.ball.processCollisions();
+        // Test wall collisions
+        if (this.levelData && this.levelData.walls) {
+            this.levelData.walls.forEach(wall => {
+                this.checkWallCollision(wall);
+            });
+        }
+
+        // Test bumper collisions
+        if (this.levelData && this.levelData.bumpers) {
+            this.levelData.bumpers.forEach(bumper => {
+                this.checkBumperCollision(bumper);
+            });
+        }
+
+        // Test spinner collisions
+        if (this.levelData && this.levelData.spinners) {
+            this.levelData.spinners.forEach(spinner => {
+                this.checkSpinnerCollision(spinner);
+            });
+        }
+
+        // Test drop target collisions
+        if (this.levelData && this.levelData.dropTargets) {
+            this.levelData.dropTargets.forEach(target => {
+                this.checkDropTargetCollision(target);
+            });
+        }
+
+        // Test tunnel collisions
+        if (this.levelData && this.levelData.tunnels) {
+            this.levelData.tunnels.forEach(tunnel => {
+                this.checkTunnelCollision(tunnel);
+            });
+        }
     }
 
     draw() {

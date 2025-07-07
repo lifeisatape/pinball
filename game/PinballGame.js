@@ -33,7 +33,7 @@ class PinballGame {
             this.resetBall();
             this.updateUI();
             this.gameStarted = true;
-
+            
             if (!this.gameLoopRunning) {
                 this.gameLoopRunning = true;
                 this.gameLoop();
@@ -75,11 +75,11 @@ class PinballGame {
         // Hide game elements and show level selection
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
-
+        
         // Populate level list
         const levels = await this.levelSelector.getAvailableLevels();
         this.populateLevelList(levels);
-
+        
         this.startScreen.style.display = 'flex';
     }
 
@@ -109,7 +109,7 @@ class PinballGame {
                 document.querySelectorAll('.level-item').forEach(item => {
                     item.classList.remove('selected');
                 });
-
+                
                 // Select new level
                 levelItem.classList.add('selected');
                 this.levelSelector.selectLevel(index);

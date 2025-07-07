@@ -1,3 +1,4 @@
+
 // Wall Class
 class Wall {
     constructor(x1, y1, x2, y2, color = '#ff4444', width = 20) {
@@ -14,7 +15,7 @@ class Wall {
         ctx.lineWidth = this.width;
         ctx.lineCap = 'round';
         ctx.beginPath();
-
+        
         if (this.type === 'semicircle' || this.type === 'quarter') {
             // Draw arc
             ctx.arc(this.centerX, this.centerY, this.radius, this.startAngle, this.endAngle);
@@ -23,7 +24,7 @@ class Wall {
             ctx.moveTo(this.x1, this.y1);
             ctx.lineTo(this.x2, this.y2);
         }
-
+        
         ctx.stroke();
     }
 
@@ -63,7 +64,7 @@ class Wall {
                     if (Math.abs(currentDistance - targetRadius) < this.width / 2 + ball.radius) {
                         // Collision detected
                         const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
-
+                        
                         // Determine collision type and adjust normal
                         const isInside = currentDistance < targetRadius;
                         if (isInside) {
@@ -75,19 +76,14 @@ class Wall {
                         const targetSurface = isInside ? 
                             (targetRadius - this.width / 2) :
                             (targetRadius + this.width / 2);
-
+                        
                         const overlap = Math.abs(targetSurface - currentDistance) - ball.radius;
-
+                        
                         if (overlap > 0) {
                             // Push ball out by the overlap amount plus small safety margin
                             const pushDistance = overlap + 1.0;
                             ball.position.x += normal.x * pushDistance;
                             ball.position.y += normal.y * pushDistance;
-                        }
-
-                        // Wake ball from rest if it was resting
-                        if (ball.isResting) {
-                            ball.wakeUp();
                         }
 
                         // Reflect velocity only if moving towards surface
@@ -96,9 +92,6 @@ class Wall {
                             ball.velocity.x -= 2 * dotProduct * normal.x;
                             ball.velocity.y -= 2 * dotProduct * normal.y;
                             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-                            // Add to collision buffer for processing
-                            ball.addCollision(normal, Math.abs(dotProduct));
                         }
 
                         return true;
@@ -116,16 +109,11 @@ class Wall {
                 const requiredDistance = ball.radius + this.width / 2;
                 const separationNeeded = requiredDistance - distance;
                 const safetyMargin = 0.5;
-
+                
                 // Push ball to safe position
                 const totalPush = separationNeeded + safetyMargin;
                 ball.position.x += normal.x * totalPush;
                 ball.position.y += normal.y * totalPush;
-
-                // Wake ball from rest if it was resting
-                if (ball.isResting) {
-                    ball.wakeUp();
-                }
 
                 // Reflect velocity only if moving towards wall
                 const dotProduct = ball.velocity.dot(normal);
@@ -133,9 +121,6 @@ class Wall {
                     ball.velocity.x -= 2 * dotProduct * normal.x;
                     ball.velocity.y -= 2 * dotProduct * normal.y;
                     ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-                    // Add to collision buffer for processing
-                    ball.addCollision(normal, Math.abs(dotProduct));
                 }
 
                 return true;

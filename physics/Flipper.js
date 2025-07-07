@@ -125,11 +125,6 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
-            // Wake ball from rest if it was resting
-            if (ball.isResting) {
-                ball.wakeUp();
-            }
-            
             const pushDistance = collision.penetration + 2;
             ball.position.x += collision.normal.x * pushDistance;
             ball.position.y += collision.normal.y * pushDistance;
@@ -167,9 +162,6 @@ class Flipper {
 
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
-            
-            // Add to collision buffer for corner detection
-            ball.addCollision(collision.normal, Math.abs(ball.velocity.dot(collision.normal)));
 
             return true;
         }
