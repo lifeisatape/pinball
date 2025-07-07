@@ -8,7 +8,7 @@ class LevelSelector {
 
     async getAvailableLevels() {
         // Получаем список файлов из папки rooms
-        const knownLevels = ['degen.json', 'degen22.json']; // Можно расширить
+        const knownLevels = ['degen.json', 'degen22.json', 'degen3.json']; // Можно расширить
         const levels = [];
 
         for (const levelFile of knownLevels) {
