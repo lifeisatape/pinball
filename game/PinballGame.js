@@ -226,11 +226,10 @@ class PinballGame {
 
     restartGame() {
         this.gameState.resetGame();
-        this.ball.reset();
+        this.resetBall(); // Используем resetBall() который устанавливает ballInPlay = true
         this.levelManager.resetLevel(this.currentLevel);
         this.gameOverOverlay.hide();
         this.updateUI(); // Обновляем весь UI включая high score
-        this.gameState.ballInPlay = false;
     }
 
     async showLevelSelect() {
