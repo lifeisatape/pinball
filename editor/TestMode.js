@@ -1,3 +1,59 @@
+// Utility functions for collision detection
+function distanceToLineSegment(point, lineStart, lineEnd) {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    
+    if (lenSq === 0) {
+        return Math.sqrt(A * A + B * B);
+    }
+
+    let param = dot / lenSq;
+    param = Math.max(0, Math.min(1, param));
+
+    const xx = lineStart.x + param * C;
+    const yy = lineStart.y + param * D;
+
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getNormalToLineSegment(point, lineStart, lineEnd) {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    
+    if (lenSq === 0) {
+        const dist = Math.sqrt(A * A + B * B);
+        return new Vector2D(A / dist, B / dist);
+    }
+
+    let param = dot / lenSq;
+    param = Math.max(0, Math.min(1, param));
+
+    const xx = lineStart.x + param * C;
+    const yy = lineStart.y + param * D;
+
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    if (dist === 0) {
+        return new Vector2D(0, -1);
+    }
+    
+    return new Vector2D(dx / dist, dy / dist);
+}
+
 // Simplified Test Game for level testing
 class TestMode {
     constructor(canvas, levelData) {
@@ -217,17 +273,39 @@ class TestMode {
     checkDropTargetCollision(target) {
         if (!target.isActive) return false;
 
-        const dx = Math.abs(this.ball.position.x - target.x);
-        const dy = Math.abs(this.ball.position.y - target.y);
+        const dx = this.ball.position.x - target.x;
+        const dy = this.ball.position.y - target.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (dx < target.width/2 + this.ball.radius && dy < target.height/2 + this.ball.radius) {
-            target.isActive = false;
-            target.resetTime = 300;
+        // Handle circular drop targets
+        if (target.isCircular) {
+            const radius = target.width / 2; // Use width as diameter
+            if (distance < this.ball.radius + radius) {
+                target.isActive = false;
+                target.resetTime = 300;
 
-            const normalX = this.ball.position.x < target.x ? -1 : 1;
-            this.ball.velocity.x = Math.abs(this.ball.velocity.x) * normalX * 1.2;
+                const normal = new Vector2D(dx / distance, dy / distance);
+                const speed = this.ball.velocity.magnitude();
+                this.ball.velocity.x = normal.x * speed * 1.2;
+                this.ball.velocity.y = normal.y * speed * 1.2;
 
-            return true;
+                return true;
+            }
+        } else {
+            // Handle rectangular drop targets
+            const halfWidth = target.width / 2;
+            const halfHeight = target.height / 2;
+            
+            if (Math.abs(dx) < halfWidth + this.ball.radius && 
+                Math.abs(dy) < halfHeight + this.ball.radius) {
+                target.isActive = false;
+                target.resetTime = 300;
+
+                const normalX = dx < 0 ? -1 : 1;
+                this.ball.velocity.x = Math.abs(this.ball.velocity.x) * normalX * 1.2;
+
+                return true;
+            }
         }
         return false;
     }
@@ -481,30 +559,52 @@ class TestMode {
             this.levelData.dropTargets.forEach(target => {
                 if (!target.isActive) return;
 
-                const gradient = this.ctx.createLinearGradient(
-                    target.x - target.width/2, target.y,
-                    target.x + target.width/2, target.y
-                );
-                gradient.addColorStop(0, '#ff8800');
-                gradient.addColorStop(0.5, '#ffaa00');
-                gradient.addColorStop(1, '#ff8800');
+                if (target.isCircular) {
+                    // Draw circular drop target
+                    const radius = target.width / 2;
+                    const gradient = this.ctx.createRadialGradient(
+                        target.x - 5, target.y - 5, 0,
+                        target.x, target.y, radius
+                    );
+                    gradient.addColorStop(0, '#ffaa00');
+                    gradient.addColorStop(0.7, '#ff8800');
+                    gradient.addColorStop(1, '#cc6600');
 
-                this.ctx.fillStyle = gradient;
-                this.ctx.fillRect(
-                    target.x - target.width/2,
-                    target.y - target.height/2,
-                    target.width,
-                    target.height
-                );
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(target.x, target.y, radius, 0, Math.PI * 2);
+                    this.ctx.fill();
 
-                this.ctx.strokeStyle = '#ffffff';
-                this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(
-                    target.x - target.width/2,
-                    target.y - target.height/2,
-                    target.width,
-                    target.height
-                );
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                } else {
+                    // Draw rectangular drop target
+                    const gradient = this.ctx.createLinearGradient(
+                        target.x - target.width/2, target.y,
+                        target.x + target.width/2, target.y
+                    );
+                    gradient.addColorStop(0, '#ff8800');
+                    gradient.addColorStop(0.5, '#ffaa00');
+                    gradient.addColorStop(1, '#ff8800');
+
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(
+                        target.x - target.width/2,
+                        target.y - target.height/2,
+                        target.width,
+                        target.height
+                    );
+
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(
+                        target.x - target.width/2,
+                        target.y - target.height/2,
+                        target.width,
+                        target.height
+                    );
+                }
             });
         }
 
