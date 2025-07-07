@@ -31,16 +31,6 @@
       "y2": 330,
       "width": 10,
       "color": "#49228c"
-    },
-    {
-      "centerX": 160,
-      "centerY": 270,
-      "radius": 28.284271247461902,
-      "startAngle": 0.7853981633974483,
-      "endAngle": 2.356194490192345,
-      "width": 10,
-      "color": "#ff4444",
-      "type": "quarter"
     }
   ],
   "bumpers": [
