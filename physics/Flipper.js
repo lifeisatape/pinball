@@ -147,25 +147,37 @@ class Flipper {
                 ball.velocity.y -= 2 * velocityDotNormal * collision.normal.y;
             }
 
-            if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
-                const normalForce = CONFIG.FLIPPER_STRENGTH;
-                ball.velocity.x += collision.normal.x * normalForce;
-                ball.velocity.y += collision.normal.y * normalForce;
-
-                ball.velocity.x += tangentialVelocity.x;
-                ball.velocity.y += tangentialVelocity.y;
-            } else {
-                const minForce = CONFIG.FLIPPER_STRENGTH * 0.1;
-                ball.velocity.x += collision.normal.x * minForce;
-                ball.velocity.y += collision.normal.y * minForce;
-            }
-
-            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-            ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+            // Check if ball has very low velocity - if so, stop micro-bouncing completely
+            const ballSpeed = ball.velocity.magnitude();
             
-            // Stop micro-bouncing on flipper collisions
-            if (Math.abs(ball.velocity.x) < 0.5) ball.velocity.x = 0;
-            if (Math.abs(ball.velocity.y) < 0.5) ball.velocity.y = 0;
+            if (ballSpeed < 2.0) {
+                // Stop micro-bouncing completely for low-speed collisions
+                ball.velocity.x = 0;
+                ball.velocity.y = 0;
+            } else {
+                if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
+                    const normalForce = CONFIG.FLIPPER_STRENGTH;
+                    ball.velocity.x += collision.normal.x * normalForce;
+                    ball.velocity.y += collision.normal.y * normalForce;
+
+                    ball.velocity.x += tangentialVelocity.x;
+                    ball.velocity.y += tangentialVelocity.y;
+                } else {
+                    // Only apply minimal force if ball has significant velocity
+                    if (ballSpeed > 3.0) {
+                        const minForce = CONFIG.FLIPPER_STRENGTH * 0.1;
+                        ball.velocity.x += collision.normal.x * minForce;
+                        ball.velocity.y += collision.normal.y * minForce;
+                    }
+                }
+
+                ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+                
+                // Final check to stop micro-bouncing
+                if (Math.abs(ball.velocity.x) < 1.0) ball.velocity.x = 0;
+                if (Math.abs(ball.velocity.y) < 1.0) ball.velocity.y = 0;
+            }
 
             return true;
         }
