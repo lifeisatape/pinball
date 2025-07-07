@@ -164,10 +164,6 @@ class Flipper {
             } else {
                 // Пассивный флиппер - просто отскок с потерей энергии
                 ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-                
-                // Добавляем минимальную силу отталкивания
-                ball.velocity.x += collision.normal.x * 2;
-                ball.velocity.y += collision.normal.y * 2;
             }
 
             // Предотвращаем слишком медленные скорости после коллизии
