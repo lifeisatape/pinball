@@ -13,10 +13,10 @@ class Ball {
         this.velocity.multiply(CONFIG.FRICTION);
         
         // Stop micro-bouncing by setting very small velocities to zero
-        if (Math.abs(this.velocity.x) < 0.1) {
+        if (Math.abs(this.velocity.x) < 0.5) {
             this.velocity.x = 0;
         }
-        if (Math.abs(this.velocity.y) < 0.1) {
+        if (Math.abs(this.velocity.y) < 0.5) {
             this.velocity.y = 0;
         }
         
@@ -29,7 +29,7 @@ class Ball {
         // Левая граница
         if (this.position.x < this.radius) {
             this.position.x = this.radius;
-            if (Math.abs(this.velocity.x) < 1.0) {
+            if (Math.abs(this.velocity.x) < 1.5) {
                 this.velocity.x = 0; // Stop micro-bouncing
             } else {
                 this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
@@ -39,7 +39,7 @@ class Ball {
         // Правая граница
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
             this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
-            if (Math.abs(this.velocity.x) < 1.0) {
+            if (Math.abs(this.velocity.x) < 1.5) {
                 this.velocity.x = 0; // Stop micro-bouncing
             } else {
                 this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
@@ -49,7 +49,7 @@ class Ball {
         // Верхняя граница
         if (this.position.y < this.radius) {
             this.position.y = this.radius;
-            if (Math.abs(this.velocity.y) < 1.0) {
+            if (Math.abs(this.velocity.y) < 1.5) {
                 this.velocity.y = 0; // Stop micro-bouncing
             } else {
                 this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
