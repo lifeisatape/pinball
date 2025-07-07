@@ -209,8 +209,14 @@ class LevelEditor {
                     Math.pow(worldPos.x - centerX, 2) + 
                     Math.pow(worldPos.y - centerY, 2)
                 );
-                const startAngle = 0;
-                const endAngle = this.tools.wallMode === 'semicircle' ? Math.PI : Math.PI / 2;
+                
+                // Get rotation from UI
+                const rotationDegrees = parseInt(document.getElementById('arcRotation').value) || 0;
+                const rotationRadians = (rotationDegrees * Math.PI) / 180;
+                
+                const arcLength = this.tools.wallMode === 'semicircle' ? Math.PI : Math.PI / 2;
+                const startAngle = rotationRadians;
+                const endAngle = rotationRadians + arcLength;
 
                 this.walls.push({
                     centerX: centerX,

@@ -135,6 +135,22 @@ class EditorTools {
                 if (centerDist <= tolerance) {
                     return { type: 'wall', object: wall, point: 'center' };
                 }
+
+                // Check start and end points of arc for rotation
+                const startX = wall.centerX + Math.cos(wall.startAngle) * wall.radius;
+                const startY = wall.centerY + Math.sin(wall.startAngle) * wall.radius;
+                const endX = wall.centerX + Math.cos(wall.endAngle) * wall.radius;
+                const endY = wall.centerY + Math.sin(wall.endAngle) * wall.radius;
+
+                const startPointDist = Math.sqrt((worldPos.x - startX) ** 2 + (worldPos.y - startY) ** 2);
+                const endPointDist = Math.sqrt((worldPos.x - endX) ** 2 + (worldPos.y - endY) ** 2);
+
+                if (startPointDist <= tolerance) {
+                    return { type: 'wall', object: wall, point: 'start_arc' };
+                }
+                if (endPointDist <= tolerance) {
+                    return { type: 'wall', object: wall, point: 'end_arc' };
+                }
             }
         }
 
@@ -284,10 +300,20 @@ class EditorTools {
                 }
             } else if (selectedObject.object.type === 'semicircle' || selectedObject.object.type === 'quarter') {
                 // Handle arc walls
-                this.dragOffset = {
-                    x: worldPos.x - selectedObject.object.centerX,
-                    y: worldPos.y - selectedObject.object.centerY
-                };
+                if (selectedObject.point === 'start_arc' || selectedObject.point === 'end_arc') {
+                    // Store initial angle for rotation
+                    this.dragOffset = {
+                        initialAngle: Math.atan2(worldPos.y - selectedObject.object.centerY, worldPos.x - selectedObject.object.centerX),
+                        wallStartAngle: selectedObject.object.startAngle,
+                        wallEndAngle: selectedObject.object.endAngle
+                    };
+                } else {
+                    // Moving center
+                    this.dragOffset = {
+                        x: worldPos.x - selectedObject.object.centerX,
+                        y: worldPos.y - selectedObject.object.centerY
+                    };
+                }
             }
         } else if (selectedObject.type === 'tunnel') {
             // For tunnels
@@ -331,9 +357,19 @@ class EditorTools {
                     selectedObject.object.y2 = worldPos.y - this.dragOffset.y2;
                 }
             } else if (selectedObject.object.type === 'semicircle' || selectedObject.object.type === 'quarter') {
-                // Handle arc walls - move center
-                selectedObject.object.centerX = worldPos.x - this.dragOffset.x;
-                selectedObject.object.centerY = worldPos.y - this.dragOffset.y;
+                // Handle arc walls
+                if (selectedObject.point === 'start_arc' || selectedObject.point === 'end_arc') {
+                    // Calculate rotation
+                    const currentAngle = Math.atan2(worldPos.y - selectedObject.object.centerY, worldPos.x - selectedObject.object.centerX);
+                    const angleDiff = currentAngle - this.dragOffset.initialAngle;
+                    
+                    selectedObject.object.startAngle = this.dragOffset.wallStartAngle + angleDiff;
+                    selectedObject.object.endAngle = this.dragOffset.wallEndAngle + angleDiff;
+                } else {
+                    // Moving center
+                    selectedObject.object.centerX = worldPos.x - this.dragOffset.x;
+                    selectedObject.object.centerY = worldPos.y - this.dragOffset.y;
+                }
             }
         } else if (selectedObject.type === 'tunnel') {
             if (selectedObject.point === 'entry') {
