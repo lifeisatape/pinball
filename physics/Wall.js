@@ -86,12 +86,20 @@ class Wall {
                             ball.position.y += normal.y * pushDistance;
                         }
 
+                        // Wake ball from rest if it was resting
+                        if (ball.isResting) {
+                            ball.wakeUp();
+                        }
+                        
                         // Reflect velocity only if moving towards surface
                         const dotProduct = ball.velocity.dot(normal);
                         if (dotProduct < 0) {
                             ball.velocity.x -= 2 * dotProduct * normal.x;
                             ball.velocity.y -= 2 * dotProduct * normal.y;
                             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                            
+                            // Add to collision buffer for processing
+                            ball.addCollision(normal, Math.abs(dotProduct));
                         }
 
                         return true;
@@ -115,12 +123,20 @@ class Wall {
                 ball.position.x += normal.x * totalPush;
                 ball.position.y += normal.y * totalPush;
 
+                // Wake ball from rest if it was resting
+                if (ball.isResting) {
+                    ball.wakeUp();
+                }
+                
                 // Reflect velocity only if moving towards wall
                 const dotProduct = ball.velocity.dot(normal);
                 if (dotProduct < 0) {
                     ball.velocity.x -= 2 * dotProduct * normal.x;
                     ball.velocity.y -= 2 * dotProduct * normal.y;
                     ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                    
+                    // Add to collision buffer for processing
+                    ball.addCollision(normal, Math.abs(dotProduct));
                 }
 
                 return true;

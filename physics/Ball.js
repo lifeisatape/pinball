@@ -5,13 +5,32 @@ class Ball {
         this.position = new Vector2D(x, y);
         this.velocity = new Vector2D(0, 0);
         this.radius = CONFIG.BALL_RADIUS;
+        this.isResting = false;
+        this.restThreshold = 0.1;
+        this.collisionBuffer = [];
     }
 
     update() {
-        this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
-        this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
-        this.velocity.multiply(CONFIG.FRICTION);
-        this.position.add(this.velocity);
+        // Clear collision buffer
+        this.collisionBuffer = [];
+        
+        // Check if ball should be resting
+        const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+        
+        if (speed < this.restThreshold && Math.abs(CONFIG.GRAVITY) < 0.3) {
+            this.isResting = true;
+            this.velocity.x = 0;
+            this.velocity.y = 0;
+        } else {
+            this.isResting = false;
+        }
+        
+        if (!this.isResting) {
+            this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
+            this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+            this.velocity.multiply(CONFIG.FRICTION);
+            this.position.add(this.velocity);
+        }
         
         return this.handleWallCollisions();
     }
@@ -44,6 +63,15 @@ class Ball {
         this.position.y = 50;
         this.velocity.x = 0;
         this.velocity.y = 0;
+        this.isResting = false;
+    }
+    
+    wakeUp() {
+        this.isResting = false;
+    }
+    
+    addCollision(normal, force) {
+        this.collisionBuffer.push({ normal, force });
     }
 
     draw(ctx) {

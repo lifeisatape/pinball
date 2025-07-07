@@ -125,6 +125,11 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
+            // Wake ball from rest if it was resting
+            if (ball.isResting) {
+                ball.wakeUp();
+            }
+            
             const pushDistance = collision.penetration + 2;
             ball.position.x += collision.normal.x * pushDistance;
             ball.position.y += collision.normal.y * pushDistance;
