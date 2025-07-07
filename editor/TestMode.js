@@ -86,20 +86,78 @@ class TestMode {
     }
 
     checkWallCollision(wall) {
-        const distance = distanceToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
+        if (wall.type === 'line' || !wall.type) {
+            // Handle straight line walls
+            const distance = distanceToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
 
-        if (distance < this.ball.radius + wall.width / 2) {
-            const normal = getNormalToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
+            if (distance < this.ball.radius + wall.width / 2) {
+                const normal = getNormalToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
 
-            const overlap = this.ball.radius + wall.width / 2 - distance;
-            const pushDistance = overlap * 0.8;
-            this.ball.position.x += normal.x * pushDistance;
-            this.ball.position.y += normal.y * pushDistance;
+                const overlap = this.ball.radius + wall.width / 2 - distance;
+                const pushDistance = overlap * 0.8;
+                this.ball.position.x += normal.x * pushDistance;
+                this.ball.position.y += normal.y * pushDistance;
 
-            const dotProduct = this.ball.velocity.dot(normal);
-            this.ball.velocity.x -= 2 * dotProduct * normal.x;
-            this.ball.velocity.y -= 2 * dotProduct * normal.y;
-            this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                const dotProduct = this.ball.velocity.dot(normal);
+                this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            }
+        } else if (wall.type === 'semicircle' || wall.type === 'quarter') {
+            // Handle arc walls
+            this.checkArcWallCollision(wall);
+        }
+    }
+
+    checkArcWallCollision(wall) {
+        const dx = this.ball.position.x - wall.centerX;
+        const dy = this.ball.position.y - wall.centerY;
+        const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+        // Check if ball is near the arc
+        const minDistance = wall.radius - wall.width / 2 - this.ball.radius;
+        const maxDistance = wall.radius + wall.width / 2 + this.ball.radius;
+
+        if (distanceFromCenter >= minDistance && distanceFromCenter <= maxDistance) {
+            // Check if ball is within the arc's angle range
+            let angle = Math.atan2(dy, dx);
+            if (angle < 0) angle += Math.PI * 2;
+
+            let startAngle = wall.startAngle;
+            let endAngle = wall.endAngle;
+            if (startAngle < 0) startAngle += Math.PI * 2;
+            if (endAngle < 0) endAngle += Math.PI * 2;
+
+            let withinArc = false;
+            if (startAngle <= endAngle) {
+                withinArc = angle >= startAngle && angle <= endAngle;
+            } else {
+                withinArc = angle >= startAngle || angle <= endAngle;
+            }
+
+            if (withinArc) {
+                // Calculate collision based on whether ball is inside or outside the arc
+                const targetRadius = wall.radius;
+                const currentDistance = distanceFromCenter;
+
+                if (Math.abs(currentDistance - targetRadius) < wall.width / 2 + this.ball.radius) {
+                    // Collision detected
+                    const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
+
+                    // Push ball to correct side
+                    const overlap = (wall.width / 2 + this.ball.radius) - Math.abs(currentDistance - targetRadius);
+                    const pushDirection = currentDistance < targetRadius ? -1 : 1;
+                    
+                    this.ball.position.x += normal.x * overlap * pushDirection * 0.8;
+                    this.ball.position.y += normal.y * overlap * pushDirection * 0.8;
+
+                    // Reflect velocity
+                    const dotProduct = this.ball.velocity.dot(normal);
+                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                }
+            }
         }
     }
 
@@ -349,12 +407,20 @@ class TestMode {
         // Draw walls
         if (this.levelData && this.levelData.walls) {
             this.levelData.walls.forEach(wall => {
-                this.ctx.strokeStyle = wall.color;
-                this.ctx.lineWidth = wall.width;
+                this.ctx.strokeStyle = wall.color || '#ff4444';
+                this.ctx.lineWidth = wall.width || 10;
                 this.ctx.lineCap = 'round';
                 this.ctx.beginPath();
-                this.ctx.moveTo(wall.x1, wall.y1);
-                this.ctx.lineTo(wall.x2, wall.y2);
+
+                if (wall.type === 'line' || !wall.type) {
+                    // Draw straight line
+                    this.ctx.moveTo(wall.x1, wall.y1);
+                    this.ctx.lineTo(wall.x2, wall.y2);
+                } else if (wall.type === 'semicircle' || wall.type === 'quarter') {
+                    // Draw arc
+                    this.ctx.arc(wall.centerX, wall.centerY, wall.radius, wall.startAngle, wall.endAngle);
+                }
+
                 this.ctx.stroke();
             });
         }
