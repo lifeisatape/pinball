@@ -16,6 +16,7 @@ class Flipper {
         this.isActive = false;
         this.angularVelocity = 0;
         this.lastAngle = this.angle;
+        this.maxAngularVelocity = 0.5; // Ограничиваем угловую скорость
 
         this.shape = new FlipperShape(x, y, this.length, this.baseWidth, this.tipWidth, isLeft);
         this.updateShape();
@@ -40,7 +41,12 @@ class Flipper {
         this.lastAngle = this.angle;
 
         const angleDiff = this.targetAngle - this.angle;
-        this.angularVelocity = angleDiff * 0.4;
+        this.angularVelocity = angleDiff * 0.3; // Снижаем скорость для реализма
+        
+        // Ограничиваем угловую скорость
+        this.angularVelocity = Math.max(-this.maxAngularVelocity, 
+                                       Math.min(this.maxAngularVelocity, this.angularVelocity));
+        
         this.angle += this.angularVelocity;
 
         const minAngle = Math.min(this.restAngle, this.activeAngle);
@@ -125,42 +131,52 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
-            const pushDistance = collision.penetration + 2;
-            ball.position.x += collision.normal.x * pushDistance;
-            ball.position.y += collision.normal.y * pushDistance;
+            // Более надежное разделение
+            const separation = Math.max(collision.penetration + 2, 3);
+            ball.position.x += collision.normal.x * separation;
+            ball.position.y += collision.normal.y * separation;
 
-            const currentAngularVelocity = this.angle - this.lastAngle;
+            // Реалистичная угловая скорость
+            const currentAngularVelocity = (this.angle - this.lastAngle) * 0.8;
 
+            // Точка контакта относительно центра флиппера
             const contactOffset = new Vector2D(
                 collision.contactPoint.x - this.position.x,
                 collision.contactPoint.y - this.position.y
             );
 
+            // Тангенциальная скорость (более реалистичная)
             const tangentialVelocity = new Vector2D(
-                -contactOffset.y * currentAngularVelocity * 10,
-                contactOffset.x * currentAngularVelocity * 10
+                -contactOffset.y * currentAngularVelocity * 3, // Снижаем множитель
+                contactOffset.x * currentAngularVelocity * 3
             );
 
+            // Отражение скорости
             const velocityDotNormal = ball.velocity.dot(collision.normal);
             if (velocityDotNormal < 0) {
-                ball.velocity.x -= 2 * velocityDotNormal * collision.normal.x;
-                ball.velocity.y -= 2 * velocityDotNormal * collision.normal.y;
+                const restitution = CONFIG.BOUNCE_DAMPING * 0.9;
+                ball.velocity.x -= (1 + restitution) * velocityDotNormal * collision.normal.x;
+                ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
             }
 
+            // Добавляем силу от активного флиппера
             if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
-                const normalForce = CONFIG.FLIPPER_STRENGTH;
-                ball.velocity.x += collision.normal.x * normalForce;
-                ball.velocity.y += collision.normal.y * normalForce;
+                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.7; // Снижаем силу
+                ball.velocity.x += collision.normal.x * flipperForce;
+                ball.velocity.y += collision.normal.y * flipperForce;
 
-                ball.velocity.x += tangentialVelocity.x;
-                ball.velocity.y += tangentialVelocity.y;
+                // Добавляем тангенциальную скорость
+                ball.velocity.x += tangentialVelocity.x * 0.5;
+                ball.velocity.y += tangentialVelocity.y * 0.5;
             } else {
-                const minForce = CONFIG.FLIPPER_STRENGTH * 0.1;
+                // Минимальная сила для пассивного флиппера
+                const minForce = CONFIG.FLIPPER_STRENGTH * 0.05;
                 ball.velocity.x += collision.normal.x * minForce;
                 ball.velocity.y += collision.normal.y * minForce;
             }
 
-            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            // Применяем демпфирование и ограничение скорости
+            ball.velocity.multiply(0.99);
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
 
             return true;

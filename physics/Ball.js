@@ -5,33 +5,69 @@ class Ball {
         this.position = new Vector2D(x, y);
         this.velocity = new Vector2D(0, 0);
         this.radius = CONFIG.BALL_RADIUS;
+        this.lastPosition = new Vector2D(x, y);
+        this.minVelocity = 0.1; // Минимальная скорость для остановки
     }
 
     update() {
+        // Сохраняем последнюю позицию для проверки проскакивания
+        this.lastPosition.x = this.position.x;
+        this.lastPosition.y = this.position.y;
+
+        // Применяем гравитацию
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
-        this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+        
+        // Применяем трение воздуха (более реалистично)
         this.velocity.multiply(CONFIG.FRICTION);
+        
+        // Останавливаем мяч если скорость слишком мала
+        if (this.velocity.magnitude() < this.minVelocity) {
+            this.velocity.x *= 0.9;
+            this.velocity.y *= 0.9;
+        }
+        
+        // Ограничиваем максимальную скорость
+        this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+        
+        // Обновляем позицию
         this.position.add(this.velocity);
+        
         return this.handleWallCollisions();
     }
 
     handleWallCollisions() {
+        let bounced = false;
+        
         // Левая граница
         if (this.position.x < this.radius) {
             this.position.x = this.radius;
-            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            if (this.velocity.x < 0) {
+                this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+                bounced = true;
+            }
         }
         
         // Правая граница
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
             this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
-            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            if (this.velocity.x > 0) {
+                this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+                bounced = true;
+            }
         }
         
         // Верхняя граница
         if (this.position.y < this.radius) {
             this.position.y = this.radius;
-            this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+            if (this.velocity.y < 0) {
+                this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+                bounced = true;
+            }
+        }
+        
+        // Применяем дополнительное трение при отскоке
+        if (bounced) {
+            this.velocity.multiply(0.95);
         }
         
         // Проверка на потерю мяча (низ экрана)
@@ -43,6 +79,8 @@ class Ball {
         this.position.y = 50;
         this.velocity.x = 0;
         this.velocity.y = 0;
+        this.lastPosition.x = this.position.x;
+        this.lastPosition.y = this.position.y;
     }
 
     draw(ctx) {
