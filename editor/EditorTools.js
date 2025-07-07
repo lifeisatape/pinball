@@ -3,6 +3,7 @@ class EditorTools {
     constructor() {
         this.currentTool = 'wall';
         this.wallMode = 'line'; // 'line', 'semicircle', 'quarter'
+        this.dropTargetShape = 'rectangle'; // 'rectangle', 'circle'
         this.isDrawing = false;
         this.drawStart = null;
         this.selectedObject = null;
@@ -26,6 +27,10 @@ class EditorTools {
 
     setWallMode(mode) {
         this.wallMode = mode;
+    }
+
+    setDropTargetShape(shape) {
+        this.dropTargetShape = shape;
     }
 
     snapToGrid(worldPos, snapEnabled, gridSize) {
@@ -60,10 +65,18 @@ class EditorTools {
 
         // Check drop targets
         for (let target of levelData.dropTargets) {
-            const dx = Math.abs(worldPos.x - target.x);
-            const dy = Math.abs(worldPos.y - target.y);
-            if (dx <= target.width / 2 + tolerance && dy <= target.height / 2 + tolerance) {
-                return { type: 'droptarget', object: target };
+            if (target.shape === 'circle') {
+                const radius = Math.max(target.width, target.height) / 2;
+                const dist = Math.sqrt((worldPos.x - target.x) ** 2 + (worldPos.y - target.y) ** 2);
+                if (dist <= radius + tolerance) {
+                    return { type: 'droptarget', object: target };
+                }
+            } else {
+                const dx = Math.abs(worldPos.x - target.x);
+                const dy = Math.abs(worldPos.y - target.y);
+                if (dx <= target.width / 2 + tolerance && dy <= target.height / 2 + tolerance) {
+                    return { type: 'droptarget', object: target };
+                }
             }
         }
 
@@ -246,12 +259,22 @@ class EditorTools {
         // Check drop targets
         for (let i = levelData.dropTargets.length - 1; i >= 0; i--) {
             const target = levelData.dropTargets[i];
-            const dx = Math.abs(worldPos.x - target.x);
-            const dy = Math.abs(worldPos.y - target.y);
-            if (dx <= target.width / 2 + tolerance && dy <= target.height / 2 + tolerance) {
-                levelData.dropTargets.splice(i, 1);
-                deleted = true;
-                break;
+            if (target.shape === 'circle') {
+                const radius = Math.max(target.width, target.height) / 2;
+                const dist = Math.sqrt((worldPos.x - target.x) ** 2 + (worldPos.y - target.y) ** 2);
+                if (dist <= radius + tolerance) {
+                    levelData.dropTargets.splice(i, 1);
+                    deleted = true;
+                    break;
+                }
+            } else {
+                const dx = Math.abs(worldPos.x - target.x);
+                const dy = Math.abs(worldPos.y - target.y);
+                if (dx <= target.width / 2 + tolerance && dy <= target.height / 2 + tolerance) {
+                    levelData.dropTargets.splice(i, 1);
+                    deleted = true;
+                    break;
+                }
             }
         }
 

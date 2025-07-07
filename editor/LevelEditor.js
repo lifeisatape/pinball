@@ -50,6 +50,15 @@ class LevelEditor {
             });
         });
 
+        // Drop target shape selection
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.tools.setDropTargetShape(btn.dataset.shape);
+            });
+        });
+
         // Canvas events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
@@ -106,11 +115,16 @@ class LevelEditor {
                 points: 50
             });
         } else if (this.tools.currentTool === 'droptarget') {
+            const width = parseInt(document.getElementById('dropTargetWidth').value);
+            const height = parseInt(document.getElementById('dropTargetHeight').value);
+            const shape = this.tools.dropTargetShape;
+            
             this.dropTargets.push({
                 x: worldPos.x,
                 y: worldPos.y,
-                width: 15,
-                height: 30,
+                width: width,
+                height: height,
+                shape: shape,
                 isActive: true,
                 points: 200
             });

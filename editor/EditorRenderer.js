@@ -176,30 +176,51 @@ class EditorRenderer {
 
     drawDropTargets(dropTargets) {
         dropTargets.forEach(target => {
-            const gradient = this.ctx.createLinearGradient(
-                target.x - target.width/2, target.y,
-                target.x + target.width/2, target.y
-            );
-            gradient.addColorStop(0, '#ff8800');
-            gradient.addColorStop(0.5, '#ffaa00');
-            gradient.addColorStop(1, '#ff8800');
+            if (target.shape === 'circle') {
+                const radius = Math.max(target.width, target.height) / 2;
+                
+                const gradient = this.ctx.createRadialGradient(
+                    target.x, target.y, 0,
+                    target.x, target.y, radius
+                );
+                gradient.addColorStop(0, '#ffaa00');
+                gradient.addColorStop(0.7, '#ff8800');
+                gradient.addColorStop(1, '#cc6600');
 
-            this.ctx.fillStyle = gradient;
-            this.ctx.fillRect(
-                target.x - target.width/2,
-                target.y - target.height/2,
-                target.width,
-                target.height
-            );
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(target.x, target.y, radius, 0, Math.PI * 2);
+                this.ctx.fill();
 
-            this.ctx.strokeStyle = '#ffffff';
-            this.ctx.lineWidth = 1;
-            this.ctx.strokeRect(
-                target.x - target.width/2,
-                target.y - target.height/2,
-                target.width,
-                target.height
-            );
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+            } else {
+                const gradient = this.ctx.createLinearGradient(
+                    target.x - target.width/2, target.y,
+                    target.x + target.width/2, target.y
+                );
+                gradient.addColorStop(0, '#ff8800');
+                gradient.addColorStop(0.5, '#ffaa00');
+                gradient.addColorStop(1, '#ff8800');
+
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(
+                    target.x - target.width/2,
+                    target.y - target.height/2,
+                    target.width,
+                    target.height
+                );
+
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(
+                    target.x - target.width/2,
+                    target.y - target.height/2,
+                    target.width,
+                    target.height
+                );
+            }
         });
     }
 
