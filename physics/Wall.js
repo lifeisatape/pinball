@@ -105,28 +105,72 @@ class Wall {
     }
 
     checkLineCollision(ball) {
-        const distance = distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
+        // Проверяем расстояние до отрезка
+        const lineStart = new Vector2D(this.x1, this.y1);
+        const lineEnd = new Vector2D(this.x2, this.y2);
+        
+        // Вычисляем ближайшую точку на отрезке
+        const A = ball.position.x - this.x1;
+        const B = ball.position.y - this.y1;
+        const C = this.x2 - this.x1;
+        const D = this.y2 - this.y1;
 
-        if (distance < ball.radius + this.width / 2) {
-            const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        
+        if (lenSq === 0) return false; // Нулевой отрезок
+        
+        let param = dot / lenSq;
+        let closestX, closestY;
+        let isEndpoint = false;
+        
+        if (param < 0) {
+            // Ближе к началу отрезка
+            closestX = this.x1;
+            closestY = this.y1;
+            isEndpoint = true;
+        } else if (param > 1) {
+            // Ближе к концу отрезка
+            closestX = this.x2;
+            closestY = this.y2;
+            isEndpoint = true;
+        } else {
+            // На отрезке
+            closestX = this.x1 + param * C;
+            closestY = this.y1 + param * D;
+        }
+
+        const dx = ball.position.x - closestX;
+        const dy = ball.position.y - closestY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        const collisionRadius = isEndpoint ? 
+            ball.radius + this.width / 4 : // Меньший радиус для концов
+            ball.radius + this.width / 2;
+
+        if (distance < collisionRadius && distance > 0.1) {
+            const normal = new Vector2D(dx / distance, dy / distance);
 
             // Более надежное разделение
-            const overlap = ball.radius + this.width / 2 - distance;
+            const overlap = collisionRadius - distance;
             const separation = Math.max(overlap + 1, 2);
             
             ball.position.x += normal.x * separation;
             ball.position.y += normal.y * separation;
 
-            // Реалистичное отражение
+            // Реалистичное отражение только если мяч движется к стене
             const velocityDotNormal = ball.velocity.dot(normal);
             
             if (velocityDotNormal < 0) {
-                const restitution = CONFIG.BOUNCE_DAMPING * 0.8;
+                const restitution = isEndpoint ? 
+                    CONFIG.BOUNCE_DAMPING * 0.6 : // Меньше отскока на концах
+                    CONFIG.BOUNCE_DAMPING * 0.8;
+                    
                 ball.velocity.x -= (1 + restitution) * velocityDotNormal * normal.x;
                 ball.velocity.y -= (1 + restitution) * velocityDotNormal * normal.y;
                 
-                // Трение по поверхности
-                ball.velocity.multiply(0.98);
+                // Дополнительное трение на концах
+                ball.velocity.multiply(isEndpoint ? 0.95 : 0.98);
             }
 
             return true;

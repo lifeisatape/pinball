@@ -40,7 +40,7 @@ class Ball {
         
         // Левая граница
         if (this.position.x < this.radius) {
-            this.position.x = this.radius;
+            this.position.x = this.radius + 0.1; // Небольшой отступ для избежания залипания
             if (this.velocity.x < 0) {
                 this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
                 bounced = true;
@@ -49,7 +49,7 @@ class Ball {
         
         // Правая граница
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
-            this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
+            this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius - 0.1;
             if (this.velocity.x > 0) {
                 this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
                 bounced = true;
@@ -58,7 +58,7 @@ class Ball {
         
         // Верхняя граница
         if (this.position.y < this.radius) {
-            this.position.y = this.radius;
+            this.position.y = this.radius + 0.1;
             if (this.velocity.y < 0) {
                 this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
                 bounced = true;

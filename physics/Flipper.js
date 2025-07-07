@@ -159,21 +159,22 @@ class Flipper {
                 ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
             }
 
-            // Добавляем силу от активного флиппера
-            if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
-                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.7; // Снижаем силу
+            // Добавляем силу только от активного движущегося флиппера
+            if (this.isActive && Math.abs(currentAngularVelocity) > 0.05) {
+                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.7;
                 ball.velocity.x += collision.normal.x * flipperForce;
                 ball.velocity.y += collision.normal.y * flipperForce;
 
                 // Добавляем тангенциальную скорость
                 ball.velocity.x += tangentialVelocity.x * 0.5;
                 ball.velocity.y += tangentialVelocity.y * 0.5;
-            } else {
-                // Минимальная сила для пассивного флиппера
-                const minForce = CONFIG.FLIPPER_STRENGTH * 0.05;
-                ball.velocity.x += collision.normal.x * minForce;
-                ball.velocity.y += collision.normal.y * minForce;
+            } else if (Math.abs(currentAngularVelocity) > 0.02) {
+                // Небольшая передача энергии только если флиппер действительно движется
+                const passiveForce = CONFIG.FLIPPER_STRENGTH * 0.1;
+                ball.velocity.x += collision.normal.x * passiveForce;
+                ball.velocity.y += collision.normal.y * passiveForce;
             }
+            // Если флиппер неподвижен - никакой дополнительной силы не добавляем
 
             // Применяем демпфирование и ограничение скорости
             ball.velocity.multiply(0.99);
