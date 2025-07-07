@@ -189,7 +189,7 @@ class LevelEditor {
             );
 
             const width = parseInt(document.getElementById('wallWidth').value);
-            const color = document.getElementById('wallColor').value);
+            const color = document.getElementById('wallColor').value;
 
             if (this.tools.wallMode === 'line') {
                 this.walls.push({
