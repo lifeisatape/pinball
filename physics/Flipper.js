@@ -125,7 +125,8 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
-            const pushDistance = collision.penetration + 2;
+            // Увеличенный отступ для предотвращения застревания
+            const pushDistance = Math.max(collision.penetration + 3, ball.radius * 0.5);
             ball.position.x += collision.normal.x * pushDistance;
             ball.position.y += collision.normal.y * pushDistance;
 
@@ -141,25 +142,39 @@ class Flipper {
                 contactOffset.x * currentAngularVelocity * 10
             );
 
+            // Улучшенная проверка направления скорости
             const velocityDotNormal = ball.velocity.dot(collision.normal);
-            if (velocityDotNormal < 0) {
+            
+            // Только отражаем если мяч движется в сторону флиппера
+            if (velocityDotNormal < -0.1) {
                 ball.velocity.x -= 2 * velocityDotNormal * collision.normal.x;
                 ball.velocity.y -= 2 * velocityDotNormal * collision.normal.y;
             }
 
-            // More realistic flipper physics
+            // Реалистичная физика флиппера
             if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
-                // Active flipper hit - apply strong force
+                // Активный флиппер - применяем силу
                 const normalForce = CONFIG.FLIPPER_STRENGTH;
                 ball.velocity.x += collision.normal.x * normalForce;
                 ball.velocity.y += collision.normal.y * normalForce;
 
-                // Apply tangential velocity for spin effect
+                // Применяем тангенциальную скорость для эффекта вращения
                 ball.velocity.x += tangentialVelocity.x * 0.3;
                 ball.velocity.y += tangentialVelocity.y * 0.3;
             } else {
-                // Passive flipper - just bounce with some energy loss
+                // Пассивный флиппер - просто отскок с потерей энергии
                 ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                
+                // Добавляем минимальную силу отталкивания
+                ball.velocity.x += collision.normal.x * 2;
+                ball.velocity.y += collision.normal.y * 2;
+            }
+
+            // Предотвращаем слишком медленные скорости после коллизии
+            const minSpeed = 0.5;
+            if (ball.velocity.magnitude() < minSpeed) {
+                ball.velocity.normalize();
+                ball.velocity.multiply(minSpeed);
             }
 
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
