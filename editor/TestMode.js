@@ -277,8 +277,8 @@ class TestMode {
         const dy = this.ball.position.y - target.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Handle circular drop targets
-        if (target.isCircular) {
+        // Handle circular drop targets (check both isCircular and shape properties)
+        if (target.isCircular || target.shape === 'circle') {
             const radius = target.width / 2; // Use width as diameter
             if (distance < this.ball.radius + radius) {
                 target.isActive = false;
@@ -559,7 +559,7 @@ class TestMode {
             this.levelData.dropTargets.forEach(target => {
                 if (!target.isActive) return;
 
-                if (target.isCircular) {
+                if (target.isCircular || target.shape === 'circle') {
                     // Draw circular drop target
                     const radius = target.width / 2;
                     const gradient = this.ctx.createRadialGradient(
