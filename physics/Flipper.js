@@ -167,6 +167,9 @@ class Flipper {
 
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+            
+            // Add to collision buffer for corner detection
+            ball.addCollision(collision.normal, Math.abs(ball.velocity.dot(collision.normal)));
 
             return true;
         }

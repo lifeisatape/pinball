@@ -17,7 +17,8 @@ class Ball {
         // Check if ball should be resting
         const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
         
-        if (speed < this.restThreshold && Math.abs(CONFIG.GRAVITY) < 0.3) {
+        // More aggressive resting conditions
+        if (speed < CONFIG.BALL_REST_THRESHOLD) {
             this.isResting = true;
             this.velocity.x = 0;
             this.velocity.y = 0;
@@ -72,6 +73,27 @@ class Ball {
     
     addCollision(normal, force) {
         this.collisionBuffer.push({ normal, force });
+    }
+    
+    processCollisions() {
+        // If multiple collisions occurred (corner/trap situation)
+        if (this.collisionBuffer.length > 1) {
+            // Calculate average collision force
+            const averageForce = this.collisionBuffer.reduce((sum, collision) => sum + collision.force, 0) / this.collisionBuffer.length;
+            
+            // If forces are small (trapped in corner), apply aggressive damping
+            if (averageForce < CONFIG.MINIMUM_COLLISION_FORCE) {
+                this.velocity.multiply(0.3); // Strong damping
+                
+                // If velocity is very small, stop the ball
+                const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+                if (speed < CONFIG.BALL_REST_THRESHOLD * 2) {
+                    this.velocity.x = 0;
+                    this.velocity.y = 0;
+                    this.isResting = true;
+                }
+            }
+        }
     }
 
     draw(ctx) {
