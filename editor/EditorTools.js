@@ -82,22 +82,59 @@ class EditorTools {
 
         // Check walls - check for specific points first, then line
         for (let wall of levelData.walls) {
-            // Check start point
-            const startDist = Math.sqrt((worldPos.x - wall.x1) ** 2 + (worldPos.y - wall.y1) ** 2);
-            if (startDist <= tolerance) {
-                return { type: 'wall', object: wall, point: 'start' };
-            }
+            if (wall.type === 'line' || !wall.type) {
+                // Handle straight line walls
+                // Check start point
+                const startDist = Math.sqrt((worldPos.x - wall.x1) ** 2 + (worldPos.y - wall.y1) ** 2);
+                if (startDist <= tolerance) {
+                    return { type: 'wall', object: wall, point: 'start' };
+                }
 
-            // Check end point
-            const endDist = Math.sqrt((worldPos.x - wall.x2) ** 2 + (worldPos.y - wall.y2) ** 2);
-            if (endDist <= tolerance) {
-                return { type: 'wall', object: wall, point: 'end' };
-            }
+                // Check end point
+                const endDist = Math.sqrt((worldPos.x - wall.x2) ** 2 + (worldPos.y - wall.y2) ** 2);
+                if (endDist <= tolerance) {
+                    return { type: 'wall', object: wall, point: 'end' };
+                }
 
-            // Check line (for moving whole wall)
-            const lineDist = this.distanceToLineSegment(worldPos, wall);
-            if (lineDist <= tolerance) {
-                return { type: 'wall', object: wall, point: 'whole' };
+                // Check line (for moving whole wall)
+                const lineDist = this.distanceToLineSegment(worldPos, wall);
+                if (lineDist <= tolerance) {
+                    return { type: 'wall', object: wall, point: 'whole' };
+                }
+            } else if (wall.type === 'semicircle' || wall.type === 'quarter') {
+                // Handle arc walls
+                const dx = worldPos.x - wall.centerX;
+                const dy = worldPos.y - wall.centerY;
+                const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+                // Check if click is near the arc
+                if (Math.abs(distanceFromCenter - wall.radius) <= tolerance) {
+                    // Check if within arc angle range
+                    let angle = Math.atan2(dy, dx);
+                    if (angle < 0) angle += Math.PI * 2;
+
+                    let startAngle = wall.startAngle;
+                    let endAngle = wall.endAngle;
+                    if (startAngle < 0) startAngle += Math.PI * 2;
+                    if (endAngle < 0) endAngle += Math.PI * 2;
+
+                    let withinArc = false;
+                    if (startAngle <= endAngle) {
+                        withinArc = angle >= startAngle && angle <= endAngle;
+                    } else {
+                        withinArc = angle >= startAngle || angle <= endAngle;
+                    }
+
+                    if (withinArc) {
+                        return { type: 'wall', object: wall, point: 'whole' };
+                    }
+                }
+
+                // Check center point for moving
+                const centerDist = Math.sqrt((worldPos.x - wall.centerX) ** 2 + (worldPos.y - wall.centerY) ** 2);
+                if (centerDist <= tolerance) {
+                    return { type: 'wall', object: wall, point: 'center' };
+                }
             }
         }
 
@@ -111,8 +148,51 @@ class EditorTools {
         // Check walls
         for (let i = levelData.walls.length - 1; i >= 0; i--) {
             const wall = levelData.walls[i];
-            const dist = this.distanceToLineSegment(worldPos, wall);
-            if (dist <= tolerance) {
+            let shouldDelete = false;
+
+            if (wall.type === 'line' || !wall.type) {
+                // Handle straight line walls
+                const dist = this.distanceToLineSegment(worldPos, wall);
+                if (dist <= tolerance) {
+                    shouldDelete = true;
+                }
+            } else if (wall.type === 'semicircle' || wall.type === 'quarter') {
+                // Handle arc walls
+                const dx = worldPos.x - wall.centerX;
+                const dy = worldPos.y - wall.centerY;
+                const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+                // Check if click is near the arc
+                if (Math.abs(distanceFromCenter - wall.radius) <= tolerance) {
+                    // Check if within arc angle range
+                    let angle = Math.atan2(dy, dx);
+                    if (angle < 0) angle += Math.PI * 2;
+
+                    let startAngle = wall.startAngle;
+                    let endAngle = wall.endAngle;
+                    if (startAngle < 0) startAngle += Math.PI * 2;
+                    if (endAngle < 0) endAngle += Math.PI * 2;
+
+                    let withinArc = false;
+                    if (startAngle <= endAngle) {
+                        withinArc = angle >= startAngle && angle <= endAngle;
+                    } else {
+                        withinArc = angle >= startAngle || angle <= endAngle;
+                    }
+
+                    if (withinArc) {
+                        shouldDelete = true;
+                    }
+                }
+
+                // Also check center point
+                const centerDist = Math.sqrt((worldPos.x - wall.centerX) ** 2 + (worldPos.y - wall.centerY) ** 2);
+                if (centerDist <= tolerance) {
+                    shouldDelete = true;
+                }
+            }
+
+            if (shouldDelete) {
                 levelData.walls.splice(i, 1);
                 deleted = true;
                 break;
@@ -181,23 +261,32 @@ class EditorTools {
 
         if (selectedObject.type === 'wall') {
             // For walls, store the original position based on which part was selected
-            if (selectedObject.point === 'start') {
+            if (selectedObject.object.type === 'line' || !selectedObject.object.type) {
+                // Handle straight line walls
+                if (selectedObject.point === 'start') {
+                    this.dragOffset = {
+                        x: worldPos.x - selectedObject.object.x1,
+                        y: worldPos.y - selectedObject.object.y1
+                    };
+                } else if (selectedObject.point === 'end') {
+                    this.dragOffset = {
+                        x: worldPos.x - selectedObject.object.x2,
+                        y: worldPos.y - selectedObject.object.y2
+                    };
+                } else {
+                    // Moving whole wall
+                    this.dragOffset = {
+                        x: worldPos.x - selectedObject.object.x1,
+                        y: worldPos.y - selectedObject.object.y1,
+                        x2: worldPos.x - selectedObject.object.x2,
+                        y2: worldPos.y - selectedObject.object.y2
+                    };
+                }
+            } else if (selectedObject.object.type === 'semicircle' || selectedObject.object.type === 'quarter') {
+                // Handle arc walls
                 this.dragOffset = {
-                    x: worldPos.x - selectedObject.object.x1,
-                    y: worldPos.y - selectedObject.object.y1
-                };
-            } else if (selectedObject.point === 'end') {
-                this.dragOffset = {
-                    x: worldPos.x - selectedObject.object.x2,
-                    y: worldPos.y - selectedObject.object.y2
-                };
-            } else {
-                // Moving whole wall
-                this.dragOffset = {
-                    x: worldPos.x - selectedObject.object.x1,
-                    y: worldPos.y - selectedObject.object.y1,
-                    x2: worldPos.x - selectedObject.object.x2,
-                    y2: worldPos.y - selectedObject.object.y2
+                    x: worldPos.x - selectedObject.object.centerX,
+                    y: worldPos.y - selectedObject.object.centerY
                 };
             }
         } else if (selectedObject.type === 'tunnel') {
@@ -226,18 +315,25 @@ class EditorTools {
         if (!this.isDragging || !selectedObject) return;
 
         if (selectedObject.type === 'wall') {
-            if (selectedObject.point === 'start') {
-                selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
-                selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
-            } else if (selectedObject.point === 'end') {
-                selectedObject.object.x2 = worldPos.x - this.dragOffset.x;
-                selectedObject.object.y2 = worldPos.y - this.dragOffset.y;
-            } else {
-                // Moving whole wall
-                selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
-                selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
-                selectedObject.object.x2 = worldPos.x - this.dragOffset.x2;
-                selectedObject.object.y2 = worldPos.y - this.dragOffset.y2;
+            if (selectedObject.object.type === 'line' || !selectedObject.object.type) {
+                // Handle straight line walls
+                if (selectedObject.point === 'start') {
+                    selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
+                    selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
+                } else if (selectedObject.point === 'end') {
+                    selectedObject.object.x2 = worldPos.x - this.dragOffset.x;
+                    selectedObject.object.y2 = worldPos.y - this.dragOffset.y;
+                } else {
+                    // Moving whole wall
+                    selectedObject.object.x1 = worldPos.x - this.dragOffset.x;
+                    selectedObject.object.y1 = worldPos.y - this.dragOffset.y;
+                    selectedObject.object.x2 = worldPos.x - this.dragOffset.x2;
+                    selectedObject.object.y2 = worldPos.y - this.dragOffset.y2;
+                }
+            } else if (selectedObject.object.type === 'semicircle' || selectedObject.object.type === 'quarter') {
+                // Handle arc walls - move center
+                selectedObject.object.centerX = worldPos.x - this.dragOffset.x;
+                selectedObject.object.centerY = worldPos.y - this.dragOffset.y;
             }
         } else if (selectedObject.type === 'tunnel') {
             if (selectedObject.point === 'entry') {
