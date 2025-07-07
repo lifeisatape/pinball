@@ -93,21 +93,15 @@ class TestMode {
             if (distance < this.ball.radius + wall.width / 2) {
                 const normal = getNormalToLineSegment(this.ball.position, new Vector2D(wall.x1, wall.y1), new Vector2D(wall.x2, wall.y2));
 
-                const requiredDistance = this.ball.radius + wall.width / 2;
-                const separationNeeded = requiredDistance - distance;
-                const safetyMargin = 0.5;
-                
-                const totalPush = separationNeeded + safetyMargin;
-                this.ball.position.x += normal.x * totalPush;
-                this.ball.position.y += normal.y * totalPush;
+                const overlap = this.ball.radius + wall.width / 2 - distance;
+                const pushDistance = overlap * 0.8;
+                this.ball.position.x += normal.x * pushDistance;
+                this.ball.position.y += normal.y * pushDistance;
 
-                // Reflect velocity only if moving towards wall
                 const dotProduct = this.ball.velocity.dot(normal);
-                if (dotProduct < 0) {
-                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
-                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
-                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-                }
+                this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
             }
         } else if (wall.type === 'semicircle' || wall.type === 'quarter') {
             // Handle arc walls
@@ -150,34 +144,18 @@ class TestMode {
                     // Collision detected
                     const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
 
-                    // Determine collision type and adjust normal
-                    const isInside = currentDistance < targetRadius;
-                    if (isInside) {
-                        normal.x *= -1;
-                        normal.y *= -1;
-                    }
-
-                    // Calculate overlap and push ball out gradually
-                    const targetSurface = isInside ? 
-                        (targetRadius - wall.width / 2) :
-                        (targetRadius + wall.width / 2);
+                    // Push ball to correct side
+                    const overlap = (wall.width / 2 + this.ball.radius) - Math.abs(currentDistance - targetRadius);
+                    const pushDirection = currentDistance < targetRadius ? -1 : 1;
                     
-                    const overlap = Math.abs(targetSurface - currentDistance) - this.ball.radius;
-                    
-                    if (overlap > 0) {
-                        // Push ball out by the overlap amount plus small safety margin
-                        const pushDistance = overlap + 1.0;
-                        this.ball.position.x += normal.x * pushDistance;
-                        this.ball.position.y += normal.y * pushDistance;
-                    }
+                    this.ball.position.x += normal.x * overlap * pushDirection * 0.8;
+                    this.ball.position.y += normal.y * overlap * pushDirection * 0.8;
 
-                    // Reflect velocity only if moving towards surface
+                    // Reflect velocity
                     const dotProduct = this.ball.velocity.dot(normal);
-                    if (dotProduct < 0) {
-                        this.ball.velocity.x -= 2 * dotProduct * normal.x;
-                        this.ball.velocity.y -= 2 * dotProduct * normal.y;
-                        this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-                    }
+                    this.ball.velocity.x -= 2 * dotProduct * normal.x;
+                    this.ball.velocity.y -= 2 * dotProduct * normal.y;
+                    this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
                 }
             }
         }

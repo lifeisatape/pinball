@@ -146,39 +146,23 @@ class FlipperShape {
             let normalX, normalY;
 
             if (isEndCap) {
-                if (minDistance > 0.01) {
+                if (minDistance > 0.1) {
                     const centerX = closestX === tipX ? tipX : 0;
                     const centerY = 0;
                     normalX = (localX - centerX) / minDistance;
                     normalY = (localY - centerY) / minDistance;
                 } else {
-                    // Более точная нормаль для очень близких точек
-                    if (Math.abs(localX - tipX) < 0.1) {
-                        // На кончике флиппера
-                        normalX = this.isLeft ? 1 : -1;
-                        normalY = 0;
-                    } else {
-                        // На основании флиппера
-                        normalX = localX > 0 ? 1 : -1;
-                        normalY = 0;
-                    }
+                    normalX = localX > 0 ? 1 : -1;
+                    normalY = 0;
                 }
             } else {
-                if (minDistance > 0.01) {
+                if (minDistance > 0.1) {
                     normalX = (localX - closestX) / minDistance;
                     normalY = (localY - closestY) / minDistance;
                 } else {
-                    // Более точная нормаль для боковых поверхностей
                     normalX = 0;
                     normalY = localY > 0 ? 1 : -1;
                 }
-            }
-
-            // Нормализация нормали для большей точности
-            const normalLength = Math.sqrt(normalX * normalX + normalY * normalY);
-            if (normalLength > 0.01) {
-                normalX /= normalLength;
-                normalY /= normalLength;
             }
 
             const worldCos = Math.cos(this.angle);
@@ -189,7 +173,7 @@ class FlipperShape {
             return {
                 hit: true,
                 normal: new Vector2D(worldNormalX, worldNormalY),
-                penetration: circle.radius - minDistance + 1.0, // Увеличенное проникновение
+                penetration: circle.radius - minDistance + 0.5,
                 contactPoint: new Vector2D(
                     this.pivot.x + worldCos * closestX - worldSin * closestY,
                     this.pivot.y + worldSin * closestX + worldCos * closestY

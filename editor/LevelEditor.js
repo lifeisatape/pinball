@@ -106,13 +106,11 @@ class LevelEditor {
                 points: 50
             });
         } else if (this.tools.currentTool === 'droptarget') {
-            const width = parseInt(document.getElementById('dropTargetWidth').value);
-            const height = parseInt(document.getElementById('dropTargetHeight').value);
             this.dropTargets.push({
                 x: worldPos.x,
                 y: worldPos.y,
-                width: width,
-                height: height,
+                width: 15,
+                height: 30,
                 isActive: true,
                 points: 200
             });

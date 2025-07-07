@@ -8,21 +8,10 @@ class Ball {
     }
 
     update() {
-        // Apply friction first, then gravity
-        this.velocity.multiply(CONFIG.FRICTION);
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
-        
-        // More realistic velocity clamping - only stop truly minimal movements
-        if (Math.abs(this.velocity.x) < 0.1) {
-            this.velocity.x = 0;
-        }
-        if (Math.abs(this.velocity.y) < 0.1) {
-            this.velocity.y = 0;
-        }
-        
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+        this.velocity.multiply(CONFIG.FRICTION);
         this.position.add(this.velocity);
-        
         return this.handleWallCollisions();
     }
 

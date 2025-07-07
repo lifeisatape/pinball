@@ -65,42 +65,23 @@ class Wall {
                         // Collision detected
                         const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
                         
-                        // Determine collision type and adjust normal
-                        const isInside = currentDistance < targetRadius;
-                        if (isInside) {
+                        // If ball is inside the arc, flip normal
+                        if (currentDistance < targetRadius) {
                             normal.x *= -1;
                             normal.y *= -1;
                         }
 
-                        // Calculate overlap and push ball out gradually
-                        const targetSurface = isInside ? 
-                            (targetRadius - this.width / 2) :
-                            (targetRadius + this.width / 2);
-                        
-                        const overlap = Math.abs(targetSurface - currentDistance) - ball.radius;
-                        
-                        if (overlap > 0) {
-                            // Push ball out by the overlap amount plus small safety margin
-                            const pushDistance = overlap + 1.0;
-                            ball.position.x += normal.x * pushDistance;
-                            ball.position.y += normal.y * pushDistance;
-                        }
+                        // Push ball away from arc
+                        const overlap = ball.radius + this.width / 2 - Math.abs(currentDistance - targetRadius);
+                        const pushDistance = overlap * 0.8;
+                        ball.position.x += normal.x * pushDistance;
+                        ball.position.y += normal.y * pushDistance;
 
-                        // Reflect velocity only if moving towards surface
+                        // Reflect velocity
                         const dotProduct = ball.velocity.dot(normal);
-                        if (dotProduct < 0) {
-                            // Calculate new velocity
-                            const newVelX = ball.velocity.x - 2 * dotProduct * normal.x;
-                            const newVelY = ball.velocity.y - 2 * dotProduct * normal.y;
-                            
-                            // Apply bounce damping
-                            ball.velocity.x = newVelX * CONFIG.BOUNCE_DAMPING;
-                            ball.velocity.y = newVelY * CONFIG.BOUNCE_DAMPING;
-                            
-                            // Stop micro-bouncing
-                            if (Math.abs(ball.velocity.x) < 0.5) ball.velocity.x = 0;
-                            if (Math.abs(ball.velocity.y) < 0.5) ball.velocity.y = 0;
-                        }
+                        ball.velocity.x -= 2 * dotProduct * normal.x;
+                        ball.velocity.y -= 2 * dotProduct * normal.y;
+                        ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
 
                         return true;
                     }
@@ -113,31 +94,15 @@ class Wall {
             if (distance < ball.radius + this.width / 2) {
                 const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
-                // Calculate exact separation needed
-                const requiredDistance = ball.radius + this.width / 2;
-                const separationNeeded = requiredDistance - distance;
-                const safetyMargin = 0.5;
-                
-                // Push ball to safe position
-                const totalPush = separationNeeded + safetyMargin;
-                ball.position.x += normal.x * totalPush;
-                ball.position.y += normal.y * totalPush;
+                const overlap = ball.radius + this.width / 2 - distance;
+                const pushDistance = overlap * 0.8;
+                ball.position.x += normal.x * pushDistance;
+                ball.position.y += normal.y * pushDistance;
 
-                // Reflect velocity only if moving towards wall
                 const dotProduct = ball.velocity.dot(normal);
-                if (dotProduct < 0) {
-                    // Calculate new velocity
-                    const newVelX = ball.velocity.x - 2 * dotProduct * normal.x;
-                    const newVelY = ball.velocity.y - 2 * dotProduct * normal.y;
-                    
-                    // Apply bounce damping
-                    ball.velocity.x = newVelX * CONFIG.BOUNCE_DAMPING;
-                    ball.velocity.y = newVelY * CONFIG.BOUNCE_DAMPING;
-                    
-                    // Stop micro-bouncing
-                    if (Math.abs(ball.velocity.x) < 0.5) ball.velocity.x = 0;
-                    if (Math.abs(ball.velocity.y) < 0.5) ball.velocity.y = 0;
-                }
+                ball.velocity.x -= 2 * dotProduct * normal.x;
+                ball.velocity.y -= 2 * dotProduct * normal.y;
+                ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
 
                 return true;
             }
