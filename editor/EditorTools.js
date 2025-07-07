@@ -40,7 +40,7 @@ class EditorTools {
     }
 
     findObjectAt(worldPos, levelData) {
-        const tolerance = 20;
+        const tolerance = 1;
 
         // Check bumpers (highest priority for selection)
         for (let bumper of levelData.bumpers) {
