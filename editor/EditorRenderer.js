@@ -112,8 +112,16 @@ class EditorRenderer {
             this.ctx.lineWidth = wall.width;
             this.ctx.lineCap = 'round';
             this.ctx.beginPath();
-            this.ctx.moveTo(wall.x1, wall.y1);
-            this.ctx.lineTo(wall.x2, wall.y2);
+
+            if (wall.type === 'line' || !wall.type) {
+                // Draw straight line (backward compatibility)
+                this.ctx.moveTo(wall.x1, wall.y1);
+                this.ctx.lineTo(wall.x2, wall.y2);
+            } else {
+                // Draw arc
+                this.ctx.arc(wall.centerX, wall.centerY, wall.radius, wall.startAngle, wall.endAngle);
+            }
+            
             this.ctx.stroke();
         });
     }
@@ -328,7 +336,7 @@ class EditorRenderer {
         this.ctx.setLineDash([]);
     }
 
-    drawDrawingPreview(isDrawing, drawStart, mousePos, wallWidth, wallColor) {
+    drawDrawingPreview(isDrawing, drawStart, mousePos, wallWidth, wallColor, wallMode) {
         if (!isDrawing || !drawStart) return;
 
         this.ctx.strokeStyle = wallColor;
@@ -336,8 +344,20 @@ class EditorRenderer {
         this.ctx.lineCap = 'round';
         this.ctx.setLineDash([5, 5]);
         this.ctx.beginPath();
-        this.ctx.moveTo(drawStart.x, drawStart.y);
-        this.ctx.lineTo(mousePos.x, mousePos.y);
+
+        if (wallMode === 'line') {
+            this.ctx.moveTo(drawStart.x, drawStart.y);
+            this.ctx.lineTo(mousePos.x, mousePos.y);
+        } else {
+            // Draw arc preview
+            const radius = Math.sqrt(
+                Math.pow(mousePos.x - drawStart.x, 2) + 
+                Math.pow(mousePos.y - drawStart.y, 2)
+            );
+            const endAngle = wallMode === 'semicircle' ? Math.PI : Math.PI / 2;
+            this.ctx.arc(drawStart.x, drawStart.y, radius, 0, endAngle);
+        }
+
         this.ctx.stroke();
         this.ctx.setLineDash([]);
     }

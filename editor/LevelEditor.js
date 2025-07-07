@@ -40,6 +40,16 @@ class LevelEditor {
             });
         });
 
+        // Wall mode selection
+        document.querySelectorAll('.wall-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.wall-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.tools.setWallMode(btn.dataset.mode);
+                this.updateModeIndicator();
+            });
+        });
+
         // Canvas events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
@@ -179,16 +189,40 @@ class LevelEditor {
             );
 
             const width = parseInt(document.getElementById('wallWidth').value);
-            const color = document.getElementById('wallColor').value;
+            const color = document.getElementById('wallColor').value);
 
-            this.walls.push({
-                x1: this.tools.drawStart.x,
-                y1: this.tools.drawStart.y,
-                x2: worldPos.x,
-                y2: worldPos.y,
-                width: width,
-                color: color
-            });
+            if (this.tools.wallMode === 'line') {
+                this.walls.push({
+                    x1: this.tools.drawStart.x,
+                    y1: this.tools.drawStart.y,
+                    x2: worldPos.x,
+                    y2: worldPos.y,
+                    width: width,
+                    color: color,
+                    type: 'line'
+                });
+            } else {
+                // Calculate arc parameters
+                const centerX = this.tools.drawStart.x;
+                const centerY = this.tools.drawStart.y;
+                const radius = Math.sqrt(
+                    Math.pow(worldPos.x - centerX, 2) + 
+                    Math.pow(worldPos.y - centerY, 2)
+                );
+                const startAngle = 0;
+                const endAngle = this.tools.wallMode === 'semicircle' ? Math.PI : Math.PI / 2;
+
+                this.walls.push({
+                    centerX: centerX,
+                    centerY: centerY,
+                    radius: radius,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    width: width,
+                    color: color,
+                    type: this.tools.wallMode
+                });
+            }
 
             this.tools.isDrawing = false;
             this.tools.drawStart = null;
@@ -257,7 +291,7 @@ class LevelEditor {
         if (this.tools.isDrawing && this.tools.drawStart) {
             const width = parseInt(document.getElementById('wallWidth').value);
             const color = document.getElementById('wallColor').value;
-            this.renderer.drawDrawingPreview(this.tools.isDrawing, this.tools.drawStart, this.mousePos, width, color);
+            this.renderer.drawDrawingPreview(this.tools.isDrawing, this.tools.drawStart, this.mousePos, width, color, this.tools.wallMode);
         }
 
         // Draw tunnel creation preview

@@ -2,6 +2,7 @@
 class EditorTools {
     constructor() {
         this.currentTool = 'wall';
+        this.wallMode = 'line'; // 'line', 'semicircle', 'quarter'
         this.isDrawing = false;
         this.drawStart = null;
         this.selectedObject = null;
@@ -21,6 +22,10 @@ class EditorTools {
             this.tunnelCreationStep = 0;
             this.tunnelEntry = null;
         }
+    }
+
+    setWallMode(mode) {
+        this.wallMode = mode;
     }
 
     snapToGrid(worldPos, snapEnabled, gridSize) {
@@ -255,7 +260,7 @@ class EditorTools {
 
     getModeText() {
         const modes = {
-            wall: 'WALL MODE',
+            wall: `WALL MODE - ${this.wallMode.toUpperCase()}`,
             bumper: 'BUMPER MODE',
             spinner: 'SPINNER MODE',
             droptarget: 'DROP TARGET MODE',
