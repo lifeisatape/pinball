@@ -89,9 +89,17 @@ class Wall {
                         // Reflect velocity only if moving towards surface
                         const dotProduct = ball.velocity.dot(normal);
                         if (dotProduct < 0) {
-                            ball.velocity.x -= 2 * dotProduct * normal.x;
-                            ball.velocity.y -= 2 * dotProduct * normal.y;
-                            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                            // Calculate new velocity
+                            const newVelX = ball.velocity.x - 2 * dotProduct * normal.x;
+                            const newVelY = ball.velocity.y - 2 * dotProduct * normal.y;
+                            
+                            // Apply bounce damping
+                            ball.velocity.x = newVelX * CONFIG.BOUNCE_DAMPING;
+                            ball.velocity.y = newVelY * CONFIG.BOUNCE_DAMPING;
+                            
+                            // Stop micro-bouncing
+                            if (Math.abs(ball.velocity.x) < 0.5) ball.velocity.x = 0;
+                            if (Math.abs(ball.velocity.y) < 0.5) ball.velocity.y = 0;
                         }
 
                         return true;
@@ -118,9 +126,17 @@ class Wall {
                 // Reflect velocity only if moving towards wall
                 const dotProduct = ball.velocity.dot(normal);
                 if (dotProduct < 0) {
-                    ball.velocity.x -= 2 * dotProduct * normal.x;
-                    ball.velocity.y -= 2 * dotProduct * normal.y;
-                    ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+                    // Calculate new velocity
+                    const newVelX = ball.velocity.x - 2 * dotProduct * normal.x;
+                    const newVelY = ball.velocity.y - 2 * dotProduct * normal.y;
+                    
+                    // Apply bounce damping
+                    ball.velocity.x = newVelX * CONFIG.BOUNCE_DAMPING;
+                    ball.velocity.y = newVelY * CONFIG.BOUNCE_DAMPING;
+                    
+                    // Stop micro-bouncing
+                    if (Math.abs(ball.velocity.x) < 0.5) ball.velocity.x = 0;
+                    if (Math.abs(ball.velocity.y) < 0.5) ball.velocity.y = 0;
                 }
 
                 return true;

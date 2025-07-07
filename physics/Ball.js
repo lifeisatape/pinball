@@ -11,6 +11,15 @@ class Ball {
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
         this.velocity.multiply(CONFIG.FRICTION);
+        
+        // Stop micro-bouncing by setting very small velocities to zero
+        if (Math.abs(this.velocity.x) < 0.1) {
+            this.velocity.x = 0;
+        }
+        if (Math.abs(this.velocity.y) < 0.1) {
+            this.velocity.y = 0;
+        }
+        
         this.position.add(this.velocity);
         
         return this.handleWallCollisions();
@@ -20,19 +29,31 @@ class Ball {
         // Левая граница
         if (this.position.x < this.radius) {
             this.position.x = this.radius;
-            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            if (Math.abs(this.velocity.x) < 1.0) {
+                this.velocity.x = 0; // Stop micro-bouncing
+            } else {
+                this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            }
         }
         
         // Правая граница
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
             this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
-            this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            if (Math.abs(this.velocity.x) < 1.0) {
+                this.velocity.x = 0; // Stop micro-bouncing
+            } else {
+                this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
+            }
         }
         
         // Верхняя граница
         if (this.position.y < this.radius) {
             this.position.y = this.radius;
-            this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+            if (Math.abs(this.velocity.y) < 1.0) {
+                this.velocity.y = 0; // Stop micro-bouncing
+            } else {
+                this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
+            }
         }
         
         // Проверка на потерю мяча (низ экрана)
