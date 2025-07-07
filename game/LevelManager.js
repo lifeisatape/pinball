@@ -91,9 +91,21 @@ class LevelManager {
 
         // Load walls
         if (levelData.walls) {
-            level.walls = levelData.walls.map(wallData => 
-                new Wall(wallData.x1, wallData.y1, wallData.x2, wallData.y2, wallData.color, wallData.width)
-            );
+            level.walls = levelData.walls.map(wallData => {
+                const wall = new Wall(wallData.x1, wallData.y1, wallData.x2, wallData.y2, wallData.color, wallData.width);
+                
+                // Add arc properties if they exist
+                if (wallData.type === 'semicircle' || wallData.type === 'quarter') {
+                    wall.type = wallData.type;
+                    wall.centerX = wallData.centerX;
+                    wall.centerY = wallData.centerY;
+                    wall.radius = wallData.radius;
+                    wall.startAngle = wallData.startAngle;
+                    wall.endAngle = wallData.endAngle;
+                }
+                
+                return wall;
+            });
         }
 
         // Load bumpers
