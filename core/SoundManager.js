@@ -9,19 +9,29 @@ class SoundManager {
         this.enabled = true;
         this.userInteracted = false;
         this.loadingPromises = new Map();
+        this.isInitialized = false;
         
         // Priority sounds that should load first
         this.prioritySounds = ['flipperIn', 'flipperOut', 'wallHit'];
         
-        this.initializeAudioContext();
+        // Mobile detection
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         this.setupEventListeners();
         this.loadPrioritySounds();
     }
 
     initializeAudioContext() {
+        if (this.audioContext) return;
+        
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log('AudioContext initialized');
+            console.log('AudioContext initialized, state:', this.audioContext.state);
+            
+            // For mobile, we need to resume context after user interaction
+            if (this.audioContext.state === 'suspended') {
+                console.log('AudioContext is suspended, will resume after user interaction');
+            }
         } catch (error) {
             console.warn('AudioContext not supported, falling back to HTML5 Audio');
             this.audioContext = null;
@@ -29,23 +39,50 @@ class SoundManager {
     }
 
     setupEventListeners() {
-        const enableAudioOnInteraction = () => {
+        const eventTypes = ['click', 'touchstart', 'touchend', 'mousedown', 'keydown'];
+        
+        const enableAudioOnInteraction = async () => {
             if (!this.userInteracted) {
-                this.userInteracted = true;
                 console.log('User interaction detected, enabling audio...');
+                this.userInteracted = true;
                 
-                if (this.audioContext && this.audioContext.state === 'suspended') {
-                    this.audioContext.resume();
+                // Initialize AudioContext if not done yet
+                if (!this.audioContext) {
+                    this.initializeAudioContext();
                 }
                 
-                this.loadAllSounds();
+                // Resume AudioContext if suspended (critical for mobile)
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    try {
+                        await this.audioContext.resume();
+                        console.log('AudioContext resumed, state:', this.audioContext.state);
+                    } catch (error) {
+                        console.warn('Failed to resume AudioContext:', error);
+                    }
+                }
+                
+                // Load all sounds after user interaction
+                await this.loadAllSounds();
+                this.isInitialized = true;
+                
+                // Remove event listeners after first interaction
+                eventTypes.forEach(event => {
+                    document.removeEventListener(event, enableAudioOnInteraction);
+                });
             }
         };
 
-        // Listen for various user interaction events
-        ['click', 'touchstart', 'keydown'].forEach(event => {
-            document.addEventListener(event, enableAudioOnInteraction, { once: true });
+        // Add multiple event listeners for better mobile support
+        eventTypes.forEach(event => {
+            document.addEventListener(event, enableAudioOnInteraction, { 
+                once: false, 
+                passive: true 
+            });
         });
+        
+        // Also listen for specific game interactions
+        document.addEventListener('keydown', enableAudioOnInteraction, { once: true });
+        document.addEventListener('touchstart', enableAudioOnInteraction, { once: true });
     }
 
     async loadPrioritySounds() {
@@ -58,13 +95,22 @@ class SoundManager {
         console.log('Starting sound loading...');
         
         for (const [key, path] of Object.entries(prioritySoundFiles)) {
-            await this.loadSound(key, path);
+            try {
+                await this.loadSound(key, path);
+            } catch (error) {
+                console.warn(`Failed to load priority sound ${key}:`, error);
+            }
         }
         
         console.log('Priority sounds loaded');
     }
 
     async loadAllSounds() {
+        if (!this.userInteracted) {
+            console.log('Waiting for user interaction before loading sounds...');
+            return;
+        }
+        
         const allSoundFiles = {
             menu: 'sounds/menu.mp3',
             flipperIn: 'sounds/Flipper_In.mp3',
@@ -86,8 +132,12 @@ class SoundManager {
             }
         }
 
-        await Promise.all(loadPromises);
-        console.log('All sounds loaded successfully');
+        try {
+            await Promise.all(loadPromises);
+            console.log('All sounds loaded successfully');
+        } catch (error) {
+            console.warn('Some sounds failed to load:', error);
+        }
     }
 
     async loadSound(name, path) {
@@ -95,7 +145,7 @@ class SoundManager {
             return this.loadingPromises.get(name);
         }
 
-        const loadPromise = this.audioContext ? 
+        const loadPromise = this.audioContext && this.userInteracted ? 
             this.loadSoundWithWebAudio(name, path) : 
             this.loadSoundWithHTMLAudio(name, path);
 
@@ -106,6 +156,13 @@ class SoundManager {
             console.log(`Loaded sound: ${name}`);
         } catch (error) {
             console.warn(`Failed to load sound ${name}:`, error);
+            // Try fallback method
+            try {
+                await this.loadSoundWithHTMLAudio(name, path);
+                console.log(`Loaded sound with fallback: ${name}`);
+            } catch (fallbackError) {
+                console.error(`Complete failure loading sound ${name}:`, fallbackError);
+            }
         }
 
         return loadPromise;
@@ -114,6 +171,10 @@ class SoundManager {
     async loadSoundWithWebAudio(name, path) {
         try {
             const response = await fetch(path);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
             
@@ -125,55 +186,91 @@ class SoundManager {
                 source: null
             };
         } catch (error) {
-            // Fallback to HTML5 Audio
-            await this.loadSoundWithHTMLAudio(name, path);
+            console.warn(`WebAudio loading failed for ${name}, trying HTML5:`, error);
+            throw error; // Re-throw to trigger fallback
         }
     }
 
     async loadSoundWithHTMLAudio(name, path) {
         return new Promise((resolve, reject) => {
-            const audio = new Audio(path);
+            const audio = new Audio();
             audio.preload = 'auto';
             audio.volume = name === 'menu' || name === 'level' ? this.musicVolume : this.sfxVolume;
             audio.loop = name === 'menu' || name === 'level';
-
-            audio.oncanplaythrough = () => {
+            
+            // Critical for mobile - set crossOrigin
+            audio.crossOrigin = 'anonymous';
+            
+            const onLoad = () => {
                 this.sounds[name] = {
                     type: 'html5',
                     audio: audio,
                     volume: audio.volume,
                     loop: audio.loop
                 };
+                cleanup();
                 resolve();
             };
 
-            audio.onerror = () => {
+            const onError = () => {
+                cleanup();
                 reject(new Error(`Failed to load ${path}`));
             };
 
+            const cleanup = () => {
+                audio.removeEventListener('canplaythrough', onLoad);
+                audio.removeEventListener('error', onError);
+                audio.removeEventListener('loadeddata', onLoad);
+            };
+
+            audio.addEventListener('canplaythrough', onLoad);
+            audio.addEventListener('loadeddata', onLoad); // Fallback event
+            audio.addEventListener('error', onError);
+            
+            audio.src = path;
             audio.load();
         });
     }
 
     playSound(soundName, options = {}) {
-        if (!this.enabled || !this.sounds[soundName]) return;
+        if (!this.enabled || !this.sounds[soundName]) {
+            console.warn(`Sound not available: ${soundName}`);
+            return;
+        }
+
+        // Ensure we have user interaction before playing
+        if (!this.userInteracted) {
+            console.warn('Cannot play sound without user interaction');
+            return;
+        }
 
         const sound = this.sounds[soundName];
         
-        if (sound.type === 'webaudio') {
-            this.playWebAudioSound(soundName, sound, options);
-        } else {
-            this.playHTML5Sound(sound, options);
+        try {
+            if (sound.type === 'webaudio') {
+                this.playWebAudioSound(soundName, sound, options);
+            } else {
+                this.playHTML5Sound(sound, options);
+            }
+        } catch (error) {
+            console.warn(`Error playing sound ${soundName}:`, error);
         }
     }
 
     playWebAudioSound(soundName, sound, options) {
-        if (!this.audioContext || this.audioContext.state !== 'running') return;
+        if (!this.audioContext || this.audioContext.state !== 'running') {
+            console.warn('AudioContext not ready, state:', this.audioContext?.state);
+            return;
+        }
 
         try {
             // Stop previous instance if playing
             if (sound.source) {
-                sound.source.stop();
+                try {
+                    sound.source.stop();
+                } catch (e) {
+                    // Ignore errors when stopping
+                }
             }
 
             const source = this.audioContext.createBufferSource();
@@ -198,13 +295,15 @@ class SoundManager {
                 }
             };
         } catch (error) {
-            console.warn(`Error playing sound ${soundName}:`, error);
+            console.warn(`Error playing WebAudio sound ${soundName}:`, error);
         }
     }
 
     playHTML5Sound(sound, options) {
         try {
             const audio = sound.audio;
+            
+            // For mobile, we need to handle play() promise
             audio.currentTime = 0;
             
             if (options.volume !== undefined) {
@@ -215,6 +314,14 @@ class SoundManager {
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
                     console.warn('HTML5 audio play failed:', error);
+                    // On mobile, sometimes we need to try again
+                    if (this.isMobile) {
+                        setTimeout(() => {
+                            audio.play().catch(e => {
+                                console.warn('Retry HTML5 audio play failed:', e);
+                            });
+                        }, 100);
+                    }
                 });
             }
         } catch (error) {
@@ -234,7 +341,11 @@ class SoundManager {
         if (!this.currentMusic) return;
 
         if (this.currentMusic.type === 'webaudio' && this.currentMusic.source) {
-            this.currentMusic.source.stop();
+            try {
+                this.currentMusic.source.stop();
+            } catch (e) {
+                // Ignore errors when stopping
+            }
             this.currentMusic.source = null;
         } else if (this.currentMusic.type === 'html5') {
             this.currentMusic.audio.pause();
@@ -292,7 +403,11 @@ class SoundManager {
         
         Object.values(this.sounds).forEach(sound => {
             if (sound.type === 'webaudio' && sound.source) {
-                sound.source.stop();
+                try {
+                    sound.source.stop();
+                } catch (e) {
+                    // Ignore errors when stopping
+                }
             } else if (sound.type === 'html5') {
                 sound.audio.pause();
             }
@@ -306,5 +421,7 @@ class SoundManager {
     }
 }
 
-// Global sound manager instance
-window.soundManager = new SoundManager();
+// Global sound manager instance - only create if not exists
+if (!window.soundManager) {
+    window.soundManager = new SoundManager();
+}
