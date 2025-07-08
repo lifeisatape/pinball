@@ -219,9 +219,6 @@ class TestMode {
                     this.ball.velocity.x -= 2 * dotProduct * normal.x;
                     this.ball.velocity.y -= 2 * dotProduct * normal.y;
                     this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-                    // Play wall hit sound
-                    window.soundManager.playSound('wallHit');
                 }
             }
         }

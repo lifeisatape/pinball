@@ -56,9 +56,6 @@ class Wall {
             ball.velocity.y -= 2 * dotProduct * normal.y;
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
 
-            // Play wall hit sound
-            window.soundManager.playSound('wallHit');
-
             return true;
         }
 
@@ -95,9 +92,6 @@ class Wall {
             ball.velocity.x -= 2 * dotProduct * normal.x;
             ball.velocity.y -= 2 * dotProduct * normal.y;
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-            // Play wall hit sound
-            window.soundManager.playSound('wallHit');
 
             return true;
         }
@@ -195,9 +189,6 @@ class Wall {
                     ball.velocity.x -= 2 * dotProduct * normal.x;
                     ball.velocity.y -= 2 * dotProduct * normal.y;
                     ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-                    // Play wall hit sound
-                    window.soundManager.playSound('wallHit');
 
                     return true;
                 }

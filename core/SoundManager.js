@@ -12,7 +12,7 @@ class SoundManager {
         this.isInitialized = false;
         
         // Priority sounds that should load first
-        this.prioritySounds = ['flipperIn', 'flipperOut', 'wallHit'];
+        this.prioritySounds = ['flipperIn', 'flipperOut'];
         
         // Mobile detection
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -88,8 +88,7 @@ class SoundManager {
     async loadPrioritySounds() {
         const prioritySoundFiles = {
             flipperIn: 'sounds/Flipper_In.mp3',
-            flipperOut: 'sounds/Flipper_Out.mp3',
-            wallHit: 'sounds/wallhit.mp3'
+            flipperOut: 'sounds/Flipper_Out.mp3'
         };
 
         console.log('Starting sound loading...');
@@ -120,7 +119,6 @@ class SoundManager {
             spinner: 'sounds/spinner.mp3',
             targetHit: 'sounds/Target_hit.mp3',
             targetIn: 'sounds/Target_in.mp3',
-            wallHit: 'sounds/wallhit.mp3',
             newGameLaunch: 'sounds/New_game_launch.mp3'
         };
 
