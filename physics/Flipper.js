@@ -131,13 +131,23 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
-            // Более надежное разделение
-            const separation = Math.max(collision.penetration + 2, 3);
-            ball.position.x += collision.normal.x * separation;
-            ball.position.y += collision.normal.y * separation;
+            // Гарантированное разделение объектов
+            const minSeparation = ball.radius + 3;
+            const currentDistance = Math.sqrt(
+                Math.pow(ball.position.x - collision.contactPoint.x, 2) +
+                Math.pow(ball.position.y - collision.contactPoint.y, 2)
+            );
+            
+            const neededSeparation = minSeparation - currentDistance + collision.penetration;
+            if (neededSeparation > 0) {
+                ball.position.x += collision.normal.x * neededSeparation;
+                ball.position.y += collision.normal.y * neededSeparation;
+            }
 
-            // Реалистичная угловая скорость
-            const currentAngularVelocity = (this.angle - this.lastAngle) * 0.8;
+            // Вычисляем реальную угловую скорость флиппера
+            const angularVelocityThreshold = 0.01;
+            const currentAngularVelocity = this.angle - this.lastAngle;
+            const isFlipperMoving = Math.abs(currentAngularVelocity) > angularVelocityThreshold;
 
             // Точка контакта относительно центра флиппера
             const contactOffset = new Vector2D(
@@ -145,39 +155,38 @@ class Flipper {
                 collision.contactPoint.y - this.position.y
             );
 
-            // Тангенциальная скорость (более реалистичная)
-            const tangentialVelocity = new Vector2D(
-                -contactOffset.y * currentAngularVelocity * 3, // Снижаем множитель
-                contactOffset.x * currentAngularVelocity * 3
-            );
-
-            // Отражение скорости
+            // Отражение скорости (всегда происходит при столкновении)
             const velocityDotNormal = ball.velocity.dot(collision.normal);
             if (velocityDotNormal < 0) {
-                const restitution = CONFIG.BOUNCE_DAMPING * 0.9;
+                // Базовое отражение с демпфированием
+                const restitution = isFlipperMoving ? 
+                    CONFIG.BOUNCE_DAMPING * 0.85 : 
+                    CONFIG.BOUNCE_DAMPING * 0.6; // Меньше отскока от неподвижного флиппера
+                    
                 ball.velocity.x -= (1 + restitution) * velocityDotNormal * collision.normal.x;
                 ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
             }
 
-            // Добавляем силу только от активного движущегося флиппера
-            if (this.isActive && Math.abs(currentAngularVelocity) > 0.05) {
-                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.7;
+            // Добавляем силу ТОЛЬКО если флиппер активно движется
+            if (this.isActive && isFlipperMoving) {
+                // Тангенциальная скорость от вращения флиппера
+                const tangentialVelocity = new Vector2D(
+                    -contactOffset.y * currentAngularVelocity * 2,
+                    contactOffset.x * currentAngularVelocity * 2
+                );
+
+                // Сила удара флиппера
+                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.6;
                 ball.velocity.x += collision.normal.x * flipperForce;
                 ball.velocity.y += collision.normal.y * flipperForce;
 
-                // Добавляем тангенциальную скорость
-                ball.velocity.x += tangentialVelocity.x * 0.5;
-                ball.velocity.y += tangentialVelocity.y * 0.5;
-            } else if (Math.abs(currentAngularVelocity) > 0.02) {
-                // Небольшая передача энергии только если флиппер действительно движется
-                const passiveForce = CONFIG.FLIPPER_STRENGTH * 0.1;
-                ball.velocity.x += collision.normal.x * passiveForce;
-                ball.velocity.y += collision.normal.y * passiveForce;
+                // Добавляем тангенциальную скорость для реалистичности
+                ball.velocity.x += tangentialVelocity.x * 0.4;
+                ball.velocity.y += tangentialVelocity.y * 0.4;
             }
-            // Если флиппер неподвижен - никакой дополнительной силы не добавляем
+            // ВАЖНО: Если флиппер неподвижен - НЕ добавляем никакой дополнительной силы!
 
-            // Применяем демпфирование и ограничение скорости
-            ball.velocity.multiply(0.99);
+            // Применяем ограничение скорости
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
 
             return true;

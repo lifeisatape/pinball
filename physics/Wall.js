@@ -109,6 +109,11 @@ class Wall {
         const lineStart = new Vector2D(this.x1, this.y1);
         const lineEnd = new Vector2D(this.x2, this.y2);
         
+        // Проверяем пересечение траектории мяча с отрезком стены
+        if (this.checkTrajectoryIntersection(ball, lineStart, lineEnd)) {
+            return true;
+        }
+        
         // Вычисляем ближайшую точку на отрезке
         const A = ball.position.x - this.x1;
         const B = ball.position.y - this.y1;
@@ -124,18 +129,18 @@ class Wall {
         let closestX, closestY;
         let isEndpoint = false;
         
-        if (param < 0) {
+        if (param < -0.1) {
             // Ближе к началу отрезка
             closestX = this.x1;
             closestY = this.y1;
             isEndpoint = true;
-        } else if (param > 1) {
+        } else if (param > 1.1) {
             // Ближе к концу отрезка
             closestX = this.x2;
             closestY = this.y2;
             isEndpoint = true;
         } else {
-            // На отрезке
+            // На отрезке или рядом с ним
             closestX = this.x1 + param * C;
             closestY = this.y1 + param * D;
         }
@@ -144,37 +149,72 @@ class Wall {
         const dy = ball.position.y - closestY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        const collisionRadius = isEndpoint ? 
-            ball.radius + this.width / 4 : // Меньший радиус для концов
-            ball.radius + this.width / 2;
+        const collisionRadius = ball.radius + this.width / 2;
 
-        if (distance < collisionRadius && distance > 0.1) {
+        if (distance < collisionRadius && distance > 0.01) {
             const normal = new Vector2D(dx / distance, dy / distance);
 
-            // Более надежное разделение
-            const overlap = collisionRadius - distance;
-            const separation = Math.max(overlap + 1, 2);
+            // Гарантированное разделение объектов
+            const minSeparation = collisionRadius + 2;
+            const currentSeparation = distance;
+            const neededSeparation = minSeparation - currentSeparation;
             
-            ball.position.x += normal.x * separation;
-            ball.position.y += normal.y * separation;
+            if (neededSeparation > 0) {
+                ball.position.x += normal.x * neededSeparation;
+                ball.position.y += normal.y * neededSeparation;
+            }
 
             // Реалистичное отражение только если мяч движется к стене
             const velocityDotNormal = ball.velocity.dot(normal);
             
             if (velocityDotNormal < 0) {
                 const restitution = isEndpoint ? 
-                    CONFIG.BOUNCE_DAMPING * 0.6 : // Меньше отскока на концах
-                    CONFIG.BOUNCE_DAMPING * 0.8;
+                    CONFIG.BOUNCE_DAMPING * 0.5 : // Сильное демпфирование на концах
+                    CONFIG.BOUNCE_DAMPING * 0.75;
                     
                 ball.velocity.x -= (1 + restitution) * velocityDotNormal * normal.x;
                 ball.velocity.y -= (1 + restitution) * velocityDotNormal * normal.y;
                 
-                // Дополнительное трение на концах
-                ball.velocity.multiply(isEndpoint ? 0.95 : 0.98);
+                // Дополнительное трение
+                ball.velocity.multiply(isEndpoint ? 0.9 : 0.96);
             }
 
             return true;
         }
+        return false;
+    }
+
+    // Новый метод для проверки пересечения траектории
+    checkTrajectoryIntersection(ball, lineStart, lineEnd) {
+        const ballStart = ball.lastPosition;
+        const ballEnd = ball.position;
+        
+        // Проверяем расстояние от предыдущей позиции до отрезка
+        const prevDistance = distanceToLineSegment(ballStart, lineStart, lineEnd);
+        const currDistance = distanceToLineSegment(ballEnd, lineStart, lineEnd);
+        
+        const radius = ball.radius + this.width / 2;
+        
+        // Если мяч пересек стену между кадрами
+        if (prevDistance > radius && currDistance < radius) {
+            // Находим точку пересечения и отражаем от неё
+            const normal = getNormalToLineSegment(ballEnd, lineStart, lineEnd);
+            
+            // Перемещаем мяч на безопасное расстояние
+            ball.position.x = ballStart.x + normal.x * (radius + 2);
+            ball.position.y = ballStart.y + normal.y * (radius + 2);
+            
+            // Отражаем скорость
+            const velocityDotNormal = ball.velocity.dot(normal);
+            if (velocityDotNormal < 0) {
+                ball.velocity.x -= (1 + CONFIG.BOUNCE_DAMPING * 0.7) * velocityDotNormal * normal.x;
+                ball.velocity.y -= (1 + CONFIG.BOUNCE_DAMPING * 0.7) * velocityDotNormal * normal.y;
+                ball.velocity.multiply(0.95);
+            }
+            
+            return true;
+        }
+        
         return false;
     }
 }

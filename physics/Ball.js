@@ -29,10 +29,38 @@ class Ball {
         // Ограничиваем максимальную скорость
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
         
-        // Обновляем позицию
-        this.position.add(this.velocity);
+        // Постепенное перемещение с проверкой коллизий для предотвращения проскакивания
+        this.moveWithCollisionCheck();
         
         return this.handleWallCollisions();
+    }
+
+    // Новый метод для безопасного перемещения с проверкой траектории
+    moveWithCollisionCheck() {
+        const speed = this.velocity.magnitude();
+        
+        // Если скорость большая, разбиваем движение на мелкие шаги
+        if (speed > this.radius) {
+            const steps = Math.ceil(speed / (this.radius * 0.5));
+            const stepVelocity = new Vector2D(
+                this.velocity.x / steps,
+                this.velocity.y / steps
+            );
+            
+            for (let i = 0; i < steps; i++) {
+                this.position.add(stepVelocity);
+                
+                // Проверяем не вышли ли за границы на каждом шаге
+                if (this.position.x < this.radius || 
+                    this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius ||
+                    this.position.y < this.radius) {
+                    break;
+                }
+            }
+        } else {
+            // Обычное перемещение для медленных скоростей
+            this.position.add(this.velocity);
+        }
     }
 
     handleWallCollisions() {
