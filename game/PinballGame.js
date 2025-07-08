@@ -1,4 +1,4 @@
-// Main Game Class
+// Main Game Class - Simplified for Web Audio
 class PinballGame {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -7,7 +7,7 @@ class PinballGame {
         this.levelManager = new LevelManager();
         this.levelSelector = new LevelSelector();
         this.renderer = new GameRenderer(this.canvas);
-        this.inputManager = null; // Will be initialized in initializeGame()
+        this.inputManager = null;
         this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
@@ -19,21 +19,23 @@ class PinballGame {
 
         this.setupEventListeners();
         this.showStartScreen();
+
+        // Ждем готовности звуков
+        window.addEventListener('soundManagerReady', () => {
+            console.log('PinballGame: Sound system ready!');
+        });
     }
 
     async initializeGame() {
         try {
-            // If no level is selected, don't initialize
-            if (!this.currentLevel) {
-                return;
-            }
+            if (!this.currentLevel) return;
 
             this.hideStartScreen();
             this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
             this.resetBall();
             this.updateUI();
             this.gameStarted = true;
-            
+
             if (!this.gameLoopRunning) {
                 this.gameLoopRunning = true;
                 this.gameLoop();
@@ -72,29 +74,30 @@ class PinballGame {
     }
 
     async showStartScreen() {
-        // Hide game elements and show level selection
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
-        
-        // Play menu music
-        window.soundManager.playMusic('menu');
-        
-        // Populate level list
+
+        // Простое воспроизведение музыки
+        if (window.soundManager && window.soundManager.isReady) {
+            window.soundManager.playMusic('menu');
+        }
+
         const levels = await this.levelSelector.getAvailableLevels();
         this.populateLevelList(levels);
-        
+
         this.startScreen.style.display = 'flex';
     }
 
     hideStartScreen() {
-        // Show game elements
         this.canvas.style.display = 'block';
         document.querySelector('.score-panel').style.display = 'flex';
         this.startScreen.style.display = 'none';
-        
-        // Play level music and new game sound
-        window.soundManager.playMusic('level');
-        window.soundManager.playSound('newGameLaunch');
+
+        // Простое переключение музыки
+        if (window.soundManager && window.soundManager.isReady) {
+            window.soundManager.playMusic('level');
+            window.soundManager.playSound('newGameLaunch');
+        }
     }
 
     populateLevelList(levels) {
@@ -112,12 +115,10 @@ class PinballGame {
             `;
 
             levelItem.addEventListener('click', () => {
-                // Remove previous selection
                 document.querySelectorAll('.level-item').forEach(item => {
                     item.classList.remove('selected');
                 });
-                
-                // Select new level
+
                 levelItem.classList.add('selected');
                 this.levelSelector.selectLevel(index);
             });
@@ -131,7 +132,6 @@ class PinballGame {
 
         const ballLost = this.ball.update();
 
-        // Update all game objects
         this.currentLevel.flippers.forEach(flipper => flipper.update());
         this.currentLevel.bumpers.forEach(bumper => bumper.update());
         this.currentLevel.spinners.forEach(spinner => spinner.update());
@@ -156,52 +156,53 @@ class PinballGame {
     }
 
     checkCollisions() {
-        // Wall collisions
         this.currentLevel.walls.forEach(wall => {
             wall.checkCollision(this.ball);
         });
 
-        // Flipper collisions
         this.currentLevel.flippers.forEach(flipper => {
             flipper.checkCollision(this.ball);
         });
 
-        // Bumper collisions
+        // ПРОСТЫЕ вызовы звуков - никаких проверок!
         this.currentLevel.bumpers.forEach(bumper => {
             const points = bumper.checkCollision(this.ball);
             if (points > 0) {
                 this.gameState.updateScore(points);
                 this.scorePanel.updateScore(this.gameState.score);
                 this.scorePanel.updateHighScore(this.gameState.highScore);
+
+                // Просто играем звук
+                window.soundManager?.playSound('bumper');
             }
         });
 
-        // Spinner collisions
         this.currentLevel.spinners.forEach(spinner => {
             const points = spinner.checkCollision(this.ball);
             if (points > 0) {
                 this.gameState.updateScore(points);
                 this.scorePanel.updateScore(this.gameState.score);
                 this.scorePanel.updateHighScore(this.gameState.highScore);
+
+                window.soundManager?.playSound('spinner');
             }
         });
 
-        // Drop Target collisions
         this.currentLevel.dropTargets.forEach(target => {
             const points = target.checkCollision(this.ball);
             if (points > 0) {
                 this.gameState.updateScore(points);
                 this.scorePanel.updateScore(this.gameState.score);
                 this.scorePanel.updateHighScore(this.gameState.highScore);
+
+                window.soundManager?.playSound('targetHit');
             }
         });
 
-        // Ramp collisions
         this.currentLevel.ramps.forEach(ramp => {
             ramp.checkCollision(this.ball);
         });
 
-        // Tunnel collisions
         this.currentLevel.tunnels.forEach(tunnel => {
             tunnel.checkCollision(this.ball);
         });
@@ -211,7 +212,6 @@ class PinballGame {
         this.renderer.clear();
         this.renderer.startVirtualRendering();
 
-        // Draw background image if available
         if (this.currentLevel.backgroundImage) {
             this.renderer.drawBackgroundImage(this.currentLevel.backgroundImage, this.currentLevel.backgroundOpacity);
         }
@@ -233,33 +233,25 @@ class PinballGame {
 
     restartGame() {
         this.gameState.resetGame();
-        this.resetBall(); // Используем resetBall() который устанавливает ballInPlay = true
+        this.resetBall();
         this.levelManager.resetLevel(this.currentLevel);
         this.gameOverOverlay.hide();
-        this.updateUI(); // Обновляем весь UI включая high score
+        this.updateUI();
     }
 
     async showLevelSelect() {
-        // Pause game when showing level select during gameplay
         this.gameStarted = false;
         await this.showStartScreen();
     }
 
     async loadSelectedLevel(selectedLevel) {
         try {
-            // Load the selected level data
             this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
-
-            // Set current level in game state for high score tracking
             this.gameState.setCurrentLevel(selectedLevel.name);
-
-            // Initialize game with selected level
             await this.initializeGame();
-
             console.log(`Loaded level: ${selectedLevel.name}`);
         } catch (error) {
             console.error('Error loading selected level:', error);
-            // Fallback to default level
             this.currentLevel = await this.levelManager.createDefaultLevel();
             this.gameState.setCurrentLevel('default');
             await this.initializeGame();

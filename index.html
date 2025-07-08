@@ -39,55 +39,61 @@
         <div class="level-select-overlay" id="startScreen" style="display: flex;">
             <div class="level-select-content">
                 <h2>PINBALL GAME</h2>
-                <p style="color: #ccc; margin-bottom: 20px;">Select a level to start playing</p>
+                <p style="color: #ccc; margin-bottom: 20px;">Preparing audio system...</p>
                 <div class="level-list" id="levelList">
                     <!-- Levels will be populated here -->
                 </div>
                 <div class="level-select-controls">
-                    <button class="level-btn primary" id="startLevel">START GAME</button>
+                    <button class="level-btn primary loading" id="startLevel" disabled>LOADING SOUNDS...</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Core modules first -->
+    <!-- КРИТИЧНО: Порядок загрузки скриптов! -->
+    
+    <!-- 1. ПЕРВЫМ загружаем SoundManager -->
+    <script src="core/SoundManager.js"></script>
+    
+    <!-- 2. Core modules -->
     <script src="core/GameConfig.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
-    <script src="core/SoundManager.js"></script>
     
-    <!-- Physics modules (depend on core) -->
+    <!-- 3. Physics modules (depend on core) -->
     <script src="physics/FlipperShape.js"></script>
     <script src="physics/Ball.js"></script>
     <script src="physics/Wall.js"></script>
     <script src="physics/Flipper.js"></script>
     
-    <!-- Game objects (depend on core and physics) -->
+    <!-- 4. Game objects (depend on core and physics) -->
     <script src="gameObjects/Bumper.js"></script>
     <script src="gameObjects/Spinner.js"></script>
     <script src="gameObjects/DropTarget.js"></script>
     <script src="gameObjects/Tunnel.js"></script>
     <script src="gameObjects/Ramp.js"></script>
     
-    <!-- UI components -->
+    <!-- 5. UI components -->
     <script src="ui/ScorePanel.js"></script>
     <script src="ui/GameOverOverlay.js"></script>
     <script src="ui/LevelSelectOverlay.js"></script>
     
-    <!-- Game engine (depends on everything above) -->
+    <!-- 6. Game engine (depends on everything above) -->
     <script src="game/GameRenderer.js"></script>
     <script src="game/InputManager.js"></script>
     <script src="game/LevelManager.js"></script>
     <script src="game/LevelSelector.js"></script>
     <script src="game/PinballGame.js"></script>
     
-    <!-- Initialize game -->
+    <!-- 7. Initialize game -->
     <script>
         window.addEventListener('load', () => {
+            console.log('Page loaded, initializing game...');
             new PinballGame();
         });
 
+        // Prevent mobile scrolling and context menu
         document.addEventListener('touchmove', (e) => {
             e.preventDefault();
         }, { passive: false });
@@ -95,6 +101,45 @@
         document.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
+
+        // Debug info for mobile
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (window.soundManager) {
+                    console.log('Sound Manager Status:', window.soundManager.getStatus());
+                }
+            }, 3000);
+        });
     </script>
+
+    <style>
+        /* Дополнительные стили для индикатора загрузки */
+        .level-btn.loading {
+            background: #444 !important;
+            color: #888 !important;
+            cursor: not-allowed !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .level-btn:disabled {
+            pointer-events: none;
+        }
+
+        /* Стили для индикатора загрузки звуков */
+        #sound-loading-indicator {
+            backdrop-filter: blur(10px);
+        }
+
+        #sound-loading-progress {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #00ff00;
+        }
+    </style>
 </body>
 </html>
