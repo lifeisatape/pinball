@@ -75,12 +75,17 @@ class PinballGame {
             }
         });
 
-        // Обработка клика для активации аудио
-        document.addEventListener('click', () => {
-            if (window.soundManager && !window.soundManager.isReady) {
+        // Единственный обработчик для активации аудио
+        this.audioActivated = false;
+        const activateAudio = () => {
+            if (!this.audioActivated && window.soundManager && !window.soundManager.isReady) {
+                this.audioActivated = true;
                 window.soundManager.unlock();
             }
-        }, { once: true });
+        };
+        
+        document.addEventListener('click', activateAudio, { once: true });
+        document.addEventListener('touchstart', activateAudio, { once: true });
     }
 
     async startLoadingProcess() {

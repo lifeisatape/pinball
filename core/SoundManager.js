@@ -10,6 +10,7 @@ class SoundManager {
         this.currentMusic = null;
         this.loadingProgress = 0;
         this.loadingCallback = null;
+        this.isLoading = false; // Флаг для предотвращения повторной загрузки
 
         // Кулдаун только для спиннера
         this.spinnerLastPlayed = 0;
@@ -77,7 +78,14 @@ class SoundManager {
     }
 
     async unlock() {
+        // Предотвращаем повторные вызовы
+        if (this.isReady || this.isLoading) {
+            console.log('SoundManager: Already ready or loading, skipping unlock');
+            return;
+        }
+
         console.log('SoundManager: Unlock triggered');
+        this.isLoading = true;
 
         try {
             // Уведомляем о начале инициализации аудио
@@ -125,12 +133,23 @@ class SoundManager {
             if (this.loadingCallback) {
                 this.loadingCallback('audio', 0, 'Failed to initialize audio');
             }
+        } finally {
+            this.isLoading = false;
         }
     }
 
     
 
     async preloadAllSounds() {
+        // Проверяем, не загружены ли уже звуки
+        if (this.buffers.size > 0) {
+            console.log('SoundManager: Sounds already loaded, skipping preload');
+            if (this.loadingCallback) {
+                this.loadingCallback('sounds', 100, 'Sounds already loaded');
+            }
+            return;
+        }
+
         console.log('SoundManager: Preloading sounds...');
 
         const soundEntries = Object.entries(this.soundFiles);
