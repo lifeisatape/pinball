@@ -38,23 +38,12 @@ class SoundManager {
             // Пытаемся создать AudioContext сразу
             this.tryCreateContext();
 
-            // Добавляем множественные события для активации
-            const events = ['click', 'touchstart', 'touchend', 'mousedown', 'keydown'];
+            // Один простой обработчик для активации аудио
             const activateAudio = () => {
                 this.unlock();
-                // Убираем все события после первого срабатывания
-                events.forEach(event => {
-                    document.removeEventListener(event, activateAudio);
-                });
             };
 
-            events.forEach(event => {
-                document.addEventListener(event, activateAudio, { 
-                    once: false, 
-                    passive: true, 
-                    capture: true 
-                });
-            });
+            document.addEventListener('click', activateAudio, { once: true });
 
         } catch (error) {
             console.warn('SoundManager: Initialization failed:', error);
@@ -118,12 +107,8 @@ class SoundManager {
                 }
 
                 await this.preloadAllSounds();
-
-                this.isReady = true;
+                
                 console.log('SoundManager: Ready!');
-
-                // Диспатчим событие готовности
-                window.dispatchEvent(new CustomEvent('soundManagerReady'));
             } else {
                 console.warn('SoundManager: AudioContext not running, state:', this.audioContext.state);
             }
@@ -182,6 +167,15 @@ class SoundManager {
         }
 
         console.log('SoundManager: All sounds preloaded');
+        
+        // Устанавливаем готовность и отправляем событие
+        this.isReady = true;
+        window.dispatchEvent(new CustomEvent('soundManagerReady'));
+        
+        // Финальное уведомление о завершении
+        if (this.loadingCallback) {
+            this.loadingCallback('sounds', 100, 'All sounds loaded');
+        }
     }
 
     setLoadingCallback(callback) {
