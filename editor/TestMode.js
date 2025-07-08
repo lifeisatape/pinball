@@ -7,7 +7,7 @@ function distanceToLineSegment(point, lineStart, lineEnd) {
 
     const dot = A * C + B * D;
     const lenSq = C * C + D * D;
-    
+
     if (lenSq === 0) {
         return Math.sqrt(A * A + B * B);
     }
@@ -31,7 +31,7 @@ function getNormalToLineSegment(point, lineStart, lineEnd) {
 
     const dot = A * C + B * D;
     const lenSq = C * C + D * D;
-    
+
     if (lenSq === 0) {
         const dist = Math.sqrt(A * A + B * B);
         return new Vector2D(A / dist, B / dist);
@@ -46,11 +46,11 @@ function getNormalToLineSegment(point, lineStart, lineEnd) {
     const dx = point.x - xx;
     const dy = point.y - yy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    
+
     if (dist === 0) {
         return new Vector2D(0, -1);
     }
-    
+
     return new Vector2D(dx / dist, dy / dist);
 }
 
@@ -203,7 +203,7 @@ class TestMode {
                     // Push ball to correct side
                     const overlap = (wall.width / 2 + this.ball.radius) - Math.abs(currentDistance - targetRadius);
                     const pushDirection = currentDistance < targetRadius ? -1 : 1;
-                    
+
                     this.ball.position.x += normal.x * overlap * pushDirection * 0.8;
                     this.ball.position.y += normal.y * overlap * pushDirection * 0.8;
 
@@ -212,6 +212,9 @@ class TestMode {
                     this.ball.velocity.x -= 2 * dotProduct * normal.x;
                     this.ball.velocity.y -= 2 * dotProduct * normal.y;
                     this.ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+
+                    // Play wall hit sound
+                    window.soundManager.playSound('wallHit');
                 }
             }
         }
@@ -295,7 +298,7 @@ class TestMode {
             // Handle rectangular drop targets
             const halfWidth = target.width / 2;
             const halfHeight = target.height / 2;
-            
+
             if (Math.abs(dx) < halfWidth + this.ball.radius && 
                 Math.abs(dy) < halfHeight + this.ball.radius) {
                 target.isActive = false;
