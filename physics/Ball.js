@@ -1,103 +1,68 @@
-
-// Ball Class
 class Ball {
     constructor(x, y) {
         this.position = new Vector2D(x, y);
         this.velocity = new Vector2D(0, 0);
         this.radius = CONFIG.BALL_RADIUS;
         this.lastPosition = new Vector2D(x, y);
-        this.minVelocity = 0.05; // Уменьшили порог для более плавного движения
+        this.minVelocity = 0.1;
     }
 
     update() {
-        // Сохраняем последнюю позицию для проверки проскакивания
+        // Сохраняем последнюю позицию
         this.lastPosition.x = this.position.x;
         this.lastPosition.y = this.position.y;
 
         // Применяем гравитацию
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
-        
-        // Применяем трение воздуха (более реалистично)
+
+        // Применяем трение воздуха
         this.velocity.multiply(CONFIG.FRICTION);
-        
-        // Останавливаем мяч если скорость слишком мала
+
+        // Останавливаем мяч если скорость очень мала
         if (this.velocity.magnitude() < this.minVelocity) {
-            this.velocity.x *= 0.9;
-            this.velocity.y *= 0.9;
+            this.velocity.x *= 0.8;
+            this.velocity.y *= 0.8;
         }
-        
+
         // Ограничиваем максимальную скорость
         this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
-        
-        // Постепенное перемещение с проверкой коллизий для предотвращения проскакивания
-        this.moveWithCollisionCheck();
-        
-        return this.handleWallCollisions();
-    }
 
-    // Новый метод для безопасного перемещения с проверкой траектории
-    moveWithCollisionCheck() {
-        const speed = this.velocity.magnitude();
-        
-        // Если скорость большая, разбиваем движение на мелкие шаги
-        if (speed > this.radius * 0.8) {
-            const steps = Math.ceil(speed / (this.radius * 0.6));
-            const stepVelocity = new Vector2D(
-                this.velocity.x / steps,
-                this.velocity.y / steps
-            );
-            
-            for (let i = 0; i < steps; i++) {
-                this.position.add(stepVelocity);
-                
-                // Проверяем не вышли ли за границы на каждом шаге
-                if (this.position.x < this.radius || 
-                    this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius ||
-                    this.position.y < this.radius) {
-                    break;
-                }
-            }
-        } else {
-            // Обычное перемещение для медленных скоростей
-            this.position.add(this.velocity);
-        }
+        // Простое перемещение без дополнительных проверок
+        this.position.add(this.velocity);
+
+        return this.handleWallCollisions();
     }
 
     handleWallCollisions() {
         let bounced = false;
-        
+
         // Левая граница
         if (this.position.x < this.radius) {
-            this.position.x = this.radius + 0.1; // Небольшой отступ для избежания залипания
+            this.position.x = this.radius;
             if (this.velocity.x < 0) {
                 this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
                 bounced = true;
             }
         }
-        
+
         // Правая граница
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
-            this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius - 0.1;
+            this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
             if (this.velocity.x > 0) {
                 this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
                 bounced = true;
             }
         }
-        
+
         // Верхняя граница
         if (this.position.y < this.radius) {
-            this.position.y = this.radius + 0.1;
+            this.position.y = this.radius;
             if (this.velocity.y < 0) {
                 this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
                 bounced = true;
             }
         }
-        
-        // Применяем дополнительное трение при отскоке
-        if (bounced) {
-            this.velocity.multiply(0.95);
-        }
-        
+
         // Проверка на потерю мяча (низ экрана)
         return this.position.y > CONFIG.VIRTUAL_HEIGHT + 50;
     }

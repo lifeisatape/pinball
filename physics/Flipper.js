@@ -1,4 +1,3 @@
-
 // Flipper Class
 class Flipper {
     constructor(x, y, isLeft) {
@@ -16,7 +15,6 @@ class Flipper {
         this.isActive = false;
         this.angularVelocity = 0;
         this.lastAngle = this.angle;
-        this.maxAngularVelocity = 0.5; // Ограничиваем угловую скорость
 
         this.shape = new FlipperShape(x, y, this.length, this.baseWidth, this.tipWidth, isLeft);
         this.updateShape();
@@ -41,12 +39,7 @@ class Flipper {
         this.lastAngle = this.angle;
 
         const angleDiff = this.targetAngle - this.angle;
-        this.angularVelocity = angleDiff * 0.3; // Снижаем скорость для реализма
-        
-        // Ограничиваем угловую скорость
-        this.angularVelocity = Math.max(-this.maxAngularVelocity, 
-                                       Math.min(this.maxAngularVelocity, this.angularVelocity));
-        
+        this.angularVelocity = angleDiff * 0.2;
         this.angle += this.angularVelocity;
 
         const minAngle = Math.min(this.restAngle, this.activeAngle);
@@ -94,16 +87,6 @@ class Flipper {
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 1.5;
             ctx.stroke();
-
-            const innerGradient = ctx.createRadialGradient(
-                midX - cos * 10, midY - sin * 10, 0,
-                midX, midY, this.length / 3
-            );
-            innerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-            innerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-            ctx.fillStyle = innerGradient;
-            ctx.fill();
         }
 
         ctx.restore();
@@ -131,60 +114,27 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
-            // Вычисляем угловую скорость флиппера
             const currentAngularVelocity = this.angle - this.lastAngle;
-            const isFlipperMoving = Math.abs(currentAngularVelocity) > 0.02;
             const velocityDotNormal = ball.velocity.dot(collision.normal);
-            
-            // Мягкое разделение только при значительном перекрытии
-            if (collision.penetration > 1.0) {
-                const separationFactor = Math.min(collision.penetration * 0.2, 1.0);
-                ball.position.x += collision.normal.x * separationFactor;
-                ball.position.y += collision.normal.y * separationFactor;
-            }
 
-            // Точка контакта относительно центра флиппера
-            const contactOffset = new Vector2D(
-                collision.contactPoint.x - this.position.x,
-                collision.contactPoint.y - this.position.y
-            );
-
-            // Обработка коллизии в зависимости от состояния флиппера
-            if (this.isActive && isFlipperMoving && velocityDotNormal < -0.3) {
-                // Активный флиппер - мощный удар
-                const restitution = CONFIG.BOUNCE_DAMPING * 0.9;
-                ball.velocity.x -= (1 + restitution) * velocityDotNormal * collision.normal.x;
-                ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
-
-                // Тангенциальная скорость от вращения
-                const tangentialVelocity = new Vector2D(
-                    -contactOffset.y * currentAngularVelocity * 3,
-                    contactOffset.x * currentAngularVelocity * 3
-                );
+            // Простая логика без принудительного разделения
+            if (this.isActive && Math.abs(currentAngularVelocity) > 0.01) {
+                // Активный удар флиппера
+                if (velocityDotNormal < 0) {
+                    ball.velocity.x -= (1 + CONFIG.BOUNCE_DAMPING) * velocityDotNormal * collision.normal.x;
+                    ball.velocity.y -= (1 + CONFIG.BOUNCE_DAMPING) * velocityDotNormal * collision.normal.y;
+                }
 
                 // Добавляем силу флиппера
-                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.8;
-                ball.velocity.x += collision.normal.x * flipperForce;
-                ball.velocity.y += collision.normal.y * flipperForce;
-                ball.velocity.x += tangentialVelocity.x * 0.5;
-                ball.velocity.y += tangentialVelocity.y * 0.5;
-                
-            } else if (velocityDotNormal < -0.5) {
-                // Неподвижный флиппер - обычное отражение
-                const restitution = CONFIG.BOUNCE_DAMPING * 0.5;
-                ball.velocity.x -= (1 + restitution) * velocityDotNormal * collision.normal.x;
-                ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
-                
-            } else {
-                // Мяч покоится на флиппере - позволяем скатываться
-                if (collision.penetration < 0.5) {
-                    // Не разделяем объекты, если перекрытие минимальное
-                    ball.velocity.multiply(0.999); // Минимальное трение
-                    return false; // Не считаем за коллизию
-                }
+                ball.velocity.x += collision.normal.x * CONFIG.FLIPPER_STRENGTH * 0.5;
+                ball.velocity.y += collision.normal.y * CONFIG.FLIPPER_STRENGTH * 0.5;
+
+            } else if (velocityDotNormal < -0.2) {
+                // Обычное отражение от неподвижного флиппера
+                ball.velocity.x -= (1 + CONFIG.BOUNCE_DAMPING * 0.6) * velocityDotNormal * collision.normal.x;
+                ball.velocity.y -= (1 + CONFIG.BOUNCE_DAMPING * 0.6) * velocityDotNormal * collision.normal.y;
             }
 
-            // Применяем ограничение скорости
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
             return true;
         }
