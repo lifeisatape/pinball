@@ -8,22 +8,23 @@ class SoundManager {
         this.currentMusic = null;
         this.enabled = true;
         this.userInteracted = false;
-        this.lastPlayTime = {};
-        this.loadingPromises = {};
+        this.isLoading = false;
+        this.isLoaded = false;
+        this.loadingPromise = null;
 
         // Мобильная оптимизация
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        this.debounceTime = this.isMobile ? 150 : 50;
-        this.maxPoolSize = this.isMobile ? 2 : 3;
+        this.poolSize = this.isMobile ? 2 : 3;
 
         this.setupUserInteraction();
-        this.preloadSounds();
+        this.startPreloading();
     }
 
     setupUserInteraction() {
         const enableAudio = () => {
             this.userInteracted = true;
-            this.initializeAudioContext();
+            console.log('User interaction detected, loading sounds...');
+            this.loadAllSounds();
             document.removeEventListener('touchstart', enableAudio);
             document.removeEventListener('click', enableAudio);
         };
@@ -32,67 +33,68 @@ class SoundManager {
         document.addEventListener('click', enableAudio, { once: true });
     }
 
-    initializeAudioContext() {
-        // Создаем пустой аудио буфер для инициализации контекста
-        const silentAudio = new Audio();
-        silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAAAAAAAAAAAAAAAAAAAZGF0YQQAAAAAAA==';
-        silentAudio.volume = 0;
-        silentAudio.play().catch(() => {});
+    startPreloading() {
+        // Начинаем предварительную загрузку сразу
+        this.loadAllSounds();
     }
 
-    preloadSounds() {
+    async loadAllSounds() {
+        if (this.isLoading || this.isLoaded) return this.loadingPromise;
+        
+        this.isLoading = true;
+        console.log('Starting sound loading...');
+
         const soundFiles = {
-            // Приоритетные звуки (загружаем сразу)
-            flipperIn: { url: 'sounds/Flipper_In.mp3', priority: true, pool: true },
-            flipperOut: { url: 'sounds/Flipper_Out.mp3', priority: true, pool: true },
-            wallHit: { url: 'sounds/wallhit.mp3', priority: true, pool: true },
-            
-            // Вторичные звуки (ленивая загрузка)
-            menu: { url: 'sounds/menu.mp3', priority: false, pool: false },
-            level: { url: 'sounds/level.mp3', priority: false, pool: false },
-            bumper: { url: 'sounds/Bamper.mp3', priority: true, pool: true },
-            spinner: { url: 'sounds/spinner.mp3', priority: true, pool: true },
-            targetHit: { url: 'sounds/Target_hit.mp3', priority: true, pool: true },
-            targetIn: { url: 'sounds/Target_in.mp3', priority: false, pool: false },
-            newGameLaunch: { url: 'sounds/New_game_launch.mp3', priority: false, pool: false }
+            menu: { url: 'sounds/menu.mp3', type: 'music' },
+            level: { url: 'sounds/level.mp3', type: 'music' },
+            flipperIn: { url: 'sounds/Flipper_In.mp3', type: 'sfx', pool: true },
+            flipperOut: { url: 'sounds/Flipper_Out.mp3', type: 'sfx', pool: true },
+            wallHit: { url: 'sounds/wallhit.mp3', type: 'sfx', pool: true },
+            bumper: { url: 'sounds/Bamper.mp3', type: 'sfx', pool: true },
+            spinner: { url: 'sounds/spinner.mp3', type: 'sfx', pool: true },
+            targetHit: { url: 'sounds/Target_hit.mp3', type: 'sfx', pool: true },
+            targetIn: { url: 'sounds/Target_in.mp3', type: 'sfx', pool: false },
+            newGameLaunch: { url: 'sounds/New_game_launch.mp3', type: 'sfx', pool: false }
         };
 
-        // Загружаем приоритетные звуки сразу
-        Object.entries(soundFiles).forEach(([key, config]) => {
-            if (config.priority) {
-                this.loadSound(key, config);
-            } else {
-                // Для неприоритетных создаем промис для ленивой загрузки
-                this.loadingPromises[key] = () => this.loadSound(key, config);
-            }
-        });
+        this.loadingPromise = this.loadSoundsSequentially(soundFiles);
+        await this.loadingPromise;
+        
+        this.isLoading = false;
+        this.isLoaded = true;
+        console.log('All sounds loaded successfully');
+        
+        return this.loadingPromise;
     }
 
-    loadSound(key, config) {
-        if (this.sounds[key]) return Promise.resolve();
+    async loadSoundsSequentially(soundFiles) {
+        const loadPromises = [];
 
+        for (const [key, config] of Object.entries(soundFiles)) {
+            loadPromises.push(this.loadSingleSound(key, config));
+        }
+
+        await Promise.all(loadPromises);
+    }
+
+    loadSingleSound(key, config) {
         return new Promise((resolve) => {
             const audio = new Audio();
-            
-            // Оптимизация для мобильных
-            if (this.isMobile) {
-                audio.preload = 'none';
-                audio.load = () => {}; // Отключаем автозагрузку
-            } else {
-                audio.preload = 'auto';
-            }
-
             audio.crossOrigin = 'anonymous';
-            audio.volume = ['menu', 'level'].includes(key) ? this.musicVolume : this.sfxVolume;
+            audio.preload = 'auto';
+            
+            // Устанавливаем громкость
+            audio.volume = config.type === 'music' ? this.musicVolume : this.sfxVolume;
 
             const onLoad = () => {
                 this.sounds[key] = audio;
                 
-                // Создаем пул для частых звуков
+                // Создаем пул если нужно
                 if (config.pool) {
                     this.createSoundPool(key, config.url, config);
                 }
                 
+                console.log(`Loaded sound: ${key}`);
                 resolve();
             };
 
@@ -105,29 +107,23 @@ class SoundManager {
             audio.addEventListener('error', onError, { once: true });
             
             audio.src = config.url;
-            
-            // Форсируем загрузку только если пользователь уже взаимодействовал
-            if (this.userInteracted && !this.isMobile) {
-                audio.load();
-            }
         });
     }
 
     createSoundPool(key, url, config) {
-        if (this.soundPools[key]) return;
-
         this.soundPools[key] = [];
         
-        for (let i = 0; i < this.maxPoolSize; i++) {
+        for (let i = 0; i < this.poolSize; i++) {
             const audio = new Audio();
-            audio.preload = this.isMobile ? 'none' : 'auto';
             audio.crossOrigin = 'anonymous';
+            audio.preload = 'auto';
             audio.volume = this.sfxVolume;
             audio.src = url;
             
             this.soundPools[key].push({
                 audio: audio,
-                playing: false
+                playing: false,
+                lastUsed: 0
             });
         }
     }
@@ -135,36 +131,42 @@ class SoundManager {
     getAvailableSound(soundName) {
         // Проверяем пул звуков
         if (this.soundPools[soundName]) {
-            const availableSound = this.soundPools[soundName].find(item => !item.playing);
-            if (availableSound) {
-                return availableSound;
+            // Находим свободный звук
+            let availableSound = this.soundPools[soundName].find(item => !item.playing);
+            
+            if (!availableSound) {
+                // Если все заняты, берем самый старый
+                availableSound = this.soundPools[soundName].reduce((oldest, current) => 
+                    current.lastUsed < oldest.lastUsed ? current : oldest
+                );
             }
-            // Если все заняты, используем первый и прерываем его
-            return this.soundPools[soundName][0];
+            
+            return availableSound;
         }
 
         // Используем основной звук
-        return { audio: this.sounds[soundName], playing: false };
+        return { 
+            audio: this.sounds[soundName], 
+            playing: false,
+            lastUsed: 0
+        };
     }
 
     async playSound(soundName, options = {}) {
-        if (!this.enabled || !this.userInteracted) return;
+        if (!this.enabled) return;
 
-        // Дебаунс для частых звуков
-        const now = Date.now();
-        if (this.lastPlayTime[soundName] && now - this.lastPlayTime[soundName] < this.debounceTime) {
-            return;
+        // Ждем загрузки звуков
+        if (!this.isLoaded) {
+            await this.loadAllSounds();
         }
-        this.lastPlayTime[soundName] = now;
 
-        // Ленивая загрузка неприоритетных звуков
-        if (!this.sounds[soundName] && this.loadingPromises[soundName]) {
-            await this.loadingPromises[soundName]();
-            delete this.loadingPromises[soundName];
-        }
+        if (!this.userInteracted) return;
 
         const soundItem = this.getAvailableSound(soundName);
-        if (!soundItem || !soundItem.audio) return;
+        if (!soundItem || !soundItem.audio) {
+            console.warn(`Sound not found: ${soundName}`);
+            return;
+        }
 
         const audio = soundItem.audio;
 
@@ -182,6 +184,7 @@ class SoundManager {
 
             // Помечаем как играющий
             soundItem.playing = true;
+            soundItem.lastUsed = Date.now();
 
             // Воспроизводим
             const playPromise = audio.play();
@@ -190,31 +193,39 @@ class SoundManager {
                 playPromise
                     .then(() => {
                         // Сбрасываем флаг по окончании
-                        audio.addEventListener('ended', () => {
+                        const onEnded = () => {
                             soundItem.playing = false;
-                        }, { once: true });
+                            audio.removeEventListener('ended', onEnded);
+                        };
+                        audio.addEventListener('ended', onEnded);
                     })
-                    .catch(() => {
+                    .catch((error) => {
                         soundItem.playing = false;
+                        console.warn(`Error playing sound ${soundName}:`, error);
                     });
             }
 
         } catch (error) {
             soundItem.playing = false;
+            console.warn(`Error playing sound ${soundName}:`, error);
         }
     }
 
     async playMusic(musicName) {
-        if (!this.enabled || !this.userInteracted) return;
+        if (!this.enabled) return;
 
-        // Ленивая загрузка музыки
-        if (!this.sounds[musicName] && this.loadingPromises[musicName]) {
-            await this.loadingPromises[musicName]();
-            delete this.loadingPromises[musicName];
+        // Ждем загрузки звуков
+        if (!this.isLoaded) {
+            await this.loadAllSounds();
         }
 
+        if (!this.userInteracted) return;
+
         const music = this.sounds[musicName];
-        if (!music) return;
+        if (!music) {
+            console.warn(`Music not found: ${musicName}`);
+            return;
+        }
 
         this.stopMusic();
         this.currentMusic = music;
@@ -243,6 +254,7 @@ class SoundManager {
             this.currentMusic.volume = this.musicVolume;
         }
 
+        // Обновляем громкость музыкальных треков
         ['menu', 'level'].forEach(key => {
             if (this.sounds[key]) {
                 this.sounds[key].volume = this.musicVolume;
@@ -300,12 +312,14 @@ class SoundManager {
     cleanup() {
         this.stopMusic();
         this.stopAllSounds();
-        this.lastPlayTime = {};
     }
 
-    // Проверка готовности (для совместимости)
+    // Проверка готовности звуков
     whenReady() {
-        return Promise.resolve();
+        if (this.isLoaded) {
+            return Promise.resolve();
+        }
+        return this.loadAllSounds();
     }
 }
 
