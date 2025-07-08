@@ -76,17 +76,19 @@ class PinballGame {
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
         
-        // Wait for sounds to be ready before playing music
-        await window.soundManager.whenReady();
+        // Show start screen immediately
+        this.startScreen.style.display = 'flex';
         
-        // Play menu music
-        window.soundManager.playMusic('menu');
-        
-        // Populate level list
+        // Populate level list first (don't wait for sounds)
         const levels = await this.levelSelector.getAvailableLevels();
         this.populateLevelList(levels);
         
-        this.startScreen.style.display = 'flex';
+        // Load sounds in background and play music when ready
+        window.soundManager.whenReady().then(() => {
+            window.soundManager.playMusic('menu');
+        }).catch(error => {
+            console.warn('Failed to load sounds:', error);
+        });
     }
 
     hideStartScreen() {
@@ -95,9 +97,13 @@ class PinballGame {
         document.querySelector('.score-panel').style.display = 'flex';
         this.startScreen.style.display = 'none';
         
-        // Play level music and new game sound
-        window.soundManager.playMusic('level');
-        window.soundManager.playSound('newGameLaunch');
+        // Play level music and new game sound when ready
+        window.soundManager.whenReady().then(() => {
+            window.soundManager.playMusic('level');
+            window.soundManager.playSound('newGameLaunch');
+        }).catch(error => {
+            console.warn('Failed to play sounds:', error);
+        });
     }
 
     populateLevelList(levels) {
@@ -255,9 +261,6 @@ class PinballGame {
 
             // Set current level in game state for high score tracking
             this.gameState.setCurrentLevel(selectedLevel.name);
-
-            // Wait for sounds to be ready
-            await window.soundManager.whenReady();
 
             // Initialize game with selected level
             await this.initializeGame();
