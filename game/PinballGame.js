@@ -204,6 +204,11 @@ class PinballGame {
         this.loadingScreen.style.display = 'none';
         this.levelSelectScreen.style.display = 'flex';
         
+        // Запускаем музыку меню
+        if (window.soundManager && window.soundManager.isReady) {
+            window.soundManager.playMusic('menu');
+        }
+        
         // Популяция списка уровней
         this.levelSelector.getAvailableLevels().then(levels => {
             this.populateLevelList(levels);
@@ -372,6 +377,13 @@ class PinballGame {
 
     async showLevelSelect() {
         this.gameStarted = false;
+        
+        // Останавливаем игровую музыку и запускаем музыку меню
+        if (window.soundManager && window.soundManager.isReady) {
+            window.soundManager.stopMusic();
+            window.soundManager.playMusic('menu');
+        }
+        
         this.showLevelSelectScreen();
     }
 
