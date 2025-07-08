@@ -76,6 +76,9 @@ class PinballGame {
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
         
+        // Wait for sounds to be ready before playing music
+        await window.soundManager.whenReady();
+        
         // Play menu music
         window.soundManager.playMusic('menu');
         
@@ -252,6 +255,9 @@ class PinballGame {
 
             // Set current level in game state for high score tracking
             this.gameState.setCurrentLevel(selectedLevel.name);
+
+            // Wait for sounds to be ready
+            await window.soundManager.whenReady();
 
             // Initialize game with selected level
             await this.initializeGame();
