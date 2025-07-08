@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Enhanced Pinball Game</title>
+    <title>Pinball: all stars</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
         <div class="score-panel">
             <div class="score-item">
-                <span class="score-label">SCORE</span>
+                <span class="score-label">score</span>
                 <span class="score-value" id="currentScore">0</span>
             </div>
             <div class="score-item">
-                <span class="score-label">BALLS</span>
+                <span class="score-label">balls</span>
                 <span class="score-value" id="ballsLeft">3</span>
             </div>
             <div class="score-item">
-                <span class="score-label">HIGH SCORE</span>
+                <span class="score-label">high</span>
                 <span class="score-value" id="highScore">0</span>
             </div>
-            <button class="restart-btn" id="restartBtn">NEW GAME</button>
-            <button class="restart-btn" id="selectLevelBtn">SELECT LEVEL</button>
+            <button class="restart-btn" id="restartBtn">new game</button>
+            <button class="restart-btn" id="selectLevelBtn">select room</button>
         </div>
 
         <canvas id="gameCanvas"></canvas>
@@ -36,10 +36,11 @@
             </div>
         </div>
 
-        <!-- Экран активации аудио -->
+        <!-- audio context activation -->
         <div class="tap-to-start-overlay" id="tapToStartScreen" style="display: flex;">
             <div class="tap-to-start-content">
-                <h1>PINBALL GAME</h1>
+                <h1>Pinball</h1>
+                <h2>all stars</h2>
                 <div class="tap-icon">🎮</div>
                 <h2>TAP TO START</h2>
                 
@@ -50,40 +51,40 @@
             </div>
         </div>
 
-        <!-- Стартовый экран с индикатором загрузки -->
+        <!-- Loading screen -->
         <div class="loading-overlay" id="loadingScreen" style="display: none;">
             <div class="loading-content">
-                <h1>PINBALL GAME</h1>
+                <h1>loading balls</h1>
                 <div class="loading-progress-container">
                     <div class="loading-progress-bar">
                         <div class="loading-progress-fill" id="progressFill"></div>
                     </div>
-                    <div class="loading-text" id="loadingText">Initializing...</div>
+                    <div class="loading-text" id="loadingText">initializing...</div>
                     <div class="loading-percentage" id="loadingPercentage">0%</div>
                 </div>
                 <div class="loading-details" id="loadingDetails">
                     <div class="loading-item">
-                        <span class="loading-item-name">Audio System</span>
+                        <span class="loading-item-name">audio system</span>
                         <span class="loading-item-status" id="audioStatus">⏳</span>
                     </div>
                     <div class="loading-item">
-                        <span class="loading-item-name">Sound Files</span>
+                        <span class="loading-item-name">sounds</span>
                         <span class="loading-item-status" id="soundsStatus">⏳</span>
                     </div>
                     <div class="loading-item">
-                        <span class="loading-item-name">Levels</span>
+                        <span class="loading-item-name">rooms</span>
                         <span class="loading-item-status" id="levelsStatus">⏳</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Экран выбора уровня -->
+        <!-- seelect room screen -->
         <div class="level-select-overlay" id="levelSelectScreen" style="display: none;">
             <div class="level-select-content">
-                <h2>SELECT LEVEL</h2>
+                <h2>select room</h2>
                 <div class="level-list" id="levelList">
-                    <!-- Levels will be populated here -->
+                    <!-- rooms -->
                 </div>
                 <div class="level-select-controls">
                     <button class="level-btn primary" id="startLevel">START GAME</button>
@@ -91,10 +92,8 @@
             </div>
         </div>
     </div>
-
-    <!-- КРИТИЧНО: Порядок загрузки скриптов! -->
     
-    <!-- 1. ПЕРВЫМ загружаем SoundManager -->
+    <!-- 1. SoundManager -->
     <script src="core/SoundManager.js"></script>
     
     <!-- 2. Core modules -->
@@ -103,13 +102,13 @@
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
     
-    <!-- 3. Physics modules (depend on core) -->
+    <!-- 3. Physics modules -->
     <script src="physics/FlipperShape.js"></script>
     <script src="physics/Ball.js"></script>
     <script src="physics/Wall.js"></script>
     <script src="physics/Flipper.js"></script>
     
-    <!-- 4. Game objects (depend on core and physics) -->
+    <!-- 4. Game objects -->
     <script src="gameObjects/Bumper.js"></script>
     <script src="gameObjects/Spinner.js"></script>
     <script src="gameObjects/DropTarget.js"></script>
@@ -121,7 +120,7 @@
     <script src="ui/GameOverOverlay.js"></script>
     <script src="ui/LevelSelectOverlay.js"></script>
     
-    <!-- 6. Game engine (depends on everything above) -->
+    <!-- 6. Game engine -->
     <script src="game/GameRenderer.js"></script>
     <script src="game/InputManager.js"></script>
     <script src="game/LevelManager.js"></script>
