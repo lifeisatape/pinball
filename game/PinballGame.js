@@ -16,8 +16,6 @@ class PinballGame {
         this.ball = null;
         this.gameStarted = false;
         this.currentLevel = null;
-        this.lastTime = 0;
-        this.accumulatedTime = 0;
 
         this.setupEventListeners();
         this.showStartScreen();
@@ -121,10 +119,10 @@ class PinballGame {
         });
     }
 
-    update(deltaTime = CONFIG.FIXED_TIME_STEP) {
+    update() {
         if (this.gameState.isGameOver) return;
 
-        const ballLost = this.ball.update(deltaTime);
+        const ballLost = this.ball.update();
 
         // Update all game objects
         this.currentLevel.flippers.forEach(flipper => flipper.update());
@@ -261,29 +259,13 @@ class PinballGame {
         }
     }
 
-    gameLoop(currentTime = 0) {
-        if (!this.lastTime) this.lastTime = currentTime;
-        
-        let deltaTime = (currentTime - this.lastTime) / 1000; // Конвертируем в секунды
-        this.lastTime = currentTime;
-        
-        // Ограничиваем максимальный deltaTime для стабильности
-        deltaTime = Math.min(deltaTime, 1/30); // Не более 30 FPS минимум
-        
+    gameLoop() {
         if (this.gameStarted && this.currentLevel) {
-            // Используем фиксированный временной шаг
-            this.accumulatedTime = (this.accumulatedTime || 0) + deltaTime;
-            
-            while (this.accumulatedTime >= CONFIG.FIXED_TIME_STEP) {
-                this.update(CONFIG.FIXED_TIME_STEP);
-                this.accumulatedTime -= CONFIG.FIXED_TIME_STEP;
-            }
-            
+            this.update();
             this.draw();
         }
-        
         if (this.gameLoopRunning) {
-            requestAnimationFrame((time) => this.gameLoop(time));
+            requestAnimationFrame(() => this.gameLoop());
         }
     }
 }

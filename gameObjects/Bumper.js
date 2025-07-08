@@ -1,5 +1,4 @@
-
-// Bumper Class
+// Bumper Class - ОРИГИНАЛ + Anti-tunneling
 class Bumper {
     constructor(x, y, radius = 20) {
         this.position = new Vector2D(x, y);
@@ -10,13 +9,16 @@ class Bumper {
         this.y = y; // For compatibility
     }
 
+    // ОРИГИНАЛЬНЫЙ update
     update() {
         if (this.hitAnimation > 0) {
             this.hitAnimation -= 0.1;
         }
     }
 
+    // УЛУЧШЕННАЯ проверка коллизий с anti-tunneling
     checkCollision(ball) {
+        // Обычная проверка текущей позиции
         const dx = ball.position.x - this.position.x;
         const dy = ball.position.y - this.position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -34,9 +36,98 @@ class Bumper {
             this.hitAnimation = 1;
             return this.points;
         }
+
+        // Anti-tunneling: проверяем траекторию движения для быстрого мяча
+        if (ball.lastPosition && ball.velocity.magnitude() > ball.radius) {
+            return this.sweepTest(ball);
+        }
+
         return 0;
     }
 
+    // Sweep test для бампера
+    sweepTest(ball) {
+        const movement = ball.getMovementLine();
+
+        // Проверяем пересечение линии движения с окружностью бампера
+        const intersection = this.lineCircleIntersection(
+            movement.start, movement.end, 
+            this.position, this.radius + ball.radius
+        );
+
+        if (intersection.hit) {
+            // Перемещаем мяч в точку коллизии
+            ball.position.x = intersection.point.x;
+            ball.position.y = intersection.point.y;
+
+            // Вычисляем нормаль в точке коллизии
+            const dx = ball.position.x - this.position.x;
+            const dy = ball.position.y - this.position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const normal = new Vector2D(dx / distance, dy / distance);
+
+            // Корректируем позицию
+            const targetDistance = this.radius + ball.radius;
+            ball.position.x = this.position.x + normal.x * targetDistance;
+            ball.position.y = this.position.y + normal.y * targetDistance;
+
+            // Применяем силу бампера
+            ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
+            ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+
+            this.hitAnimation = 1;
+            return this.points;
+        }
+
+        return 0;
+    }
+
+    // Пересечение линии с окружностью
+    lineCircleIntersection(lineStart, lineEnd, circleCenter, circleRadius) {
+        const dx = lineEnd.x - lineStart.x;
+        const dy = lineEnd.y - lineStart.y;
+        const fx = lineStart.x - circleCenter.x;
+        const fy = lineStart.y - circleCenter.y;
+
+        const a = dx * dx + dy * dy;
+        const b = 2 * (fx * dx + fy * dy);
+        const c = (fx * fx + fy * fy) - circleRadius * circleRadius;
+
+        const discriminant = b * b - 4 * a * c;
+
+        if (discriminant < 0) {
+            return { hit: false }; // Нет пересечения
+        }
+
+        const discriminantSqrt = Math.sqrt(discriminant);
+        const t1 = (-b - discriminantSqrt) / (2 * a);
+        const t2 = (-b + discriminantSqrt) / (2 * a);
+
+        // Берем ближайшую точку пересечения в пределах линии
+        let t = -1;
+        if (t1 >= 0 && t1 <= 1) {
+            t = t1;
+        } else if (t2 >= 0 && t2 <= 1) {
+            t = t2;
+        }
+
+        if (t >= 0) {
+            const intersectionPoint = new Vector2D(
+                lineStart.x + t * dx,
+                lineStart.y + t * dy
+            );
+
+            return {
+                hit: true,
+                point: intersectionPoint,
+                t: t
+            };
+        }
+
+        return { hit: false };
+    }
+
+    // ОРИГИНАЛЬНАЯ отрисовка
     draw(ctx) {
         const animRadius = this.radius + this.hitAnimation * 10;
 
