@@ -98,6 +98,10 @@ class TestMode {
         };
 
         this.setupControls();
+        
+        // Start level music
+        window.soundManager.playMusic('level');
+        
         this.gameLoop();
     }
 
@@ -132,6 +136,9 @@ class TestMode {
         this.running = false;
         document.removeEventListener('keydown', this.keyHandler);
         document.removeEventListener('keyup', this.keyHandler);
+        
+        // Stop level music
+        window.soundManager.stopMusic();
     }
 
     resetBall() {
@@ -237,6 +244,9 @@ class TestMode {
 
             // Add hit animation
             bumper.hitAnimation = 1;
+            
+            // Play bumper sound
+            window.soundManager.playSound('bumper');
             return true;
         }
         return false;
@@ -268,6 +278,8 @@ class TestMode {
             this.ball.velocity.x += worldNormalX * CONFIG.SPINNER_BOUNCE_FORCE;
             this.ball.velocity.y += worldNormalY * CONFIG.SPINNER_BOUNCE_FORCE;
 
+            // Play spinner sound
+            window.soundManager.playSound('spinner');
             return true;
         }
         return false;
@@ -292,6 +304,8 @@ class TestMode {
                 this.ball.velocity.x = normal.x * speed * 1.2;
                 this.ball.velocity.y = normal.y * speed * 1.2;
 
+                // Play target hit sound
+                window.soundManager.playSound('targetHit');
                 return true;
             }
         } else {
@@ -307,6 +321,8 @@ class TestMode {
                 const normalX = dx < 0 ? -1 : 1;
                 this.ball.velocity.x = Math.abs(this.ball.velocity.x) * normalX * 1.2;
 
+                // Play target hit sound
+                window.soundManager.playSound('targetHit');
                 return true;
             }
         }
@@ -366,6 +382,8 @@ class TestMode {
                     target.resetTime--;
                     if (target.resetTime <= 0) {
                         target.isActive = true;
+                        // Play target spawn sound
+                        window.soundManager.playSound('targetIn');
                     }
                 }
             });
