@@ -11,6 +11,7 @@ class SoundManager {
         this.isLoading = false;
         this.isLoaded = false;
         this.loadingPromise = null;
+        this.audioUnlocked = false;
 
         // Мобильная оптимизация
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -24,55 +25,83 @@ class SoundManager {
     }
 
     setupUserInteraction() {
-        const enableAudio = async () => {
+        const enableAudio = async (event) => {
             if (this.userInteracted) return;
             
-            this.userInteracted = true;
             console.log('User interaction detected, enabling audio...');
+            this.userInteracted = true;
+            
+            // Разблокируем аудио контекст
+            await this.unlockAudioContext();
             
             // Загружаем звуки если еще не загружены
             if (!this.isLoaded && !this.isLoading) {
                 await this.loadAllSounds();
             }
 
-            // Создаем тестовый аудио элемент для разблокировки аудио контекста
-            try {
-                const testAudio = new Audio();
-                testAudio.volume = 0;
-                testAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
-                await testAudio.play();
-                testAudio.pause();
-            } catch (e) {
-                console.warn('Failed to unlock audio context:', e);
-            }
-
             // Воспроизводим отложенную музыку
-            if (this.pendingMusic) {
-                this.playMusic(this.pendingMusic);
-                this.pendingMusic = null;
+            if (this.pendingMusic && this.audioUnlocked) {
+                setTimeout(() => {
+                    this.playMusic(this.pendingMusic);
+                    this.pendingMusic = null;
+                }, 100);
             }
 
             // Очищаем очередь звуков
             this.pendingSounds = [];
 
-            document.removeEventListener('touchstart', enableAudio);
-            document.removeEventListener('touchend', enableAudio);
-            document.removeEventListener('click', enableAudio);
-            document.removeEventListener('keydown', enableAudio);
+            // Удаляем обработчики
+            document.removeEventListener('touchstart', enableAudio, true);
+            document.removeEventListener('touchend', enableAudio, true);
+            document.removeEventListener('click', enableAudio, true);
+            document.removeEventListener('keydown', enableAudio, true);
+            document.removeEventListener('pointerdown', enableAudio, true);
         };
 
-        // Добавляем несколько обработчиков для надежности
-        document.addEventListener('touchstart', enableAudio, { once: true, passive: true });
-        document.addEventListener('touchend', enableAudio, { once: true, passive: true });
-        document.addEventListener('click', enableAudio, { once: true });
-        document.addEventListener('keydown', enableAudio, { once: true });
+        // Добавляем обработчики с capture=true для перехвата всех событий
+        document.addEventListener('touchstart', enableAudio, { once: true, capture: true, passive: true });
+        document.addEventListener('touchend', enableAudio, { once: true, capture: true, passive: true });
+        document.addEventListener('click', enableAudio, { once: true, capture: true });
+        document.addEventListener('keydown', enableAudio, { once: true, capture: true });
+        document.addEventListener('pointerdown', enableAudio, { once: true, capture: true, passive: true });
 
-        // Автоматическая загрузка звуков (но не воспроизведение)
+        // Предварительная загрузка звуков
         setTimeout(() => {
             if (!this.isLoading && !this.isLoaded) {
                 this.loadAllSounds();
             }
-        }, 100);
+        }, 500);
+    }
+
+    async unlockAudioContext() {
+        if (this.audioUnlocked) return;
+
+        try {
+            // Создаем несколько тестовых аудио для разблокировки
+            const testPromises = [];
+            
+            for (let i = 0; i < 3; i++) {
+                const testAudio = new Audio();
+                testAudio.volume = 0.01; // Очень тихо
+                testAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+                
+                const playPromise = testAudio.play().then(() => {
+                    testAudio.pause();
+                    testAudio.currentTime = 0;
+                }).catch(() => {
+                    // Игнорируем ошибки
+                });
+                
+                testPromises.push(playPromise);
+            }
+
+            await Promise.all(testPromises);
+            this.audioUnlocked = true;
+            console.log('Audio context unlocked');
+            
+        } catch (error) {
+            console.warn('Failed to unlock audio context:', error);
+        }
     }
 
     async loadAllSounds() {
@@ -122,11 +151,11 @@ class SoundManager {
     loadSingleSound(key, config) {
         return new Promise((resolve) => {
             const audio = new Audio();
-            audio.crossOrigin = 'anonymous';
-            audio.preload = 'auto';
-            audio.muted = false;
             
-            // Устанавливаем громкость
+            // Важные настройки для мобильных устройств
+            audio.crossOrigin = 'anonymous';
+            audio.preload = this.isMobile ? 'metadata' : 'auto';
+            audio.muted = false;
             audio.volume = config.type === 'music' ? this.musicVolume : this.sfxVolume;
 
             const onLoad = () => {
@@ -146,14 +175,23 @@ class SoundManager {
                 resolve(); // Продолжаем даже при ошибке
             };
 
+            const onCanPlay = () => {
+                // На мобильных устройствах canplaythrough может не сработать
+                if (this.isMobile && audio.readyState >= 2) {
+                    onLoad();
+                }
+            };
+
             audio.addEventListener('canplaythrough', onLoad, { once: true });
+            audio.addEventListener('canplay', onCanPlay, { once: true });
             audio.addEventListener('error', onError, { once: true });
             
-            // На мобильных устройствах может потребоваться задержка
+            // Устанавливаем источник с задержкой для мобильных
             if (this.isMobile) {
                 setTimeout(() => {
                     audio.src = config.url;
-                }, 50);
+                    audio.load(); // Принудительная загрузка
+                }, Math.random() * 100 + 50);
             } else {
                 audio.src = config.url;
             }
@@ -166,18 +204,17 @@ class SoundManager {
         for (let i = 0; i < this.poolSize; i++) {
             const audio = new Audio();
             audio.crossOrigin = 'anonymous';
-            audio.preload = 'auto';
+            audio.preload = this.isMobile ? 'metadata' : 'auto';
             audio.volume = this.sfxVolume;
             audio.muted = false;
             
             // Задержка для мобильных устройств
-            if (this.isMobile) {
-                setTimeout(() => {
-                    audio.src = url;
-                }, 100 + i * 50);
-            } else {
+            setTimeout(() => {
                 audio.src = url;
-            }
+                if (this.isMobile) {
+                    audio.load();
+                }
+            }, 200 + i * 100);
             
             this.soundPools[key].push({
                 audio: audio,
@@ -191,13 +228,17 @@ class SoundManager {
         // Проверяем пул звуков
         if (this.soundPools[soundName]) {
             // Находим свободный звук
-            let availableSound = this.soundPools[soundName].find(item => !item.playing);
+            let availableSound = this.soundPools[soundName].find(item => 
+                !item.playing && item.audio.readyState >= 2
+            );
             
             if (!availableSound) {
-                // Если все заняты, берем самый старый
-                availableSound = this.soundPools[soundName].reduce((oldest, current) => 
-                    current.lastUsed < oldest.lastUsed ? current : oldest
-                );
+                // Если все заняты, берем самый старый готовый
+                availableSound = this.soundPools[soundName]
+                    .filter(item => item.audio.readyState >= 2)
+                    .reduce((oldest, current) => 
+                        current.lastUsed < oldest.lastUsed ? current : oldest
+                    );
             }
             
             return availableSound;
@@ -214,25 +255,19 @@ class SoundManager {
     async playSound(soundName, options = {}) {
         if (!this.enabled) return;
 
-        // Если пользователь еще не взаимодействовал, сохраняем в очередь
-        if (!this.userInteracted) {
+        // Если пользователь еще не взаимодействовал или аудио не разблокировано
+        if (!this.userInteracted || !this.audioUnlocked) {
             this.pendingSounds.push({ soundName, options });
             return;
         }
 
         // Ждем загрузки звуков
         if (!this.isLoaded) {
-            try {
-                await this.loadAllSounds();
-            } catch (error) {
-                console.warn('Failed to load sounds:', error);
-                return;
-            }
+            return; // Не ждем на мобильных, просто пропускаем
         }
 
         const soundItem = this.getAvailableSound(soundName);
         if (!soundItem || !soundItem.audio) {
-            console.warn(`Sound not found: ${soundName}`);
             return;
         }
 
@@ -241,14 +276,17 @@ class SoundManager {
         try {
             // Проверяем готовность к воспроизведению
             if (audio.readyState < 2) {
-                console.warn(`Sound not ready: ${soundName}`);
                 return;
             }
 
-            // Останавливаем текущее воспроизведение
+            // Останавливаем текущее воспроизведение осторожно
             if (!audio.paused) {
-                audio.pause();
-                audio.currentTime = 0;
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                } catch (e) {
+                    // Игнорируем ошибки при остановке
+                }
             }
 
             // Устанавливаем громкость
@@ -271,62 +309,56 @@ class SoundManager {
                             soundItem.playing = false;
                             audio.removeEventListener('ended', onEnded);
                         };
-                        audio.addEventListener('ended', onEnded);
+                        audio.addEventListener('ended', onEnded, { once: true });
                     })
                     .catch((error) => {
                         soundItem.playing = false;
-                        console.warn(`Error playing sound ${soundName}:`, error.message || error);
+                        // Молча игнорируем ошибки воспроизведения
                     });
             }
 
         } catch (error) {
             soundItem.playing = false;
-            console.warn(`Error playing sound ${soundName}:`, error.message || error);
+            // Молча игнорируем ошибки
         }
     }
 
     async playMusic(musicName) {
         if (!this.enabled) return;
 
-        // Если пользователь еще не взаимодействовал, сохраняем отложенную музыку
-        if (!this.userInteracted) {
+        // Если пользователь еще не взаимодействовал или аудио не разблокировано
+        if (!this.userInteracted || !this.audioUnlocked) {
             this.pendingMusic = musicName;
             return;
         }
 
         // Ждем загрузки звуков
         if (!this.isLoaded) {
-            try {
-                await this.loadAllSounds();
-            } catch (error) {
-                console.warn('Failed to load sounds:', error);
-                return;
-            }
-        }
-
-        const music = this.sounds[musicName];
-        if (!music) {
-            console.warn(`Music not found: ${musicName}`);
+            this.pendingMusic = musicName;
             return;
         }
 
-        // Проверяем готовность к воспроизведению
-        if (music.readyState < 2) {
-            console.warn(`Music not ready: ${musicName}`);
+        const music = this.sounds[musicName];
+        if (!music || music.readyState < 2) {
+            this.pendingMusic = musicName;
             return;
         }
 
         this.stopMusic();
         this.currentMusic = music;
-        this.currentMusic.currentTime = 0;
-        this.currentMusic.volume = this.musicVolume;
-        this.currentMusic.loop = true;
-
+        
         try {
-            await this.currentMusic.play();
+            this.currentMusic.currentTime = 0;
+            this.currentMusic.volume = this.musicVolume;
+            this.currentMusic.loop = true;
+            
+            const playPromise = this.currentMusic.play();
+            if (playPromise) {
+                await playPromise;
+            }
         } catch (error) {
-            console.warn('Failed to play music:', error.message || error);
             this.currentMusic = null;
+            // Молча игнорируем ошибки
         }
     }
 
@@ -336,7 +368,7 @@ class SoundManager {
                 this.currentMusic.pause();
                 this.currentMusic.currentTime = 0;
             } catch (error) {
-                console.warn('Error stopping music:', error);
+                // Игнорируем ошибки
             }
             this.currentMusic = null;
         }
@@ -390,7 +422,7 @@ class SoundManager {
                     sound.pause();
                     sound.currentTime = 0;
                 } catch (error) {
-                    console.warn('Error stopping sound:', error);
+                    // Игнорируем ошибки
                 }
             }
         });
@@ -403,7 +435,7 @@ class SoundManager {
                         item.audio.pause();
                         item.audio.currentTime = 0;
                     } catch (error) {
-                        console.warn('Error stopping pooled sound:', error);
+                        // Игнорируем ошибки
                     }
                 }
                 item.playing = false;
