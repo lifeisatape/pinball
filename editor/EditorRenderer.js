@@ -100,6 +100,26 @@ class EditorRenderer {
         this.ctx.restore();
     }
 
+    drawOverlayImage(image, opacity) {
+        if (!image) return;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = opacity;
+
+        // Calculate scale to fit the image within the game area while maintaining aspect ratio
+        const scaleX = CONFIG.VIRTUAL_WIDTH / image.width;
+        const scaleY = CONFIG.VIRTUAL_HEIGHT / image.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        const scaledWidth = image.width * scale;
+        const scaledHeight = image.height * scale;
+        const offsetX = (CONFIG.VIRTUAL_WIDTH - scaledWidth) / 2;
+        const offsetY = (CONFIG.VIRTUAL_HEIGHT - scaledHeight) / 2;
+
+        this.ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
+        this.ctx.restore();
+    }
+
     drawGameBoundaries() {
         this.ctx.strokeStyle = '#666';
         this.ctx.lineWidth = 2;

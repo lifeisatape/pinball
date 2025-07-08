@@ -17,6 +17,8 @@ class LevelEditor {
         this.tunnels = [];
         this.backgroundImage = null;
         this.backgroundOpacity = 0.5;
+        this.overlayImage = null;
+        this.overlayOpacity = 0.7;
 
         // Fixed flipper positions
         this.flippers = [
@@ -69,6 +71,14 @@ class LevelEditor {
         document.getElementById('clearBackground').addEventListener('click', () => this.clearBackgroundImage());
         document.getElementById('backgroundOpacity').addEventListener('input', (e) => {
             this.backgroundOpacity = parseFloat(e.target.value);
+            this.render();
+        });
+
+        // Overlay controls
+        document.getElementById('loadOverlay').addEventListener('click', () => this.loadOverlayImage());
+        document.getElementById('clearOverlay').addEventListener('click', () => this.clearOverlayImage());
+        document.getElementById('overlayOpacity').addEventListener('input', (e) => {
+            this.overlayOpacity = parseFloat(e.target.value);
             this.render();
         });
 
@@ -268,6 +278,13 @@ class LevelEditor {
                 opacity: this.backgroundOpacity
             };
         }
+
+        if (this.overlayImage) {
+            data.overlay = {
+                image: this.overlayImage.src,
+                opacity: this.overlayOpacity
+            };
+        }
         
         return data;
     }
@@ -320,6 +337,11 @@ class LevelEditor {
             this.renderer.drawTunnelCreationPreview(this.tools.tunnelCreationStep, this.tools.tunnelEntry, this.mousePos, radius);
         }
 
+        // Draw overlay image
+        if (this.overlayImage) {
+            this.renderer.drawOverlayImage(this.overlayImage, this.overlayOpacity);
+        }
+
         this.renderer.endVirtualRendering();
     }
 
@@ -330,6 +352,8 @@ class LevelEditor {
             this.spinners = [];
             this.dropTargets = [];
             this.tunnels = [];
+            this.backgroundImage = null;
+            this.overlayImage = null;
             this.render();
         }
     }
@@ -371,6 +395,13 @@ class LevelEditor {
                         } else {
                             this.backgroundImage = null;
                             this.backgroundOpacity = 0.5;
+                        }
+
+                        if (levelData.overlay) {
+                            this.loadOverlayFromData(levelData.overlay);
+                        } else {
+                            this.overlayImage = null;
+                            this.overlayOpacity = 0.7;
                         }
                         
                         this.render();
@@ -442,6 +473,11 @@ class LevelEditor {
             testData.backgroundOpacity = this.backgroundOpacity;
         }
 
+        if (this.overlayImage) {
+            testData.overlayImage = this.overlayImage;
+            testData.overlayOpacity = this.overlayOpacity;
+        }
+
         this.testMode = new TestMode(this.testCanvas, testData);
     }
 
@@ -490,6 +526,48 @@ class LevelEditor {
                 this.render();
             };
             img.src = backgroundData.image;
+        }
+    }
+
+    loadOverlayImage() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.overlayImage = img;
+                        this.render();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        input.click();
+    }
+
+    clearOverlayImage() {
+        this.overlayImage = null;
+        this.render();
+    }
+
+    loadOverlayFromData(overlayData) {
+        if (overlayData.image) {
+            const img = new Image();
+            img.onload = () => {
+                this.overlayImage = img;
+                this.overlayOpacity = overlayData.opacity || 0.7;
+                document.getElementById('overlayOpacity').value = this.overlayOpacity;
+                this.render();
+            };
+            img.src = overlayData.image;
         }
     }
 }

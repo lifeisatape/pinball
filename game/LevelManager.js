@@ -86,7 +86,9 @@ class LevelManager {
             ramps: [],
             tunnels: [],
             backgroundImage: null,
-            backgroundOpacity: 0.5
+            backgroundOpacity: 0.5,
+            overlayImage: null,
+            overlayOpacity: 0.7
         };
 
         // Load walls
@@ -144,6 +146,16 @@ class LevelManager {
             };
             img.src = levelData.background.image;
             level.backgroundOpacity = levelData.background.opacity || 0.5;
+        }
+
+        // Load overlay image
+        if (levelData.overlay && levelData.overlay.image) {
+            const img = new Image();
+            img.onload = () => {
+                level.overlayImage = img;
+            };
+            img.src = levelData.overlay.image;
+            level.overlayOpacity = levelData.overlay.opacity || 0.7;
         }
 
         return level;

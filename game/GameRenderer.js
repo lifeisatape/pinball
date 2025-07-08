@@ -59,6 +59,25 @@ class GameRenderer {
         this.ctx.restore();
     }
 
+    drawOverlayImage(overlayImage, opacity) {
+        if (!overlayImage) return;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = opacity || 0.7;
+
+        const scaleX = CONFIG.VIRTUAL_WIDTH / overlayImage.width;
+        const scaleY = CONFIG.VIRTUAL_HEIGHT / overlayImage.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        const scaledWidth = overlayImage.width * scale;
+        const scaledHeight = overlayImage.height * scale;
+        const offsetX = (CONFIG.VIRTUAL_WIDTH - scaledWidth) / 2;
+        const offsetY = (CONFIG.VIRTUAL_HEIGHT - scaledHeight) / 2;
+
+        this.ctx.drawImage(overlayImage, offsetX, offsetY, scaledWidth, scaledHeight);
+        this.ctx.restore();
+    }
+
     endVirtualRendering() {
         this.ctx.restore();
     }

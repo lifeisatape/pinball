@@ -356,8 +356,14 @@ class PinballGame {
         this.renderer.clear();
         this.renderer.startVirtualRendering();
 
+        // Draw background image
         if (this.currentLevel.backgroundImage) {
             this.renderer.drawBackgroundImage(this.currentLevel.backgroundImage, this.currentLevel.backgroundOpacity);
+        }
+
+        // Draw overlay image
+        if (this.currentLevel.overlayImage) {
+            this.renderer.drawOverlayImage(this.currentLevel.overlayImage, 1.0); // Assuming opacity of 1 for now
         }
 
         this.renderer.renderGameObjects(this.currentLevel);

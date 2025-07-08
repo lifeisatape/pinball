@@ -639,6 +639,25 @@ class TestMode {
             flipper.draw(this.ctx);
         });
 
+        // Draw overlay image if available
+        if (this.levelData.overlayImage) {
+            this.ctx.save();
+            this.ctx.globalAlpha = this.levelData.overlayOpacity || 0.7;
+
+            const image = this.levelData.overlayImage;
+            const scaleX = CONFIG.VIRTUAL_WIDTH / image.width;
+            const scaleY = CONFIG.VIRTUAL_HEIGHT / image.height;
+            const scale = Math.min(scaleX, scaleY);
+
+            const scaledWidth = image.width * scale;
+            const scaledHeight = image.height * scale;
+            const offsetX = (CONFIG.VIRTUAL_WIDTH - scaledWidth) / 2;
+            const offsetY = (CONFIG.VIRTUAL_HEIGHT - scaledHeight) / 2;
+
+            this.ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
+            this.ctx.restore();
+        }
+
         // Draw ball with original gradient
         const ballGradient = this.ctx.createRadialGradient(
             this.ball.position.x - 3, this.ball.position.y - 3, 0,
