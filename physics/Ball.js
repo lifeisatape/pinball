@@ -6,7 +6,7 @@ class Ball {
         this.velocity = new Vector2D(0, 0);
         this.radius = CONFIG.BALL_RADIUS;
         this.lastPosition = new Vector2D(x, y);
-        this.minVelocity = 0.1; // Минимальная скорость для остановки
+        this.minVelocity = 0.05; // Уменьшили порог для более плавного движения
     }
 
     update() {
@@ -40,8 +40,8 @@ class Ball {
         const speed = this.velocity.magnitude();
         
         // Если скорость большая, разбиваем движение на мелкие шаги
-        if (speed > this.radius) {
-            const steps = Math.ceil(speed / (this.radius * 0.5));
+        if (speed > this.radius * 0.8) {
+            const steps = Math.ceil(speed / (this.radius * 0.6));
             const stepVelocity = new Vector2D(
                 this.velocity.x / steps,
                 this.velocity.y / steps

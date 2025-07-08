@@ -131,23 +131,17 @@ class Flipper {
         const collision = this.shape.intersectsCircle(ball);
 
         if (collision.hit) {
-            // Гарантированное разделение объектов
-            const minSeparation = ball.radius + 3;
-            const currentDistance = Math.sqrt(
-                Math.pow(ball.position.x - collision.contactPoint.x, 2) +
-                Math.pow(ball.position.y - collision.contactPoint.y, 2)
-            );
-            
-            const neededSeparation = minSeparation - currentDistance + collision.penetration;
-            if (neededSeparation > 0) {
-                ball.position.x += collision.normal.x * neededSeparation;
-                ball.position.y += collision.normal.y * neededSeparation;
-            }
-
-            // Вычисляем реальную угловую скорость флиппера
-            const angularVelocityThreshold = 0.01;
+            // Вычисляем угловую скорость флиппера
             const currentAngularVelocity = this.angle - this.lastAngle;
-            const isFlipperMoving = Math.abs(currentAngularVelocity) > angularVelocityThreshold;
+            const isFlipperMoving = Math.abs(currentAngularVelocity) > 0.02;
+            const velocityDotNormal = ball.velocity.dot(collision.normal);
+            
+            // Мягкое разделение только при значительном перекрытии
+            if (collision.penetration > 1.0) {
+                const separationFactor = Math.min(collision.penetration * 0.2, 1.0);
+                ball.position.x += collision.normal.x * separationFactor;
+                ball.position.y += collision.normal.y * separationFactor;
+            }
 
             // Точка контакта относительно центра флиппера
             const contactOffset = new Vector2D(
@@ -155,40 +149,43 @@ class Flipper {
                 collision.contactPoint.y - this.position.y
             );
 
-            // Отражение скорости (всегда происходит при столкновении)
-            const velocityDotNormal = ball.velocity.dot(collision.normal);
-            if (velocityDotNormal < 0) {
-                // Базовое отражение с демпфированием
-                const restitution = isFlipperMoving ? 
-                    CONFIG.BOUNCE_DAMPING * 0.85 : 
-                    CONFIG.BOUNCE_DAMPING * 0.6; // Меньше отскока от неподвижного флиппера
-                    
+            // Обработка коллизии в зависимости от состояния флиппера
+            if (this.isActive && isFlipperMoving && velocityDotNormal < -0.3) {
+                // Активный флиппер - мощный удар
+                const restitution = CONFIG.BOUNCE_DAMPING * 0.9;
                 ball.velocity.x -= (1 + restitution) * velocityDotNormal * collision.normal.x;
                 ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
-            }
 
-            // Добавляем силу ТОЛЬКО если флиппер активно движется
-            if (this.isActive && isFlipperMoving) {
-                // Тангенциальная скорость от вращения флиппера
+                // Тангенциальная скорость от вращения
                 const tangentialVelocity = new Vector2D(
-                    -contactOffset.y * currentAngularVelocity * 2,
-                    contactOffset.x * currentAngularVelocity * 2
+                    -contactOffset.y * currentAngularVelocity * 3,
+                    contactOffset.x * currentAngularVelocity * 3
                 );
 
-                // Сила удара флиппера
-                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.6;
+                // Добавляем силу флиппера
+                const flipperForce = CONFIG.FLIPPER_STRENGTH * 0.8;
                 ball.velocity.x += collision.normal.x * flipperForce;
                 ball.velocity.y += collision.normal.y * flipperForce;
-
-                // Добавляем тангенциальную скорость для реалистичности
-                ball.velocity.x += tangentialVelocity.x * 0.4;
-                ball.velocity.y += tangentialVelocity.y * 0.4;
+                ball.velocity.x += tangentialVelocity.x * 0.5;
+                ball.velocity.y += tangentialVelocity.y * 0.5;
+                
+            } else if (velocityDotNormal < -0.5) {
+                // Неподвижный флиппер - обычное отражение
+                const restitution = CONFIG.BOUNCE_DAMPING * 0.5;
+                ball.velocity.x -= (1 + restitution) * velocityDotNormal * collision.normal.x;
+                ball.velocity.y -= (1 + restitution) * velocityDotNormal * collision.normal.y;
+                
+            } else {
+                // Мяч покоится на флиппере - позволяем скатываться
+                if (collision.penetration < 0.5) {
+                    // Не разделяем объекты, если перекрытие минимальное
+                    ball.velocity.multiply(0.999); // Минимальное трение
+                    return false; // Не считаем за коллизию
+                }
             }
-            // ВАЖНО: Если флиппер неподвижен - НЕ добавляем никакой дополнительной силы!
 
             // Применяем ограничение скорости
             ball.velocity.clamp(CONFIG.MAX_BALL_SPEED);
-
             return true;
         }
 

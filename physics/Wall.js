@@ -76,25 +76,24 @@ class Wall {
                         normal.y *= -1;
                     }
 
-                    // Разделяем объекты более эффективно
+                    // Мягкое разделение для дуг
                     const overlap = ball.radius + this.width / 2 - Math.abs(currentDistance - targetRadius);
-                    const separation = Math.max(overlap + 1, 2); // Гарантируем разделение
                     
-                    ball.position.x += normal.x * separation;
-                    ball.position.y += normal.y * separation;
+                    if (overlap > 0.5) {
+                        const separationFactor = Math.min(overlap * 0.4, 1.5);
+                        ball.position.x += normal.x * separationFactor;
+                        ball.position.y += normal.y * separationFactor;
+                    }
 
-                    // Реалистичное отражение с учетом входящей скорости
                     const velocityDotNormal = ball.velocity.dot(normal);
                     
-                    // Отражаем только если мяч движется к стене
-                    if (velocityDotNormal < 0) {
-                        // Упругое отражение с демпфированием
+                    if (velocityDotNormal < -0.5) {
                         const restitution = CONFIG.BOUNCE_DAMPING * 0.8;
                         ball.velocity.x -= (1 + restitution) * velocityDotNormal * normal.x;
                         ball.velocity.y -= (1 + restitution) * velocityDotNormal * normal.y;
-                        
-                        // Дополнительное трение для реализма
                         ball.velocity.multiply(0.98);
+                    } else if (overlap > 0) {
+                        ball.velocity.multiply(0.995);
                     }
 
                     return true;
@@ -154,29 +153,31 @@ class Wall {
         if (distance < collisionRadius && distance > 0.01) {
             const normal = new Vector2D(dx / distance, dy / distance);
 
-            // Гарантированное разделение объектов
-            const minSeparation = collisionRadius + 2;
-            const currentSeparation = distance;
-            const neededSeparation = minSeparation - currentSeparation;
+            // Мягкое разделение объектов только при необходимости
+            const overlap = collisionRadius - distance;
             
-            if (neededSeparation > 0) {
-                ball.position.x += normal.x * neededSeparation;
-                ball.position.y += normal.y * neededSeparation;
+            if (overlap > 0.5) { // Только при значительном перекрытии
+                const separationFactor = Math.min(overlap * 0.3, 1.0); // Мягкое разделение
+                ball.position.x += normal.x * separationFactor;
+                ball.position.y += normal.y * separationFactor;
             }
 
-            // Реалистичное отражение только если мяч движется к стене
+            // Отражение только если мяч движется к стене достаточно быстро
             const velocityDotNormal = ball.velocity.dot(normal);
             
-            if (velocityDotNormal < 0) {
+            if (velocityDotNormal < -0.5) { // Порог скорости для отражения
                 const restitution = isEndpoint ? 
-                    CONFIG.BOUNCE_DAMPING * 0.5 : // Сильное демпфирование на концах
-                    CONFIG.BOUNCE_DAMPING * 0.75;
+                    CONFIG.BOUNCE_DAMPING * 0.6 : 
+                    CONFIG.BOUNCE_DAMPING * 0.8;
                     
                 ball.velocity.x -= (1 + restitution) * velocityDotNormal * normal.x;
                 ball.velocity.y -= (1 + restitution) * velocityDotNormal * normal.y;
                 
-                // Дополнительное трение
-                ball.velocity.multiply(isEndpoint ? 0.9 : 0.96);
+                // Меньше трения
+                ball.velocity.multiply(isEndpoint ? 0.95 : 0.98);
+            } else if (overlap > 0) {
+                // Просто замедляем мяч при касании
+                ball.velocity.multiply(0.99);
             }
 
             return true;
