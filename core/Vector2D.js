@@ -46,4 +46,29 @@ class Vector2D {
         }
         return this;
     }
+
+    subtract(vector) {
+        this.x -= vector.x;
+        this.y -= vector.y;
+        return this;
+    }
+
+    distanceTo(vector) {
+        const dx = this.x - vector.x;
+        const dy = this.y - vector.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    static distance(v1, v2) {
+        const dx = v1.x - v2.x;
+        const dy = v1.y - v2.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    static lerp(v1, v2, t) {
+        return new Vector2D(
+            v1.x + (v2.x - v1.x) * t,
+            v1.y + (v2.y - v1.y) * t
+        );
+    }
 }

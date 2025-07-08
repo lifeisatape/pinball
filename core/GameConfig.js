@@ -12,5 +12,11 @@ const CONFIG = {
     VIRTUAL_WIDTH: 320,
     VIRTUAL_HEIGHT: 480,
     BUMPER_BOUNCE_FORCE: 10,
-    SPINNER_BOUNCE_FORCE: 5
+    SPINNER_BOUNCE_FORCE: 5,
+    
+    // Physics improvements
+    FIXED_TIME_STEP: 1/120, // 120 FPS для стабильности
+    MAX_SUB_STEPS: 8,       // Максимум подшагов для CCD
+    COLLISION_TOLERANCE: 0.1, // Допуск для разделения объектов
+    MIN_VELOCITY_THRESHOLD: 0.1 // Минимальная скорость для остановки
 };

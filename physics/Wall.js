@@ -1,4 +1,3 @@
-
 // Wall Class
 class Wall {
     constructor(x1, y1, x2, y2, color = '#ff4444', width = 20) {
@@ -15,7 +14,7 @@ class Wall {
         ctx.lineWidth = this.width;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        
+
         if (this.type === 'semicircle' || this.type === 'quarter') {
             // Draw arc
             ctx.arc(this.centerX, this.centerY, this.radius, this.startAngle, this.endAngle);
@@ -24,7 +23,7 @@ class Wall {
             ctx.moveTo(this.x1, this.y1);
             ctx.lineTo(this.x2, this.y2);
         }
-        
+
         ctx.stroke();
     }
 
@@ -64,7 +63,7 @@ class Wall {
                     if (Math.abs(currentDistance - targetRadius) < this.width / 2 + ball.radius) {
                         // Collision detected
                         const normal = new Vector2D(dx / distanceFromCenter, dy / distanceFromCenter);
-                        
+
                         // If ball is inside the arc, flip normal
                         if (currentDistance < targetRadius) {
                             normal.x *= -1;
@@ -92,21 +91,47 @@ class Wall {
             const distance = distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
             if (distance < ball.radius + this.width / 2) {
-                const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
+            const normal = this.getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
-                const overlap = ball.radius + this.width / 2 - distance;
-                const pushDistance = overlap * 0.8;
-                ball.position.x += normal.x * pushDistance;
-                ball.position.y += normal.y * pushDistance;
+            // Полное разделение объектов
+            const penetration = ball.radius + this.width / 2 - distance;
+            const separationDistance = penetration + CONFIG.COLLISION_TOLERANCE;
+            ball.position.x += normal.x * separationDistance;
+            ball.position.y += normal.y * separationDistance;
 
-                const dotProduct = ball.velocity.dot(normal);
+            // Отражение скорости
+            const dotProduct = ball.velocity.dot(normal);
+            if (dotProduct < 0) { // Только если движется в сторону стены
                 ball.velocity.x -= 2 * dotProduct * normal.x;
                 ball.velocity.y -= 2 * dotProduct * normal.y;
                 ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
-
-                return true;
             }
+
+            return true;
         }
         return false;
     }
-}
+
+    getNormalToLineSegment(point, lineStart, lineEnd) {
+        const lineVector = lineEnd.copy().subtract(lineStart);
+        const pointVector = point.copy().subtract(lineStart);
+
+        const lineLength = lineVector.magnitude();
+        if (lineLength < 0.0001) {
+            // Деградирует в точку
+            const distance = pointVector.magnitude();
+            return distance > 0 ? pointVector.copy().normalize() : new Vector2D(0, -1);
+        }
+
+        const projection = pointVector.dot(lineVector) / (lineLength * lineLength);
+        const clampedProjection = Math.max(0, Math.min(1, projection));
+
+        const closestPoint = lineStart.copy().add(lineVector.copy().multiply(clampedProjection));
+        const normal = point.copy().subtract(closestPoint);
+
+        const distance = normal.magnitude();
+        return distance > 0 ? normal.normalize() : new Vector2D(0, -1);
+    }
+
+    checkCollisionOld(ball) {
+        if (this.type === 'semicircle' || this.type === 'quarter') {
