@@ -7,6 +7,7 @@ class Bumper {
         this.points = 100;
         this.x = x; // For compatibility
         this.y = y; // For compatibility
+        this.lastHitTime = 0; // Для предотвращения повторных коллизий
     }
 
     // ОРИГИНАЛЬНЫЙ update
@@ -24,33 +25,48 @@ class Bumper {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < ball.radius + this.radius) {
+            // Проверяем, движется ли мяч к бамперу или от него
+            const velocityTowardsBumper = (ball.velocity.x * dx + ball.velocity.y * dy) / distance;
+            
+            // Если мяч движется от бампера и скорость достаточная, пропускаем коллизию
+            if (velocityTowardsBumper > 2 && distance > this.radius + ball.radius * 0.8) {
+                return 0;
+            }
+
             // Предотвращаем деление на ноль и застревание в центре
             if (distance < 0.1) {
                 // Если мяч слишком близко к центру, выталкиваем его случайным образом
                 const angle = Math.random() * Math.PI * 2;
                 const normal = new Vector2D(Math.cos(angle), Math.sin(angle));
-                const targetDistance = ball.radius + this.radius + 5;
+                const targetDistance = ball.radius + this.radius + 8;
                 ball.position.x = this.position.x + normal.x * targetDistance;
                 ball.position.y = this.position.y + normal.y * targetDistance;
+                
+                // Задаем сильную скорость в случайном направлении
+                ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE * 1.5;
+                ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE * 1.5;
             } else {
                 const normal = new Vector2D(dx / distance, dy / distance);
                 
-                // Гарантируем, что мяч находится на правильном расстоянии
-                const targetDistance = ball.radius + this.radius + 2;
+                // Гарантируем, что мяч находится на безопасном расстоянии
+                const safetyMargin = Math.max(5, ball.velocity.magnitude() * 0.1);
+                const targetDistance = ball.radius + this.radius + safetyMargin;
                 ball.position.x = this.position.x + normal.x * targetDistance;
                 ball.position.y = this.position.y + normal.y * targetDistance;
+                
+                // Проверяем текущую скорость мяча
+                const currentSpeed = ball.velocity.magnitude();
+                const minBounceForce = Math.max(CONFIG.BUMPER_BOUNCE_FORCE, currentSpeed * 1.2);
+                
+                ball.velocity.x = normal.x * minBounceForce;
+                ball.velocity.y = normal.y * minBounceForce;
             }
 
-            // Пересчитываем нормаль после корректировки позиции
-            const newDx = ball.position.x - this.position.x;
-            const newDy = ball.position.y - this.position.y;
-            const newDistance = Math.sqrt(newDx * newDx + newDy * newDy);
-            const finalNormal = new Vector2D(newDx / newDistance, newDy / newDistance);
-
-            ball.velocity.x = finalNormal.x * CONFIG.BUMPER_BOUNCE_FORCE;
-            ball.velocity.y = finalNormal.y * CONFIG.BUMPER_BOUNCE_FORCE;
-
             this.hitAnimation = 1;
+            
+            // Добавляем небольшую задержку перед следующей возможной коллизией
+            this.lastHitTime = Date.now();
+            
             return this.points;
         }
 
@@ -64,6 +80,11 @@ class Bumper {
 
     // Sweep test для бампера
     sweepTest(ball) {
+        // Проверяем, не было ли недавней коллизии
+        if (this.lastHitTime && Date.now() - this.lastHitTime < 50) {
+            return 0;
+        }
+
         const movement = ball.getMovementLine();
 
         // Проверяем пересечение линии движения с окружностью бампера
@@ -73,35 +94,57 @@ class Bumper {
         );
 
         if (intersection.hit) {
+            // Проверяем направление движения - мяч должен двигаться К бамперу
+            const moveDirection = new Vector2D(
+                movement.end.x - movement.start.x,
+                movement.end.y - movement.start.y
+            );
+            const toBumper = new Vector2D(
+                this.position.x - movement.start.x,
+                this.position.y - movement.start.y
+            );
+            
+            // Если мяч движется от бампера, игнорируем коллизию
+            if (moveDirection.dot(toBumper) < 0) {
+                return 0;
+            }
+
             // Вычисляем направление от центра бампера к точке пересечения
             const dx = intersection.point.x - this.position.x;
             const dy = intersection.point.y - this.position.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < 0.1) {
-                // Если слишком близко к центру, используем случайное направление
-                const angle = Math.random() * Math.PI * 2;
-                const normal = new Vector2D(Math.cos(angle), Math.sin(angle));
-                const targetDistance = this.radius + ball.radius + 5;
+                // Если слишком близко к центру, используем направление движения
+                const moveSpeed = ball.velocity.magnitude();
+                const normal = new Vector2D(-moveDirection.x, -moveDirection.y);
+                normal.normalize();
+                
+                const targetDistance = this.radius + ball.radius + 8;
                 ball.position.x = this.position.x + normal.x * targetDistance;
                 ball.position.y = this.position.y + normal.y * targetDistance;
                 
-                ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
-                ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+                ball.velocity.x = normal.x * Math.max(CONFIG.BUMPER_BOUNCE_FORCE, moveSpeed * 1.5);
+                ball.velocity.y = normal.y * Math.max(CONFIG.BUMPER_BOUNCE_FORCE, moveSpeed * 1.5);
             } else {
                 const normal = new Vector2D(dx / distance, dy / distance);
                 
-                // Корректируем позицию с безопасным отступом
-                const targetDistance = this.radius + ball.radius + 2;
+                // Корректируем позицию с большим безопасным отступом
+                const safetyMargin = Math.max(6, ball.velocity.magnitude() * 0.15);
+                const targetDistance = this.radius + ball.radius + safetyMargin;
                 ball.position.x = this.position.x + normal.x * targetDistance;
                 ball.position.y = this.position.y + normal.y * targetDistance;
 
-                // Применяем силу бампера
-                ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
-                ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+                // Применяем силу бампера с учетом текущей скорости
+                const currentSpeed = ball.velocity.magnitude();
+                const bounceForce = Math.max(CONFIG.BUMPER_BOUNCE_FORCE, currentSpeed * 1.3);
+                
+                ball.velocity.x = normal.x * bounceForce;
+                ball.velocity.y = normal.y * bounceForce;
             }
 
             this.hitAnimation = 1;
+            this.lastHitTime = Date.now();
             return this.points;
         }
 
