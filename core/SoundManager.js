@@ -14,6 +14,7 @@ class SoundManager {
         this.maxConcurrentSounds = 8; // Максимум 8 звуков одновременно
         this.activeSounds = [];
         this.userInteracted = false;
+        this.lastPlayTime = {}; // Для дебаунса звуков
         
         this.setupMobileOptimizations();
         this.loadSounds();
@@ -157,6 +158,16 @@ class SoundManager {
 
     playSound(soundName, options = {}) {
         if (!this.enabled || !this.userInteracted || !this.soundPools[soundName]) return;
+
+        // Дебаунс для предотвращения спама звуков
+        const now = Date.now();
+        const debounceTime = this.isMobile ? 150 : 50; // Больше дебаунс на мобиле
+        
+        if (!this.lastPlayTime) this.lastPlayTime = {};
+        if (this.lastPlayTime[soundName] && now - this.lastPlayTime[soundName] < debounceTime) {
+            return; // Пропускаем если звук недавно играл
+        }
+        this.lastPlayTime[soundName] = now;
 
         // Ограничиваем количество одновременных звуков
         if (this.activeSounds.length >= this.maxConcurrentSounds) {

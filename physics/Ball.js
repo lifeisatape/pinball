@@ -50,7 +50,6 @@ class Ball {
         if (this.position.x < this.radius) {
             this.position.x = this.radius;
             this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
-            window.soundManager.playSound('wallHit');
             collision = true;
         }
 
@@ -58,7 +57,6 @@ class Ball {
         if (this.position.x > CONFIG.VIRTUAL_WIDTH - this.radius) {
             this.position.x = CONFIG.VIRTUAL_WIDTH - this.radius;
             this.velocity.x *= -CONFIG.BOUNCE_DAMPING;
-            window.soundManager.playSound('wallHit');
             collision = true;
         }
 
@@ -66,8 +64,12 @@ class Ball {
         if (this.position.y < this.radius) {
             this.position.y = this.radius;
             this.velocity.y *= -CONFIG.BOUNCE_DAMPING;
-            window.soundManager.playSound('wallHit');
             collision = true;
+        }
+
+        // Звук только при первом столкновении
+        if (collision) {
+            window.soundManager.playSound('wallHit');
         }
 
         return collision;
