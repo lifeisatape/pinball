@@ -11,6 +11,7 @@ class PinballGame {
         this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
+        this.tapToStartScreen = document.getElementById('tapToStartScreen');
         this.loadingScreen = document.getElementById('loadingScreen');
         this.levelSelectScreen = document.getElementById('levelSelectScreen');
 
@@ -26,7 +27,7 @@ class PinballGame {
         };
 
         this.setupEventListeners();
-        this.startLoadingProcess();
+        this.showTapToStartScreen();
     }
 
     async initializeGame() {
@@ -75,10 +76,27 @@ class PinballGame {
             }
         });
 
-        // SoundManager сам обработает активацию аудио
+        // Обработчик для экрана "tap to start"
+        this.tapToStartScreen.addEventListener('click', () => {
+            this.startLoadingProcess();
+        });
+
+        this.tapToStartScreen.addEventListener('touchstart', () => {
+            this.startLoadingProcess();
+        }, { passive: true });
+    }
+
+    showTapToStartScreen() {
+        this.canvas.style.display = 'none';
+        document.querySelector('.score-panel').style.display = 'none';
+        this.tapToStartScreen.style.display = 'flex';
+        this.loadingScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'none';
     }
 
     async startLoadingProcess() {
+        // Скрываем экран "tap to start" и показываем загрузку
+        this.tapToStartScreen.style.display = 'none';
         this.showLoadingScreen();
         
         // Настраиваем коллбек для отслеживания прогресса
@@ -95,7 +113,11 @@ class PinballGame {
             this.checkLoadingComplete();
         });
 
-        // Загружаем уровни
+        // Активируем аудио и загружаем уровни
+        if (window.soundManager) {
+            window.soundManager.unlock();
+        }
+        
         await this.loadLevels();
     }
 

@@ -38,12 +38,7 @@ class SoundManager {
             // Пытаемся создать AudioContext сразу
             this.tryCreateContext();
 
-            // Один простой обработчик для активации аудио
-            const activateAudio = () => {
-                this.unlock();
-            };
-
-            document.addEventListener('click', activateAudio, { once: true });
+            // Аудио будет активировано через tap-to-start screen
 
         } catch (error) {
             console.warn('SoundManager: Initialization failed:', error);
