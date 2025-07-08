@@ -56,11 +56,8 @@ class Wall {
             ball.velocity.y -= 2 * dotProduct * normal.y;
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
 
-            // Дебаунс для стен - проверяем недавнее столкновение
-            if (!this.lastHitTime || Date.now() - this.lastHitTime > 100) {
-                window.soundManager.playSound('wallHit');
-                this.lastHitTime = Date.now();
-            }
+            // Play wall hit sound
+            window.soundManager.playSound('wallHit');
 
             return true;
         }
@@ -99,11 +96,8 @@ class Wall {
             ball.velocity.y -= 2 * dotProduct * normal.y;
             ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
 
-            // Дебаунс для стен - проверяем недавнее столкновение
-            if (!this.lastHitTime || Date.now() - this.lastHitTime > 100) {
-                window.soundManager.playSound('wallHit');
-                this.lastHitTime = Date.now();
-            }
+            // Play wall hit sound
+            window.soundManager.playSound('wallHit');
 
             return true;
         }
@@ -202,11 +196,8 @@ class Wall {
                     ball.velocity.y -= 2 * dotProduct * normal.y;
                     ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
 
-                    // Дебаунс для стен - проверяем недавнее столкновение
-                    if (!this.lastHitTime || Date.now() - this.lastHitTime > 100) {
-                        window.soundManager.playSound('wallHit');
-                        this.lastHitTime = Date.now();
-                    }
+                    // Play wall hit sound
+                    window.soundManager.playSound('wallHit');
 
                     return true;
                 }

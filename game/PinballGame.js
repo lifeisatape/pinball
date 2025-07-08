@@ -76,19 +76,14 @@ class PinballGame {
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
         
-        // Show start screen immediately
-        this.startScreen.style.display = 'flex';
+        // Play menu music
+        window.soundManager.playMusic('menu');
         
-        // Populate level list first (don't wait for sounds)
+        // Populate level list
         const levels = await this.levelSelector.getAvailableLevels();
         this.populateLevelList(levels);
         
-        // Load sounds in background and play music when ready
-        window.soundManager.whenReady().then(() => {
-            window.soundManager.playMusic('menu');
-        }).catch(error => {
-            console.warn('Failed to load sounds:', error);
-        });
+        this.startScreen.style.display = 'flex';
     }
 
     hideStartScreen() {
@@ -97,13 +92,9 @@ class PinballGame {
         document.querySelector('.score-panel').style.display = 'flex';
         this.startScreen.style.display = 'none';
         
-        // Play level music and new game sound when ready
-        window.soundManager.whenReady().then(() => {
-            window.soundManager.playMusic('level');
-            window.soundManager.playSound('newGameLaunch');
-        }).catch(error => {
-            console.warn('Failed to play sounds:', error);
-        });
+        // Play level music and new game sound
+        window.soundManager.playMusic('level');
+        window.soundManager.playSound('newGameLaunch');
     }
 
     populateLevelList(levels) {
