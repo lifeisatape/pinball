@@ -36,15 +36,43 @@
             </div>
         </div>
 
-        <div class="level-select-overlay" id="startScreen" style="display: flex;">
+        <!-- Стартовый экран с индикатором загрузки -->
+        <div class="loading-overlay" id="loadingScreen" style="display: flex;">
+            <div class="loading-content">
+                <h1>PINBALL GAME</h1>
+                <div class="loading-progress-container">
+                    <div class="loading-progress-bar">
+                        <div class="loading-progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="loading-text" id="loadingText">Initializing...</div>
+                    <div class="loading-percentage" id="loadingPercentage">0%</div>
+                </div>
+                <div class="loading-details" id="loadingDetails">
+                    <div class="loading-item">
+                        <span class="loading-item-name">Audio System</span>
+                        <span class="loading-item-status" id="audioStatus">⏳</span>
+                    </div>
+                    <div class="loading-item">
+                        <span class="loading-item-name">Sound Files</span>
+                        <span class="loading-item-status" id="soundsStatus">⏳</span>
+                    </div>
+                    <div class="loading-item">
+                        <span class="loading-item-name">Levels</span>
+                        <span class="loading-item-status" id="levelsStatus">⏳</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран выбора уровня -->
+        <div class="level-select-overlay" id="levelSelectScreen" style="display: none;">
             <div class="level-select-content">
-                <h2>PINBALL GAME</h2>
-                <p style="color: #ccc; margin-bottom: 20px;">Preparing audio system...</p>
+                <h2>SELECT LEVEL</h2>
                 <div class="level-list" id="levelList">
                     <!-- Levels will be populated here -->
                 </div>
                 <div class="level-select-controls">
-                    <button class="level-btn primary loading" id="startLevel" disabled>LOADING SOUNDS...</button>
+                    <button class="level-btn primary" id="startLevel">START GAME</button>
                 </div>
             </div>
         </div>

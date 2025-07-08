@@ -8,6 +8,8 @@ class SoundManager {
         this.enabled = true;
         this.isReady = false;
         this.currentMusic = null;
+        this.loadingProgress = 0;
+        this.loadingCallback = null;
 
         // Кулдаун только для спиннера
         this.spinnerLastPlayed = 0;
@@ -28,9 +30,6 @@ class SoundManager {
 
         console.log('SoundManager: Created');
         this.init();
-
-        // Обновляем UI сразу
-        setTimeout(() => this.updateLoadingUI(), 100);
     }
 
     async init() {
@@ -81,6 +80,11 @@ class SoundManager {
         console.log('SoundManager: Unlock triggered');
 
         try {
+            // Уведомляем о начале инициализации аудио
+            if (this.loadingCallback) {
+                this.loadingCallback('audio', 0, 'Initializing audio context...');
+            }
+
             // Создаем контекст если его нет
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -90,6 +94,9 @@ class SoundManager {
             // Резюмируем контекст если нужно
             if (this.audioContext.state === 'suspended') {
                 console.log('SoundManager: Resuming suspended AudioContext...');
+                if (this.loadingCallback) {
+                    this.loadingCallback('audio', 50, 'Resuming audio context...');
+                }
                 await this.audioContext.resume();
                 console.log('SoundManager: AudioContext resumed, state:', this.audioContext.state);
             }
@@ -97,6 +104,11 @@ class SoundManager {
             // Загружаем звуки если контекст готов
             if (this.audioContext.state === 'running') {
                 console.log('SoundManager: AudioContext running, loading sounds...');
+                
+                if (this.loadingCallback) {
+                    this.loadingCallback('audio', 100, 'Audio context ready');
+                }
+
                 await this.preloadAllSounds();
 
                 this.isReady = true;
@@ -104,70 +116,57 @@ class SoundManager {
 
                 // Диспатчим событие готовности
                 window.dispatchEvent(new CustomEvent('soundManagerReady'));
-
-                // Обновляем UI
-                this.updateLoadingUI();
             } else {
                 console.warn('SoundManager: AudioContext not running, state:', this.audioContext.state);
             }
 
         } catch (error) {
             console.error('SoundManager: Failed to unlock audio:', error);
-        }
-    }
-
-    updateLoadingUI() {
-        // Обновляем кнопку старта
-        const startButton = document.getElementById('startLevel');
-        const description = document.querySelector('.level-select-content p');
-
-        if (this.isReady) {
-            if (startButton) {
-                startButton.textContent = 'START GAME';
-                startButton.disabled = false;
-                startButton.classList.remove('loading');
-            }
-
-            if (description) {
-                description.textContent = 'Select a level to start playing';
-                description.style.color = '#ccc';
-            }
-        } else {
-            if (startButton) {
-                startButton.textContent = 'CLICK TO ENABLE AUDIO';
-                startButton.disabled = false;
-                startButton.classList.add('loading');
-
-                // Добавляем обработчик клика на кнопку
-                startButton.addEventListener('click', () => {
-                    if (!this.isReady) {
-                        this.unlock();
-                    }
-                }, { once: true });
-            }
-
-            if (description) {
-                description.textContent = 'Click anywhere to enable audio';
-                description.style.color = '#ffa500';
+            if (this.loadingCallback) {
+                this.loadingCallback('audio', 0, 'Failed to initialize audio');
             }
         }
     }
+
+    
 
     async preloadAllSounds() {
         console.log('SoundManager: Preloading sounds...');
 
-        const loadPromises = Object.entries(this.soundFiles).map(async ([name, url]) => {
+        const soundEntries = Object.entries(this.soundFiles);
+        const totalSounds = soundEntries.length;
+        let loadedSounds = 0;
+
+        for (const [name, url] of soundEntries) {
             try {
                 const buffer = await this.loadSound(url);
                 this.buffers.set(name, buffer);
-                console.log(`SoundManager: Loaded ${name}`);
+                loadedSounds++;
+                
+                this.loadingProgress = Math.round((loadedSounds / totalSounds) * 100);
+                
+                // Уведомляем о прогрессе
+                if (this.loadingCallback) {
+                    this.loadingCallback('sounds', this.loadingProgress, `Loading ${name}...`);
+                }
+                
+                console.log(`SoundManager: Loaded ${name} (${loadedSounds}/${totalSounds})`);
             } catch (error) {
                 console.warn(`SoundManager: Failed to load ${name}:`, error);
+                loadedSounds++;
+                this.loadingProgress = Math.round((loadedSounds / totalSounds) * 100);
+                
+                if (this.loadingCallback) {
+                    this.loadingCallback('sounds', this.loadingProgress, `Failed to load ${name}`);
+                }
             }
-        });
+        }
 
-        await Promise.all(loadPromises);
         console.log('SoundManager: All sounds preloaded');
+    }
+
+    setLoadingCallback(callback) {
+        this.loadingCallback = callback;
     }
 
     async loadSound(url) {

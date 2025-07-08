@@ -11,19 +11,22 @@ class PinballGame {
         this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
-        this.startScreen = document.getElementById('startScreen');
+        this.loadingScreen = document.getElementById('loadingScreen');
+        this.levelSelectScreen = document.getElementById('levelSelectScreen');
 
         this.ball = null;
         this.gameStarted = false;
         this.currentLevel = null;
 
-        this.setupEventListeners();
-        this.showStartScreen();
+        // Состояние загрузки
+        this.loadingState = {
+            audio: false,
+            sounds: false,
+            levels: false
+        };
 
-        // Ждем готовности звуков
-        window.addEventListener('soundManagerReady', () => {
-            console.log('PinballGame: Sound system ready!');
-        });
+        this.setupEventListeners();
+        this.startLoadingProcess();
     }
 
     async initializeGame() {
@@ -71,27 +74,138 @@ class PinballGame {
                 alert('Please select a level first!');
             }
         });
+
+        // Обработка клика для активации аудио
+        document.addEventListener('click', () => {
+            if (window.soundManager && !window.soundManager.isReady) {
+                window.soundManager.unlock();
+            }
+        }, { once: true });
+    }
+
+    async startLoadingProcess() {
+        this.showLoadingScreen();
+        
+        // Настраиваем коллбек для отслеживания прогресса
+        if (window.soundManager) {
+            window.soundManager.setLoadingCallback((type, progress, message) => {
+                this.updateLoadingProgress(type, progress, message);
+            });
+        }
+
+        // Ждем готовности звуков
+        window.addEventListener('soundManagerReady', () => {
+            console.log('PinballGame: Sound system ready!');
+            this.loadingState.sounds = true;
+            this.checkLoadingComplete();
+        });
+
+        // Загружаем уровни
+        await this.loadLevels();
+    }
+
+    async loadLevels() {
+        this.updateLoadingProgress('levels', 0, 'Loading levels...');
+        
+        try {
+            const levels = await this.levelSelector.getAvailableLevels();
+            this.updateLoadingProgress('levels', 100, `Loaded ${levels.length} levels`);
+            this.loadingState.levels = true;
+            this.checkLoadingComplete();
+        } catch (error) {
+            console.error('Failed to load levels:', error);
+            this.updateLoadingProgress('levels', 100, 'Failed to load levels');
+            this.loadingState.levels = true;
+            this.checkLoadingComplete();
+        }
+    }
+
+    updateLoadingProgress(type, progress, message) {
+        const statusMap = {
+            'audio': 'audioStatus',
+            'sounds': 'soundsStatus', 
+            'levels': 'levelsStatus'
+        };
+
+        const statusElement = document.getElementById(statusMap[type]);
+        if (statusElement) {
+            if (progress === 100) {
+                statusElement.textContent = '✅';
+                if (type === 'audio') this.loadingState.audio = true;
+            } else if (progress > 0) {
+                statusElement.textContent = '🔄';
+            } else {
+                statusElement.textContent = '❌';
+            }
+        }
+
+        // Обновляем общий прогресс
+        this.updateOverallProgress();
+        
+        // Обновляем текст загрузки
+        const loadingText = document.getElementById('loadingText');
+        if (loadingText) {
+            loadingText.textContent = message;
+        }
+    }
+
+    updateOverallProgress() {
+        const completed = Object.values(this.loadingState).filter(Boolean).length;
+        const total = Object.keys(this.loadingState).length;
+        const percentage = Math.round((completed / total) * 100);
+
+        const progressFill = document.getElementById('progressFill');
+        const progressPercentage = document.getElementById('loadingPercentage');
+
+        if (progressFill) {
+            progressFill.style.width = percentage + '%';
+        }
+
+        if (progressPercentage) {
+            progressPercentage.textContent = percentage + '%';
+        }
+    }
+
+    checkLoadingComplete() {
+        const allLoaded = Object.values(this.loadingState).every(Boolean);
+        
+        if (allLoaded) {
+            setTimeout(() => {
+                this.showLevelSelectScreen();
+            }, 1000); // Небольшая задержка для красоты
+        }
+    }
+
+    showLoadingScreen() {
+        this.canvas.style.display = 'none';
+        document.querySelector('.score-panel').style.display = 'none';
+        this.loadingScreen.style.display = 'flex';
+        this.levelSelectScreen.style.display = 'none';
+    }
+
+    showLevelSelectScreen() {
+        this.loadingScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'flex';
+        
+        // Популяция списка уровней
+        this.levelSelector.getAvailableLevels().then(levels => {
+            this.populateLevelList(levels);
+        });
     }
 
     async showStartScreen() {
-        this.canvas.style.display = 'none';
-        document.querySelector('.score-panel').style.display = 'none';
-
+        this.showLevelSelectScreen();
+        
         // Простое воспроизведение музыки
         if (window.soundManager && window.soundManager.isReady) {
             window.soundManager.playMusic('menu');
         }
-
-        const levels = await this.levelSelector.getAvailableLevels();
-        this.populateLevelList(levels);
-
-        this.startScreen.style.display = 'flex';
     }
 
     hideStartScreen() {
         this.canvas.style.display = 'block';
         document.querySelector('.score-panel').style.display = 'flex';
-        this.startScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'none';
 
         // Простое переключение музыки
         if (window.soundManager && window.soundManager.isReady) {
@@ -241,7 +355,7 @@ class PinballGame {
 
     async showLevelSelect() {
         this.gameStarted = false;
-        await this.showStartScreen();
+        this.showLevelSelectScreen();
     }
 
     async loadSelectedLevel(selectedLevel) {
