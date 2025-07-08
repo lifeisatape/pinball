@@ -1,4 +1,3 @@
-
 // Drop Target Class
 class DropTarget {
     constructor(x, y, width = 15, height = 30, shape = 'rectangle') {
@@ -14,10 +13,13 @@ class DropTarget {
     }
 
     update() {
+        // Handle respawn
         if (!this.isActive && this.resetTime > 0) {
             this.resetTime--;
             if (this.resetTime <= 0) {
                 this.isActive = true;
+                // Play target respawn sound
+                window.soundManager.playSound('targetIn');
             }
         }
     }
@@ -38,12 +40,12 @@ class DropTarget {
                 // Calculate collision normal
                 const normalX = dx / distance;
                 const normalY = dy / distance;
-                
+
                 // Reflect velocity
                 const dotProduct = ball.velocity.x * normalX + ball.velocity.y * normalY;
                 ball.velocity.x = ball.velocity.x - 2 * dotProduct * normalX;
                 ball.velocity.y = ball.velocity.y - 2 * dotProduct * normalY;
-                
+
                 // Add some boost
                 ball.velocity.x *= 1.2;
                 ball.velocity.y *= 1.2;
@@ -61,6 +63,9 @@ class DropTarget {
                 const normalX = ball.position.x < this.position.x ? -1 : 1;
                 ball.velocity.x = Math.abs(ball.velocity.x) * normalX * 1.2;
 
+                // Play target hit sound
+                window.soundManager.playSound('targetHit');
+
                 return this.points;
             }
         }
@@ -72,7 +77,7 @@ class DropTarget {
 
         if (this.shape === 'circle') {
             const radius = Math.max(this.width, this.height) / 2;
-            
+
             const gradient = ctx.createRadialGradient(
                 this.position.x, this.position.y, 0,
                 this.position.x, this.position.y, radius

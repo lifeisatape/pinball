@@ -28,11 +28,13 @@ class Flipper {
     activate() {
         this.isActive = true;
         this.targetAngle = this.activeAngle;
+        window.soundManager.playSound('flipperIn');
     }
 
     deactivate() {
         this.isActive = false;
         this.targetAngle = this.restAngle;
+        window.soundManager.playSound('flipperOut');
     }
 
     update() {

@@ -1,4 +1,3 @@
-
 // Spinner Class
 class Spinner {
     constructor(x, y, width = 30, height = 8) {
@@ -42,6 +41,9 @@ class Spinner {
 
             ball.velocity.x += worldNormalX * CONFIG.SPINNER_BOUNCE_FORCE;
             ball.velocity.y += worldNormalY * CONFIG.SPINNER_BOUNCE_FORCE;
+
+             // Play spinner sound
+            window.soundManager.playSound('spinner');
 
             return this.points;
         }

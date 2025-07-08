@@ -76,6 +76,9 @@ class PinballGame {
         this.canvas.style.display = 'none';
         document.querySelector('.score-panel').style.display = 'none';
         
+        // Play menu music
+        window.soundManager.playMusic('menu');
+        
         // Populate level list
         const levels = await this.levelSelector.getAvailableLevels();
         this.populateLevelList(levels);
@@ -88,6 +91,10 @@ class PinballGame {
         this.canvas.style.display = 'block';
         document.querySelector('.score-panel').style.display = 'flex';
         this.startScreen.style.display = 'none';
+        
+        // Play level music and new game sound
+        window.soundManager.playMusic('level');
+        window.soundManager.playSound('newGameLaunch');
     }
 
     populateLevelList(levels) {

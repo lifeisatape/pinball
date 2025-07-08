@@ -64,6 +64,9 @@ class Bumper {
 
             this.hitAnimation = 1;
             
+            // Play bumper sound
+            window.soundManager.playSound('bumper');
+            
             // Добавляем небольшую задержку перед следующей возможной коллизией
             this.lastHitTime = Date.now();
             
@@ -145,6 +148,10 @@ class Bumper {
 
             this.hitAnimation = 1;
             this.lastHitTime = Date.now();
+            
+            // Play bumper sound
+            window.soundManager.playSound('bumper');
+            
             return this.points;
         }
 
