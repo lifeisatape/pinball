@@ -24,14 +24,31 @@ class Bumper {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < ball.radius + this.radius) {
-            const normal = new Vector2D(dx / distance, dy / distance);
+            // Предотвращаем деление на ноль и застревание в центре
+            if (distance < 0.1) {
+                // Если мяч слишком близко к центру, выталкиваем его случайным образом
+                const angle = Math.random() * Math.PI * 2;
+                const normal = new Vector2D(Math.cos(angle), Math.sin(angle));
+                const targetDistance = ball.radius + this.radius + 5;
+                ball.position.x = this.position.x + normal.x * targetDistance;
+                ball.position.y = this.position.y + normal.y * targetDistance;
+            } else {
+                const normal = new Vector2D(dx / distance, dy / distance);
+                
+                // Гарантируем, что мяч находится на правильном расстоянии
+                const targetDistance = ball.radius + this.radius + 2;
+                ball.position.x = this.position.x + normal.x * targetDistance;
+                ball.position.y = this.position.y + normal.y * targetDistance;
+            }
 
-            const overlap = ball.radius + this.radius - distance + 2;
-            ball.position.x += normal.x * overlap;
-            ball.position.y += normal.y * overlap;
+            // Пересчитываем нормаль после корректировки позиции
+            const newDx = ball.position.x - this.position.x;
+            const newDy = ball.position.y - this.position.y;
+            const newDistance = Math.sqrt(newDx * newDx + newDy * newDy);
+            const finalNormal = new Vector2D(newDx / newDistance, newDy / newDistance);
 
-            ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
-            ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+            ball.velocity.x = finalNormal.x * CONFIG.BUMPER_BOUNCE_FORCE;
+            ball.velocity.y = finalNormal.y * CONFIG.BUMPER_BOUNCE_FORCE;
 
             this.hitAnimation = 1;
             return this.points;
@@ -56,24 +73,33 @@ class Bumper {
         );
 
         if (intersection.hit) {
-            // Перемещаем мяч в точку коллизии
-            ball.position.x = intersection.point.x;
-            ball.position.y = intersection.point.y;
-
-            // Вычисляем нормаль в точке коллизии
-            const dx = ball.position.x - this.position.x;
-            const dy = ball.position.y - this.position.y;
+            // Вычисляем направление от центра бампера к точке пересечения
+            const dx = intersection.point.x - this.position.x;
+            const dy = intersection.point.y - this.position.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            const normal = new Vector2D(dx / distance, dy / distance);
+            
+            if (distance < 0.1) {
+                // Если слишком близко к центру, используем случайное направление
+                const angle = Math.random() * Math.PI * 2;
+                const normal = new Vector2D(Math.cos(angle), Math.sin(angle));
+                const targetDistance = this.radius + ball.radius + 5;
+                ball.position.x = this.position.x + normal.x * targetDistance;
+                ball.position.y = this.position.y + normal.y * targetDistance;
+                
+                ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
+                ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+            } else {
+                const normal = new Vector2D(dx / distance, dy / distance);
+                
+                // Корректируем позицию с безопасным отступом
+                const targetDistance = this.radius + ball.radius + 2;
+                ball.position.x = this.position.x + normal.x * targetDistance;
+                ball.position.y = this.position.y + normal.y * targetDistance;
 
-            // Корректируем позицию
-            const targetDistance = this.radius + ball.radius;
-            ball.position.x = this.position.x + normal.x * targetDistance;
-            ball.position.y = this.position.y + normal.y * targetDistance;
-
-            // Применяем силу бампера
-            ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
-            ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+                // Применяем силу бампера
+                ball.velocity.x = normal.x * CONFIG.BUMPER_BOUNCE_FORCE;
+                ball.velocity.y = normal.y * CONFIG.BUMPER_BOUNCE_FORCE;
+            }
 
             this.hitAnimation = 1;
             return this.points;
