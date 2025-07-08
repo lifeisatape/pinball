@@ -98,7 +98,7 @@ class PinballGame {
         // Скрываем экран "tap to start" и показываем загрузку
         this.tapToStartScreen.style.display = 'none';
         this.showLoadingScreen();
-        
+
         // Настраиваем коллбек для отслеживания прогресса
         if (window.soundManager) {
             window.soundManager.setLoadingCallback((type, progress, message) => {
@@ -113,17 +113,25 @@ class PinballGame {
             this.checkLoadingComplete();
         });
 
-        // Активируем аудио и загружаем уровни
-        if (window.soundManager) {
-            window.soundManager.unlock();
-        }
-        
+        // Затем активируем аудио с задержкой, увеличенной для deployed версии
+        const isDeployed = window.location.hostname.includes('replit.app') || 
+                          window.location.hostname.includes('replit.dev') || 
+                          window.location.protocol === 'https:';
+
+        const delay = isDeployed ? 1000 : 500; // Больше времени для deployed версии
+
+        setTimeout(async () => {
+            if (window.soundManager) {
+                await window.soundManager.unlock();
+            }
+        }, delay);
+
         await this.loadLevels();
     }
 
     async loadLevels() {
         this.updateLoadingProgress('levels', 0, 'Loading levels...');
-        
+
         try {
             const levels = await this.levelSelector.getAvailableLevels();
             this.updateLoadingProgress('levels', 100, `Loaded ${levels.length} levels`);
@@ -158,7 +166,7 @@ class PinballGame {
 
         // Обновляем общий прогресс
         this.updateOverallProgress();
-        
+
         // Обновляем текст загрузки
         const loadingText = document.getElementById('loadingText');
         if (loadingText) {
@@ -185,7 +193,7 @@ class PinballGame {
 
     checkLoadingComplete() {
         const allLoaded = Object.values(this.loadingState).every(Boolean);
-        
+
         if (allLoaded) {
             setTimeout(() => {
                 this.showLevelSelectScreen();
@@ -203,12 +211,12 @@ class PinballGame {
     showLevelSelectScreen() {
         this.loadingScreen.style.display = 'none';
         this.levelSelectScreen.style.display = 'flex';
-        
+
         // Запускаем музыку меню
         if (window.soundManager && window.soundManager.isReady) {
             window.soundManager.playMusic('menu');
         }
-        
+
         // Популяция списка уровней
         this.levelSelector.getAvailableLevels().then(levels => {
             this.populateLevelList(levels);
@@ -217,7 +225,7 @@ class PinballGame {
 
     async showStartScreen() {
         this.showLevelSelectScreen();
-        
+
         // Простое воспроизведение музыки
         if (window.soundManager && window.soundManager.isReady) {
             window.soundManager.playMusic('menu');
@@ -377,13 +385,13 @@ class PinballGame {
 
     async showLevelSelect() {
         this.gameStarted = false;
-        
+
         // Останавливаем игровую музыку и запускаем музыку меню
         if (window.soundManager && window.soundManager.isReady) {
             window.soundManager.stopMusic();
             window.soundManager.playMusic('menu');
         }
-        
+
         this.showLevelSelectScreen();
     }
 
