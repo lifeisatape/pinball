@@ -104,22 +104,38 @@ class Ball {
         this.lastPosition.y = this.position.y;
     }
 
-    // ОРИГИНАЛЬНАЯ отрисовка
+    // МЕТАЛЛИЧЕСКИЙ вид шарика
     draw(ctx) {
         const gradient = ctx.createRadialGradient(
             this.position.x - 3, this.position.y - 3, 0,
             this.position.x, this.position.y, this.radius
         );
         gradient.addColorStop(0, '#ffffff');
-        gradient.addColorStop(0.3, '#ffff80');
-        gradient.addColorStop(1, '#ffcc00');
+        gradient.addColorStop(0.2, '#e6e6e6');
+        gradient.addColorStop(0.5, '#c0c0c0');
+        gradient.addColorStop(0.8, '#909090');
+        gradient.addColorStop(1, '#606060');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = '#ffffff';
+        // Металлический блик
+        const highlight = ctx.createRadialGradient(
+            this.position.x - 2, this.position.y - 2, 0,
+            this.position.x - 2, this.position.y - 2, this.radius * 0.6
+        );
+        highlight.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = highlight;
+        ctx.beginPath();
+        ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Темная окантовка для металлического эффекта
+        ctx.strokeStyle = '#404040';
         ctx.lineWidth = 1;
         ctx.stroke();
     }
