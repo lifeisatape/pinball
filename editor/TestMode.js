@@ -658,21 +658,37 @@ class TestMode {
             this.ctx.restore();
         }
 
-        // Draw ball with original gradient
+        // Draw ball with metallic appearance
         const ballGradient = this.ctx.createRadialGradient(
             this.ball.position.x - 3, this.ball.position.y - 3, 0,
             this.ball.position.x, this.ball.position.y, this.ball.radius
         );
         ballGradient.addColorStop(0, '#ffffff');
-        ballGradient.addColorStop(0.3, '#ffff80');
-        ballGradient.addColorStop(1, '#ffcc00');
+        ballGradient.addColorStop(0.2, '#e6e6e6');
+        ballGradient.addColorStop(0.5, '#c0c0c0');
+        ballGradient.addColorStop(0.8, '#909090');
+        ballGradient.addColorStop(1, '#606060');
 
         this.ctx.fillStyle = ballGradient;
         this.ctx.beginPath();
         this.ctx.arc(this.ball.position.x, this.ball.position.y, this.ball.radius, 0, Math.PI * 2);
         this.ctx.fill();
 
-        this.ctx.strokeStyle = '#ffffff';
+        // Металлический блик
+        const highlight = this.ctx.createRadialGradient(
+            this.ball.position.x - 2, this.ball.position.y - 2, 0,
+            this.ball.position.x - 2, this.ball.position.y - 2, this.ball.radius * 0.6
+        );
+        highlight.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        this.ctx.fillStyle = highlight;
+        this.ctx.beginPath();
+        this.ctx.arc(this.ball.position.x, this.ball.position.y, this.ball.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Темная окантовка для металлического эффекта
+        this.ctx.strokeStyle = '#404040';
         this.ctx.lineWidth = 1;
         this.ctx.stroke();
 
