@@ -171,7 +171,7 @@ class EditorTools {
     }
 
     deleteObjectAt(worldPos, levelData) {
-        const tolerance = 20;
+        const tolerance = 5;
         let deleted = false;
 
         // Check walls
