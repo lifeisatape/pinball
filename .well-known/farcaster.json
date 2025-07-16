@@ -8,7 +8,7 @@
     "version": "next",
     "name": "all stars",
     "iconUrl": "https://flowersonmars.space/generated-icon.png",
-    "homeUrl": "https://flowersonmars.space/?miniApp=true",
+    "homeUrl": "https://flowersonmars.space/",
     "imageUrl": "https://flowersonmars.space/gn.png",
     "buttonTitle": "Play",
     "splashImageUrl": "https://flowersonmars.space/gm.png",
@@ -21,5 +21,11 @@
     "ogTitle": "all stars",
     "ogDescription": "oldscool pinball game & original soundtrack",
     "ogImageUrl": "https://flowersonmars.space/generated-icon.png"
+  },
+  "miniApp": {
+    "name": "all stars",
+    "url": "https://flowersonmars.space/",
+    "iconUrl": "https://flowersonmars.space/generated-icon.png",
+    "description": "oldscool pinball game & original soundtrack"
   }
 }

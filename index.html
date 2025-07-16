@@ -94,11 +94,15 @@
         </div>
     </div>
     
+    <!-- Farcaster SDK -->
+    <script src="https://unpkg.com/@farcaster/frame-sdk@0.1.0/dist/index.js"></script>
+    
     <!-- 1. SoundManager -->
     <script src="core/SoundManager.js"></script>
     
     <!-- 2. Core modules -->
     <script src="core/GameConfig.js"></script>
+    <script src="core/FarcasterManager.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
@@ -132,7 +136,23 @@
     <script>
         window.addEventListener('load', () => {
             console.log('Page loaded, initializing game...');
-            new PinballGame();
+            
+            // Проверяем URL параметры для автозапуска
+            const urlParams = new URLSearchParams(window.location.search);
+            const isMiniApp = urlParams.get('miniApp') === 'true';
+            const isFrame = window.parent !== window;
+            
+            const game = new PinballGame();
+            
+            // Автозапуск для frame окружения
+            if (isFrame || isMiniApp) {
+                console.log('Frame/MiniApp environment detected, auto-starting...');
+                setTimeout(() => {
+                    if (window.farcasterManager?.isReady) {
+                        game.startLoadingSequence();
+                    }
+                }, 1000);
+            }
         });
 
         // Prevent mobile scrolling and context menu

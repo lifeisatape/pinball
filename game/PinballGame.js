@@ -27,6 +27,7 @@ class PinballGame {
         };
 
         this.setupEventListeners();
+        this.setupFarcasterIntegration();
         this.showTapToStartScreen();
     }
 
@@ -84,6 +85,53 @@ class PinballGame {
         this.tapToStartScreen.addEventListener('touchstart', () => {
             this.startLoadingProcess();
         }, { passive: true });
+    }
+
+    setupFarcasterIntegration() {
+        // Ждем готовности Farcaster SDK
+        this.farcasterManager.onReady((context) => {
+            console.log('PinballGame: Farcaster SDK ready', context);
+
+            if (this.farcasterManager.isInFrame()) {
+                // В frame окружении - скрываем некоторые UI элементы
+                this.adaptUIForFrame();
+
+                // Показываем информацию о пользователе если доступна
+                const user = this.farcasterManager.getUser();
+                if (user) {
+                    console.log('PinballGame: Farcaster user:', user);
+                    this.displayUserInfo(user);
+                }
+            }
+        });
+
+        // Слушаем обновления контекста
+        this.farcasterManager.onContextUpdate((context) => {
+            console.log('PinballGame: Farcaster context updated', context);
+        });
+    }
+
+    adaptUIForFrame() {
+        // Адаптируем UI для frame окружения
+        console.log('PinballGame: Adapting UI for Farcaster frame');
+
+        // Можно скрыть некоторые кнопки или изменить layout
+        const selectLevelBtn = document.getElementById('selectLevelBtn');
+        if (selectLevelBtn) {
+            selectLevelBtn.style.display = 'none';
+        }
+    }
+
+    displayUserInfo(user) {
+        // Показываем информацию о пользователе Farcaster
+        const tapToStartContent = document.querySelector('.tap-to-start-content');
+        if (tapToStartContent && user.username) {
+            const userInfo = document.createElement('p');
+            userInfo.textContent = `Welcome, @${user.username}!`;
+            userInfo.style.color = 'var(--accent-color)';
+            userInfo.style.marginBottom = '20px';
+            tapToStartContent.insertBefore(userInfo, tapToStartContent.querySelector('h2'));
+        }
     }
 
     showTapToStartScreen() {
