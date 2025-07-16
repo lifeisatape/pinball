@@ -4,6 +4,7 @@ class FarcasterManager {
         this.isReady = false;
         this.context = null;
         this.user = null;
+        this.sdk = null;
         this.callbacks = {
             ready: [],
             contextUpdate: [],
@@ -39,16 +40,16 @@ class FarcasterManager {
     async initializeFrameSDK() {
         try {
             // Ждем загрузки SDK с таймаутом
-            if (!window.FrameSDK) {
-                console.log('FarcasterManager: Waiting for FrameSDK...');
-                await this.waitForSDK();
+            this.sdk = await this.waitForSDK();
+            if (!this.sdk) {
+                throw new Error('FrameSDK not available');
             }
 
             console.log('FarcasterManager: Initializing FrameSDK...');
-            await window.FrameSDK.init();
+            await this.sdk.init();
 
             // Получаем контекст
-            this.context = await window.FrameSDK.context();
+            this.context = await this.sdk.context();
             this.user = this.context?.user;
 
             console.log('FarcasterManager: Context received:', {
@@ -63,7 +64,7 @@ class FarcasterManager {
             this.isReady = true;
 
             // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() для скрытия splash screen
-            await window.FrameSDK.actions.ready();
+            await this.sdk.actions.ready();
             console.log('FarcasterManager: Ready signal sent to hide splash screen');
 
             // Уведомляем колбэки
@@ -83,20 +84,21 @@ class FarcasterManager {
 
     async waitForSDK(maxAttempts = 50) {
         for (let i = 0; i < maxAttempts; i++) {
-            if (window.FrameSDK) {
+            // Проверяем глобальную переменную sdk, которую создает CDN версия
+            if (window.frameSDK) {
                 console.log(`FarcasterManager: FrameSDK loaded after ${i * 100}ms`);
-                return;
+                return window.frameSDK;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-        throw new Error('FrameSDK not loaded after 5 second timeout');
+        return null;
     }
 
     setupEventListeners() {
-        if (!window.FrameSDK) return;
+        if (!this.sdk) return;
 
         try {
-            window.FrameSDK.on('frameAdded', (data) => {
+            this.sdk.on('frameAdded', (data) => {
                 console.log('FarcasterManager: Frame added event:', data);
                 this.callbacks.frameAdded.forEach(callback => {
                     try {
@@ -107,7 +109,7 @@ class FarcasterManager {
                 });
             });
 
-            window.FrameSDK.on('frameRemoved', (data) => {
+            this.sdk.on('frameRemoved', (data) => {
                 console.log('FarcasterManager: Frame removed event:', data);
                 this.callbacks.frameRemoved.forEach(callback => {
                     try {
@@ -118,7 +120,7 @@ class FarcasterManager {
                 });
             });
 
-            window.FrameSDK.on('notificationsEnabled', (data) => {
+            this.sdk.on('notificationsEnabled', (data) => {
                 console.log('FarcasterManager: Notifications enabled event:', data);
                 this.callbacks.notificationsEnabled.forEach(callback => {
                     try {
@@ -129,7 +131,7 @@ class FarcasterManager {
                 });
             });
 
-            window.FrameSDK.on('notificationsDisabled', (data) => {
+            this.sdk.on('notificationsDisabled', (data) => {
                 console.log('FarcasterManager: Notifications disabled event:', data);
                 this.callbacks.notificationsDisabled.forEach(callback => {
                     try {
@@ -237,16 +239,16 @@ class FarcasterManager {
     async addToFavorites() {
         if (!this.isFrameEnvironment) {
             console.log('FarcasterManager: addToFavorites called outside frame environment');
-            return;
+            return false;
         }
 
-        if (!window.FrameSDK) {
-            console.error('FarcasterManager: FrameSDK not available for addToFavorites');
-            return;
+        if (!this.sdk) {
+            console.error('FarcasterManager: SDK not available for addToFavorites');
+            return false;
         }
 
         try {
-            await window.FrameSDK.actions.addFrame();
+            await this.sdk.actions.addFrame();
             console.log('FarcasterManager: Add frame action triggered successfully');
             return true;
         } catch (error) {
@@ -261,9 +263,9 @@ class FarcasterManager {
             return;
         }
 
-        if (this.isFrameEnvironment && window.FrameSDK) {
+        if (this.isFrameEnvironment && this.sdk) {
             try {
-                await window.FrameSDK.actions.openUrl(url);
+                await this.sdk.actions.openUrl(url);
                 console.log('FarcasterManager: URL opened via FrameSDK:', url);
             } catch (error) {
                 console.error('FarcasterManager: Failed to open URL via FrameSDK:', error);
@@ -281,13 +283,13 @@ class FarcasterManager {
             return;
         }
 
-        if (!window.FrameSDK) {
-            console.error('FarcasterManager: FrameSDK not available for close');
+        if (!this.sdk) {
+            console.error('FarcasterManager: SDK not available for close');
             return;
         }
 
         try {
-            await window.FrameSDK.actions.close();
+            await this.sdk.actions.close();
             console.log('FarcasterManager: Frame closed successfully');
         } catch (error) {
             console.error('FarcasterManager: Failed to close frame:', error);
@@ -297,16 +299,16 @@ class FarcasterManager {
     async composeCast(options = {}) {
         if (!this.isFrameEnvironment) {
             console.log('FarcasterManager: composeCast called outside frame environment');
-            return;
+            return null;
         }
 
-        if (!window.FrameSDK) {
-            console.error('FarcasterManager: FrameSDK not available for composeCast');
-            return;
+        if (!this.sdk) {
+            console.error('FarcasterManager: SDK not available for composeCast');
+            return null;
         }
 
         try {
-            const result = await window.FrameSDK.actions.composeCast(options);
+            const result = await this.sdk.actions.composeCast(options);
             console.log('FarcasterManager: Cast composed successfully:', result);
             return result;
         } catch (error) {
@@ -321,8 +323,8 @@ class FarcasterManager {
             return null;
         }
 
-        if (!window.FrameSDK) {
-            console.error('FarcasterManager: FrameSDK not available for signIn');
+        if (!this.sdk) {
+            console.error('FarcasterManager: SDK not available for signIn');
             return null;
         }
 
@@ -332,7 +334,7 @@ class FarcasterManager {
         }
 
         try {
-            const result = await window.FrameSDK.actions.signIn({ nonce });
+            const result = await this.sdk.actions.signIn({ nonce });
             console.log('FarcasterManager: Sign in successful');
             return result;
         } catch (error) {
@@ -361,7 +363,7 @@ class FarcasterManager {
             isInFrame: this.isFrameEnvironment,
             hasUser: !!this.user,
             contextLoaded: !!this.context,
-            sdkAvailable: !!window.FrameSDK,
+            sdkAvailable: !!this.sdk,
             userFid: this.user?.fid,
             username: this.user?.username,
             clientFid: this.context?.client?.clientFid,
@@ -419,7 +421,7 @@ class FarcasterManager {
                 referrer: document.referrer,
                 search: window.location.search,
                 isIframe: window.parent !== window,
-                frameSDKLoaded: !!window.FrameSDK
+                frameSDKLoaded: !!window.frameSDK
             }
         };
 
