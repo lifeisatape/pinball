@@ -89,26 +89,30 @@ class PinballGame {
 
     setupFarcasterIntegration() {
         // Ждем готовности Farcaster SDK
-        this.farcasterManager.onReady((context) => {
-            console.log('PinballGame: Farcaster SDK ready', context);
+        if (window.farcasterManager) {
+            window.farcasterManager.onReady((context) => {
+                console.log('PinballGame: Farcaster SDK ready', context);
 
-            if (this.farcasterManager.isInFrame()) {
-                // В frame окружении - скрываем некоторые UI элементы
-                this.adaptUIForFrame();
+                if (window.farcasterManager.isInFrame()) {
+                    // В frame окружении - скрываем некоторые UI элементы
+                    this.adaptUIForFrame();
 
-                // Показываем информацию о пользователе если доступна
-                const user = this.farcasterManager.getUser();
-                if (user) {
-                    console.log('PinballGame: Farcaster user:', user);
-                    this.displayUserInfo(user);
+                    // Показываем информацию о пользователе если доступна
+                    const user = window.farcasterManager.getUser();
+                    if (user) {
+                        console.log('PinballGame: Farcaster user:', user);
+                        this.displayUserInfo(user);
+                    }
                 }
-            }
-        });
+            });
 
-        // Слушаем обновления контекста
-        this.farcasterManager.onContextUpdate((context) => {
-            console.log('PinballGame: Farcaster context updated', context);
-        });
+            // Слушаем обновления контекста
+            window.farcasterManager.onContextUpdate((context) => {
+                console.log('PinballGame: Farcaster context updated', context);
+            });
+        } else {
+            console.warn('PinballGame: FarcasterManager not available');
+        }
     }
 
     adaptUIForFrame() {
@@ -143,6 +147,7 @@ class PinballGame {
     }
 
     async startLoadingProcess() {
+        console.log('PinballGame: Starting loading process...');
         // Скрываем экран "tap to start" и показываем загрузку
         this.tapToStartScreen.style.display = 'none';
         this.showLoadingScreen();

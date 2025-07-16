@@ -146,12 +146,20 @@
             
             // Автозапуск для frame окружения
             if (isFrame || isMiniApp) {
-                console.log('Frame/MiniApp environment detected, auto-starting...');
-                setTimeout(() => {
+                console.log('Frame/MiniApp environment detected, will auto-start after loading...');
+                
+                // Ждем готовности Farcaster Manager
+                const checkReadyAndStart = () => {
                     if (window.farcasterManager?.isReady) {
-                        game.startLoadingSequence();
+                        console.log('FarcasterManager ready, starting loading process...');
+                        game.startLoadingProcess();
+                    } else {
+                        console.log('Waiting for FarcasterManager...');
+                        setTimeout(checkReadyAndStart, 500);
                     }
-                }, 1000);
+                };
+                
+                setTimeout(checkReadyAndStart, 1000);
             }
         });
 
