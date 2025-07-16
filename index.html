@@ -145,13 +145,13 @@
         </div>
     </div>
     
-    <!-- Farcaster SDK - ВАЖНО: правильная версия для CDN -->
+    <!-- Farcaster MiniApp SDK - обновленная версия -->
     <script type="module">
-        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+        import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
         
         // Делаем SDK доступным глобально для совместимости с существующим кодом
-        window.frameSDK = sdk;
-        console.log('Farcaster SDK loaded via ESM:', sdk);
+        window.miniAppSDK = sdk;
+        console.log('Farcaster MiniApp SDK loaded via ESM:', sdk);
     </script>
     
     <!-- 1. Core modules - порядок важен -->
@@ -208,54 +208,68 @@
                 search: window.location.search
             });
             
-            // Создаем экземпляр игры
-            const game = new PinballGame();
-            
-            // Автозапуск для frame окружения
-            if (isFrameEnvironment) {
-                console.log('Frame environment detected, setting up auto-start...');
+            // Ждем загрузки PinballGame класса
+            const initializeGame = () => {
+                if (typeof PinballGame === 'undefined') {
+                    console.log('Waiting for PinballGame class to load...');
+                    setTimeout(initializeGame, 100);
+                    return;
+                }
                 
-                const startGameWithTimeout = () => {
-                    let attempts = 0;
-                    const maxAttempts = 30; // 15 секунд максимум
+                console.log('PinballGame class available, creating instance...');
+                
+                // Создаем экземпляр игры
+                const game = new PinballGame();
+                
+                // Автозапуск для frame окружения
+                if (isFrameEnvironment) {
+                    console.log('Frame environment detected, setting up auto-start...');
                     
-                    const checkReadyAndStart = () => {
-                        attempts++;
+                    const startGameWithTimeout = () => {
+                        let attempts = 0;
+                        const maxAttempts = 30; // 15 секунд максимум
                         
-                        // Проверяем готовность FarcasterManager и SDK
-                        const farcasterReady = window.farcasterManager?.isReady;
-                        const sdkAvailable = !!window.frameSDK;
-                        
-                        console.log(`Attempt ${attempts}: Farcaster ready: ${farcasterReady}, SDK available: ${sdkAvailable}`);
-                        
-                        if (farcasterReady || attempts >= maxAttempts) {
-                            if (farcasterReady) {
-                                console.log('FarcasterManager ready, starting game...');
-                            } else {
-                                console.warn('FarcasterManager timeout, starting anyway...');
-                            }
+                        const checkReadyAndStart = () => {
+                            attempts++;
                             
-                            // Небольшая задержка для плавности
-                            setTimeout(() => {
-                                game.startLoadingProcess();
-                            }, 500);
-                        } else {
-                            // Продолжаем ждать
-                            setTimeout(checkReadyAndStart, 500);
-                        }
+                            // Проверяем готовность FarcasterManager и SDK
+                            const farcasterReady = window.farcasterManager?.isReady;
+                            const sdkAvailable = !!window.miniAppSDK;
+                            
+                            console.log(`Attempt ${attempts}: Farcaster ready: ${farcasterReady}, SDK available: ${sdkAvailable}`);
+                            
+                            if (farcasterReady || attempts >= maxAttempts) {
+                                if (farcasterReady) {
+                                    console.log('FarcasterManager ready, starting game...');
+                                } else {
+                                    console.warn('FarcasterManager timeout, starting anyway...');
+                                }
+                                
+                                // Небольшая задержка для плавности
+                                setTimeout(() => {
+                                    game.startLoadingProcess();
+                                }, 500);
+                            } else {
+                                // Продолжаем ждать
+                                setTimeout(checkReadyAndStart, 500);
+                            }
+                        };
+                        
+                        checkReadyAndStart();
                     };
                     
-                    checkReadyAndStart();
-                };
-                
-                // Запускаем процесс с небольшой задержкой для загрузки SDK
-                setTimeout(startGameWithTimeout, 2000);
-            } else {
-                console.log('Web environment - waiting for user interaction');
-            }
+                    // Запускаем процесс с небольшой задержкой для загрузки SDK
+                    setTimeout(startGameWithTimeout, 2000);
+                } else {
+                    console.log('Web environment - waiting for user interaction');
+                }
 
-            // Делаем игру доступной глобально для отладки
-            window.game = game;
+                // Делаем игру доступной глобально для отладки
+                window.game = game;
+            };
+            
+            // Запускаем инициализацию
+            initializeGame();
         });
 
         // Предотвращаем прокрутку на мобильных устройствах
@@ -291,7 +305,8 @@
                 console.log('Window size:', window.innerWidth + 'x' + window.innerHeight);
                 console.log('Device pixel ratio:', window.devicePixelRatio);
                 console.log('Touch support:', 'ontouchstart' in window);
-                console.log('Frame SDK available:', !!window.frameSDK);
+                console.log('MiniApp SDK available:', !!window.miniAppSDK);
+                console.log('PinballGame class available:', typeof PinballGame !== 'undefined');
                 
                 if (window.soundManager) {
                     console.log('Sound Manager Status:', window.soundManager.getStatus());

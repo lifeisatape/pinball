@@ -42,14 +42,13 @@ class FarcasterManager {
             // Ждем загрузки SDK с таймаутом
             this.sdk = await this.waitForSDK();
             if (!this.sdk) {
-                throw new Error('FrameSDK not available');
+                throw new Error('MiniApp SDK not available');
             }
 
-            console.log('FarcasterManager: Initializing FrameSDK...');
-            await this.sdk.init();
+            console.log('FarcasterManager: MiniApp SDK found:', this.sdk);
 
-            // Получаем контекст
-            this.context = await this.sdk.context();
+            // В новом SDK нет init() - сразу получаем контекст
+            this.context = this.sdk.context;
             this.user = this.context?.user;
 
             console.log('FarcasterManager: Context received:', {
@@ -84,10 +83,10 @@ class FarcasterManager {
 
     async waitForSDK(maxAttempts = 50) {
         for (let i = 0; i < maxAttempts; i++) {
-            // Проверяем глобальную переменную sdk, которую создает CDN версия
-            if (window.frameSDK) {
-                console.log(`FarcasterManager: FrameSDK loaded after ${i * 100}ms`);
-                return window.frameSDK;
+            // Проверяем глобальную переменную sdk, которую создает новый CDN
+            if (window.miniAppSDK) {
+                console.log(`FarcasterManager: MiniApp SDK loaded after ${i * 100}ms`);
+                return window.miniAppSDK;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
@@ -242,8 +241,8 @@ class FarcasterManager {
             return false;
         }
 
-        if (!this.sdk) {
-            console.error('FarcasterManager: SDK not available for addToFavorites');
+        if (!this.sdk || !this.sdk.actions) {
+            console.error('FarcasterManager: SDK actions not available for addToFavorites');
             return false;
         }
 
@@ -263,12 +262,12 @@ class FarcasterManager {
             return;
         }
 
-        if (this.isFrameEnvironment && this.sdk) {
+        if (this.isFrameEnvironment && this.sdk && this.sdk.actions) {
             try {
                 await this.sdk.actions.openUrl(url);
-                console.log('FarcasterManager: URL opened via FrameSDK:', url);
+                console.log('FarcasterManager: URL opened via MiniApp SDK:', url);
             } catch (error) {
-                console.error('FarcasterManager: Failed to open URL via FrameSDK:', error);
+                console.error('FarcasterManager: Failed to open URL via SDK:', error);
                 // Fallback to regular window.open
                 window.open(url, '_blank');
             }
@@ -283,8 +282,8 @@ class FarcasterManager {
             return;
         }
 
-        if (!this.sdk) {
-            console.error('FarcasterManager: SDK not available for close');
+        if (!this.sdk || !this.sdk.actions) {
+            console.error('FarcasterManager: SDK actions not available for close');
             return;
         }
 
@@ -302,8 +301,8 @@ class FarcasterManager {
             return null;
         }
 
-        if (!this.sdk) {
-            console.error('FarcasterManager: SDK not available for composeCast');
+        if (!this.sdk || !this.sdk.actions) {
+            console.error('FarcasterManager: SDK actions not available for composeCast');
             return null;
         }
 
@@ -323,8 +322,8 @@ class FarcasterManager {
             return null;
         }
 
-        if (!this.sdk) {
-            console.error('FarcasterManager: SDK not available for signIn');
+        if (!this.sdk || !this.sdk.actions) {
+            console.error('FarcasterManager: SDK actions not available for signIn');
             return null;
         }
 
@@ -421,7 +420,7 @@ class FarcasterManager {
                 referrer: document.referrer,
                 search: window.location.search,
                 isIframe: window.parent !== window,
-                frameSDKLoaded: !!window.frameSDK
+                miniAppSDKLoaded: !!window.miniAppSDK
             }
         };
 
