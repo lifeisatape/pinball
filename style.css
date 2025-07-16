@@ -395,6 +395,16 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
+.level-select-content h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(6, 214, 160, 0.5);
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
 .level-select-content h2 {
     color: var(--text-primary);
     margin-bottom: 8px;
@@ -548,8 +558,13 @@ body {
         padding: 24px 16px;
     }
 
-    .level-select-content h2 {
+    .level-select-content h1 {
         font-size: 24px;
+        margin-bottom: 12px;
+    }
+
+    .level-select-content h2 {
+        font-size: 20px;
     }
 
     .level-item {
@@ -616,8 +631,12 @@ body {
         padding: 28px 20px;
     }
 
+    .level-select-content h1 {
+        font-size: 28px;
+    }
+
     .level-select-content h2 {
-        font-size: 26px;
+        font-size: 24px;
     }
 }
 
@@ -649,8 +668,12 @@ body {
         padding: 40px 32px;
     }
 
+    .level-select-content h1 {
+        font-size: 36px;
+    }
+
     .level-select-content h2 {
-        font-size: 32px;
+        font-size: 28px;
     }
 
     .level-item {
@@ -716,8 +739,12 @@ body {
         font-size: 13px;
     }
 
+    .level-select-content h1 {
+        font-size: 40px;
+    }
+
     .level-select-content h2 {
-        font-size: 36px;
+        font-size: 32px;
     }
 
     .level-btn {
@@ -748,9 +775,14 @@ body {
         max-height: 85vh;
     }
 
-    .level-select-content h2 {
-        font-size: 20px;
+    .level-select-content h1 {
+        font-size: 18px;
         margin-bottom: 8px;
+    }
+
+    .level-select-content h2 {
+        font-size: 16px;
+        margin-bottom: 6px;
     }
 
     .level-item {
