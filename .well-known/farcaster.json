@@ -1,31 +1,26 @@
 {
   "accountAssociation": {
     "header": "eyJmaWQiOjEwMjIyMTIsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhmZTA0NmFGMmQ1NEVEZjcwM2E2QTBjQTc3RDU2RGI0ZjE0N2QzRWQ3In0",
-    "payload": "eyJkb21haW4iOiJmbG93ZXJzb25tYXJzLnNwYWNlIn0",
-    "signature": "MHhjNGUxZjE2Y2YyZjMxZGQ0NGY4ZWU0OGU4OGQxYzBjMjhmOTJmMzllMmRkNGViMzQyNDhiODZhNzNiN2U0NzhiNTExYWJiYzM4ODhhMjg3N2IxNGZmMGJjMTk2YmIwMjA3M2FjN2Y5OWFiOWIzYzE5ZTE4YzRjNDBlNDYxNzRmZjFj"
+    "payload": "eyJkb21haW4iOiJwaW5iYWxsbGwuc3BhY2UifQ",
+    "signature": "MHg3OTJlNDdlZTk0YTNjZmI3M2FlZGVmNmJiZGZjMjNhMDc5ZjVlZWZmYzc2Mzg5OGU2NTJlYzFmYmMwZmQzYjQwNjdkNzVjNzY0YmNlZmU1MmRiODYzMWQ4YzRmYzYwNDg0NjhmMzI4YTQ1MThkMDg2MThhY2EyMDc2NGUyNDM4NjFj"
   },
   "frame": {
     "version": "next",
-    "name": "all stars",
-    "iconUrl": "https://flowersonmars.space/generated-icon.png",
-    "homeUrl": "https://flowersonmars.space/",
-    "imageUrl": "https://flowersonmars.space/gn.png",
-    "buttonTitle": "Play",
-    "splashImageUrl": "https://flowersonmars.space/gm.png",
+    "name": "pinbal",
+    "iconUrl": "https://pinballll.space/generated-icon.png",
+    "homeUrl": "https://pinballll.space/",
+    "splashImageUrl": "https://pinballll.space/gm.png",
     "splashBackgroundColor": "#951212",
     "subtitle": "pinball game",
-    "description": "oldscool pinball game & original soundtrack",
+    "description": "pinball game with original soundtrack",
+    "screenshotUrls": [
+      "https://pinballll.spacel/gn.png"
+    ],
     "primaryCategory": "games",
     "tags": ["game", "arcade", "pinball"],
-    "heroImageUrl": "https://flowersonmars.space/generated-icon.png",
-    "ogTitle": "all stars",
-    "ogDescription": "oldscool pinball game & original soundtrack",
-    "ogImageUrl": "https://flowersonmars.space/generated-icon.png"
-  },
-  "miniApp": {
-    "name": "all stars",
-    "url": "https://flowersonmars.space/",
-    "iconUrl": "https://flowersonmars.space/generated-icon.png",
-    "description": "oldscool pinball game & original soundtrack"
+    "heroImageUrl": "https://pinballll.space/generated-icon.png",
+    "ogTitle": "pinbal",
+    "ogDescription": "pinball game with original soundtrack",
+    "ogImageUrl": "https://pinballll.space/generated-icon.png",
   }
 }
