@@ -20,58 +20,101 @@ class FarcasterManager {
     async init() {
         console.log('FarcasterManager: Initializing...');
 
-        // Проверяем окружение frame - несколько методов для надежности
-        this.isFrameEnvironment = typeof window !== 'undefined' && 
-                                 (window.parent !== window || 
-                                  window.location.search.includes('frame=true') ||
-                                  window.location.search.includes('miniApp=true') ||
-                                  document.referrer.includes('warpcast.com') ||
-                                  document.referrer.includes('farcaster'));
+        // ИСПРАВЛЕНО: Проверяем window.isMiniApp как в рабочем примере
+        if (!window.isMiniApp) {
+            console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
+            this.simulateReady();
+            return;
+        }
 
-        if (this.isFrameEnvironment) {
-            console.log('FarcasterManager: Frame environment detected');
-            await this.initializeFrameSDK();
-        } else {
-            console.log('FarcasterManager: Standalone web environment');
+        try {
+            console.log('🔄 Initializing Farcaster integration...');
+
+            // ИСПРАВЛЕНО: Ждем правильный SDK - window.sdk, а не window.miniAppSDK
+            const sdk = await this.waitForSDK();
+            this.sdk = sdk;
+
+            // ИСПРАВЛЕНО: Проверяем окружение через SDK
+            let isInMiniAppEnv = true;
+            try {
+                if (typeof sdk.isInMiniApp === 'function') {
+                    isInMiniAppEnv = await sdk.isInMiniApp();
+                    console.log('🔍 SDK environment check:', isInMiniAppEnv);
+                }
+            } catch (error) {
+                console.log('⚠️ Could not verify environment with SDK:', error);
+            }
+
+            if (isInMiniAppEnv) {
+                this.isFrameEnvironment = true;
+                console.log('✅ Farcaster SDK initialized successfully');
+
+                // ИСПРАВЛЕНО: Получаем контекст правильно - await sdk.context
+                try {
+                    this.context = await sdk.context;
+                    console.log('📋 Farcaster context received');
+
+                    // ИСПРАВЛЕНО: Безопасное получение пользователя
+                    try {
+                        const user = this.context.user;
+                        this.user = user;
+                        console.log('👤 User info:', {
+                            fid: user?.fid,
+                            username: user?.username,
+                            displayName: user?.displayName
+                        });
+                    } catch (userError) {
+                        console.log('ℹ️ User data not immediately available');
+                        this.user = null;
+                    }
+                } catch (error) {
+                    console.log('⚠️ Could not get context:', error.message);
+                }
+
+                await this.setupMiniAppFeatures();
+            } else {
+                console.log('⚠️ SDK reports not in Mini App environment');
+                this.simulateReady();
+            }
+        } catch (error) {
+            console.error('❌ Error initializing Farcaster SDK:', error);
+            this.isFrameEnvironment = false;
             this.simulateReady();
         }
     }
 
-    async initializeFrameSDK() {
+    async waitForSDK() {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 секунд
+
+        while (attempts < maxAttempts) {
+            // ИСПРАВЛЕНО: Ищем window.sdk, а не window.miniAppSDK
+            if (window.sdk && typeof window.sdk.actions === 'object') {
+                console.log(`FarcasterManager: SDK loaded after ${attempts * 100}ms`);
+                return window.sdk;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        throw new Error('SDK not loaded within timeout');
+    }
+
+    async setupMiniAppFeatures() {
         try {
-            // Ждем загрузки SDK с таймаутом
-            this.sdk = await this.waitForSDK();
-            if (!this.sdk) {
-                throw new Error('MiniApp SDK not available');
-            }
-
-            console.log('FarcasterManager: MiniApp SDK found:', this.sdk);
-
-            // В новом SDK нет init() - сразу получаем контекст
-            this.context = this.sdk.context;
-
-            // В новом SDK user - это функция, нужно ее вызвать
-            try {
-                this.user = typeof this.context.user === 'function' ? this.context.user() : this.context.user;
-            } catch (error) {
-                console.warn('FarcasterManager: Failed to get user data:', error);
-                this.user = null;
-            }
-
-            console.log('FarcasterManager: Context received:', {
-                user: this.user,
-                location: this.context?.location,
-                client: this.context?.client
-            });
-
             // Устанавливаем слушатели событий
             this.setupEventListeners();
+
+            // Ждем готовности UI перед вызовом ready()
+            await new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    setTimeout(resolve, 500); // Даем время на рендеринг
+                });
+            });
 
             this.isReady = true;
 
             // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() для скрытия splash screen
-            await this.sdk.actions.ready();
-            console.log('FarcasterManager: Ready signal sent to hide splash screen');
+            await this.notifyAppReady();
 
             // Уведомляем колбэки
             this.callbacks.ready.forEach(callback => {
@@ -82,22 +125,24 @@ class FarcasterManager {
                 }
             });
 
+            console.log('🎉 Mini App features setup complete');
         } catch (error) {
-            console.error('FarcasterManager: Initialization failed:', error);
-            this.handleInitError(error);
+            console.error('Error setting up Mini App features:', error);
         }
     }
 
-    async waitForSDK(maxAttempts = 50) {
-        for (let i = 0; i < maxAttempts; i++) {
-            // Проверяем глобальную переменную sdk, которую создает новый CDN
-            if (window.miniAppSDK) {
-                console.log(`FarcasterManager: MiniApp SDK loaded after ${i * 100}ms`);
-                return window.miniAppSDK;
+    // ИСПРАВЛЕНО: Отдельный метод для ready() как в рабочем примере
+    async notifyAppReady() {
+        if (this.isFrameEnvironment && this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+            try {
+                await this.sdk.actions.ready({
+                    disableNativeGestures: false
+                });
+                console.log('🎉 Farcaster splash screen dismissed');
+            } catch (error) {
+                console.error('❌ Failed to dismiss splash screen:', error);
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
         }
-        return null;
     }
 
     setupEventListeners() {
@@ -169,23 +214,12 @@ class FarcasterManager {
     }
 
     handleInitError(error) {
-        console.error('FarcasterManager: Failed to initialize:', error);
-
-        // Попытка fallback инициализации
-        setTimeout(() => {
-            this.isReady = true;
-            console.log('FarcasterManager: Fallback ready state after init error');
-            this.callbacks.ready.forEach(callback => {
-                try {
-                    callback(null);
-                } catch (error) {
-                    console.error('FarcasterManager: Error in fallback ready callback:', error);
-                }
-            });
-        }, 1000);
+        console.error('FarcasterManager: Initialization failed, falling back to web mode:', error);
+        this.isFrameEnvironment = false;
+        this.simulateReady();
     }
 
-    // === ПУБЛИЧНЫЕ API МЕТОДЫ ===
+    // === CALLBACK REGISTRATION ===
 
     onReady(callback) {
         if (typeof callback !== 'function') {
@@ -194,7 +228,8 @@ class FarcasterManager {
         }
 
         if (this.isReady) {
-            callback(this.context);
+            // Если уже готов, вызываем сразу
+            setTimeout(() => callback(this.context), 0);
         } else {
             this.callbacks.ready.push(callback);
         }
@@ -302,6 +337,23 @@ class FarcasterManager {
         }
     }
 
+    // ИСПРАВЛЕНО: Добавляем методы из рабочего примера
+    async shareScore(score, level) {
+        if (!this.isFrameEnvironment || !this.sdk || !this.sdk.actions || !this.sdk.actions.composeCast) return;
+
+        try {
+            const text = `🚀 I just scored ${score || 0} points and reached level ${level || 1} in Pinball All Stars! Can you beat that? 🎮💥`;
+            const url = window.location.origin;
+
+            await this.sdk.actions.composeCast({
+                text: text,
+                embeds: [url]
+            });
+        } catch (error) {
+            console.error('Error sharing score:', error);
+        }
+    }
+
     async composeCast(options = {}) {
         if (!this.isFrameEnvironment) {
             console.log('FarcasterManager: composeCast called outside frame environment');
@@ -349,10 +401,51 @@ class FarcasterManager {
         }
     }
 
+    // ИСПРАВЛЕНО: Добавляем метод для доната через sendToken
+    async sendDonation(amount = '1000000') { // По умолчанию 1 USDC
+        if (!this.isFrameEnvironment || !this.sdk || !this.sdk.actions || !this.sdk.actions.sendToken) {
+            console.log('Farcaster SDK недоступен для доната');
+            return { success: false, reason: 'sdk_unavailable' };
+        }
+
+        try {
+            const result = await this.sdk.actions.sendToken({
+                token: 'eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+                amount: amount, // 1 USDC = 1000000 (6 decimals)
+                recipientAddress: '0x7Ea45b01EECaE066f37500c92B10421937571f75'
+            });
+
+            if (result.success) {
+                console.log('Донат успешно отправлен:', result.send.transaction);
+                return result;
+            } else {
+                console.log('Ошибка при донате:', result.error);
+                return result;
+            }
+        } catch (error) {
+            console.error('Ошибка при отправке доната:', error);
+            return { success: false, reason: 'send_failed', error: error.message };
+        }
+    }
+
     // === GETTERS ===
 
     getUser() {
         return this.user;
+    }
+
+    // ИСПРАВЛЕНО: Добавляем метод getUserInfo как в рабочем примере
+    getUserInfo() {
+        if (this.isFrameEnvironment && this.context && this.context.user) {
+            const user = this.context.user;
+            return {
+                fid: user.fid || null,
+                username: user.username || null,
+                displayName: user.displayName || null,
+                pfpUrl: user.pfpUrl || null
+            };
+        }
+        return null;
     }
 
     getContext() {
@@ -427,7 +520,8 @@ class FarcasterManager {
                 referrer: document.referrer,
                 search: window.location.search,
                 isIframe: window.parent !== window,
-                miniAppSDKLoaded: !!window.miniAppSDK
+                isMiniApp: !!window.isMiniApp,
+                sdkLoaded: !!window.sdk
             }
         };
 

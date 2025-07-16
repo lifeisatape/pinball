@@ -1,0 +1,223 @@
+
+// ИСПРАВЛЕННЫЕ МЕТОДЫ для game/PinballGame.js
+
+// Замените метод adaptUIForFrame на этот:
+adaptUIForFrame(context) {
+    // Адаптируем UI для frame окружения
+    console.log('PinballGame: Adapting UI for Farcaster frame');
+
+    // Применяем безопасные отступы если доступны
+    try {
+        // ИСПРАВЛЕНО: Убираем проверку на функции - в исправленной версии это простые объекты
+        const client = context?.client;
+        const safeAreaInsets = client?.safeAreaInsets;
+
+        if (safeAreaInsets) {
+            console.log('PinballGame: Got safe area insets:', safeAreaInsets);
+
+            // ИСПРАВЛЕНО: Извлекаем простые значения
+            const top = safeAreaInsets.top || 0;
+            const bottom = safeAreaInsets.bottom || 0;
+            const left = safeAreaInsets.left || 0;
+            const right = safeAreaInsets.right || 0;
+
+            // Применяем безопасные отступы
+            const gameContainer = document.querySelector('.game-container');
+            if (gameContainer) {
+                gameContainer.style.paddingTop = `${top}px`;
+                gameContainer.style.paddingBottom = `${bottom}px`;
+                gameContainer.style.paddingLeft = `${left}px`;
+                gameContainer.style.paddingRight = `${right}px`;
+            }
+
+            console.log('PinballGame: Applied safe area insets:', { top, bottom, left, right });
+        }
+
+        // Скрываем веб-специфичные элементы в frame окружении
+        const webOnlyElements = document.querySelectorAll('.web-only');
+        webOnlyElements.forEach(element => {
+            element.style.display = 'none';
+        });
+
+        // Показываем frame-специфичные элементы
+        const frameOnlyElements = document.querySelectorAll('.frame-only');
+        frameOnlyElements.forEach(element => {
+            element.style.display = 'block';
+        });
+
+    } catch (error) {
+        console.error('PinballGame: Error adapting UI for frame:', error);
+    }
+
+    // Добавляем кнопку "Add to Apps" если еще не добавлена
+    const tapToStartContent = document.querySelector('.tap-to-start-content');
+    if (tapToStartContent && !document.getElementById('addToAppsBtn')) {
+        const addButton = document.createElement('button');
+        addButton.id = 'addToAppsBtn';
+        addButton.className = 'restart-btn';
+        addButton.textContent = '⭐ Add to Apps';
+        addButton.style.marginTop = '10px';
+        addButton.style.background = 'var(--accent-color, #4CAF50)';
+
+        addButton.addEventListener('click', async () => {
+            try {
+                const success = await window.farcasterManager.addToFavorites();
+                if (success) {
+                    this.showNotification('Added to your apps! 🎮', 'success');
+                } else {
+                    this.showNotification('Already in your apps! ⭐', 'info');
+                }
+            } catch (error) {
+                console.error('Failed to add to apps:', error);
+                this.showNotification('Failed to add to apps', 'error');
+            }
+        });
+
+        tapToStartContent.appendChild(addButton);
+    }
+
+    // Добавляем кнопку "Share Score" в game over overlay
+    const gameOverContent = document.querySelector('.game-over-content');
+    if (gameOverContent && !document.getElementById('shareScoreBtn')) {
+        const shareButton = document.createElement('button');
+        shareButton.id = 'shareScoreBtn';
+        shareButton.className = 'restart-btn';
+        shareButton.textContent = '📱 Share Score';
+        shareButton.style.marginTop = '10px';
+        shareButton.style.background = 'var(--accent-color, #ff6b35)';
+
+        shareButton.addEventListener('click', async () => {
+            const currentScore = this.gameState ? this.gameState.score : 0;
+            const level = this.currentLevel ? this.currentLevel.name : 'Pinball';
+
+            try {
+                await window.farcasterManager.composeCast({
+                    text: `Just scored ${currentScore} points in ${level}! 🎮⚡\n\nPlay the game yourself:`,
+                    embeds: [window.location.href]
+                });
+
+                this.showNotification('Cast created! 📝', 'success');
+            } catch (error) {
+                console.error('Failed to share score:', error);
+                this.showNotification('Failed to share score', 'error');
+            }
+        });
+
+        gameOverContent.appendChild(shareButton);
+    }
+}
+
+// Замените метод displayUserInfo на этот:
+displayUserInfo(user) {
+    // Показываем информацию о пользователе Farcaster
+    const tapToStartContent = document.querySelector('.tap-to-start-content');
+    if (!tapToStartContent) return;
+
+    try {
+        // ИСПРАВЛЕНО: Убираем проверку на функцию - user уже простой объект
+        const userData = user;
+
+        if (!userData) return;
+
+        // ИСПРАВЛЕНО: Данные уже простые свойства, не функции
+        const username = userData.username;
+        const pfpUrl = userData.pfpUrl;
+        const displayName = userData.displayName;
+
+        if (!username) return;
+
+        // Удаляем предыдущий элемент если есть
+        const existingUserInfo = document.getElementById('farcasterUserInfo');
+        if (existingUserInfo) {
+            existingUserInfo.remove();
+        }
+
+        // Создаем элемент с информацией о пользователе
+        const userInfoElement = document.createElement('div');
+        userInfoElement.id = 'farcasterUserInfo';
+        userInfoElement.style.cssText = `
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            text-align: center;
+            color: #ffffff;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        `;
+
+        let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
+        
+        if (pfpUrl) {
+            userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
+        }
+        
+        userContent += `<div>`;
+        userContent += `<div style="font-weight: bold;">@${username}</div>`;
+        
+        if (displayName && displayName !== username) {
+            userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
+        }
+        
+        userContent += `</div></div>`;
+        
+        userInfoElement.innerHTML = userContent;
+        tapToStartContent.appendChild(userInfoElement);
+
+        console.log('FarcasterManager: User info displayed for', username);
+    } catch (error) {
+        console.error('FarcasterManager: Error displaying user info:', error);
+    }
+}
+
+// Добавьте этот метод если его нет:
+showNotification(message, type) {
+    type = type || 'info';
+
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-size: 14px;
+        font-weight: 500;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    `;
+
+    // Цвета в зависимости от типа
+    const colors = {
+        success: { bg: '#4CAF50', text: '#fff' },
+        error: { bg: '#f44336', text: '#fff' },
+        info: { bg: '#2196F3', text: '#fff' },
+        warning: { bg: '#ff9800', text: '#fff' }
+    };
+
+    const color = colors[type] || colors.info;
+    notification.style.backgroundColor = color.bg;
+    notification.style.color = color.text;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Анимация появления
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    // Удаление через 3 секунды
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}

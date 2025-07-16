@@ -35,48 +35,59 @@
                 <span class="score-value" id="ballsLeft">3</span>
             </div>
             <div class="score-item">
-                <span class="score-label">high</span>
-                <span class="score-value" id="highScore">0</span>
-            </div>
-            <button class="restart-btn" id="restartBtn">new game</button>
-            <button class="restart-btn" id="selectLevelBtn">select room</button>
-        </div>
-
-        <canvas id="gameCanvas"></canvas>
-
-        <div class="game-over-overlay" id="gameOverOverlay">
-            <div class="game-over-content">
-                <h2>GAME OVER</h2>
-                <p>Final Score: <span id="finalScore">0</span></p>
-                <p id="newHighScore" class="new-high-score">NEW HIGH SCORE!</p>
-                <button class="restart-btn" id="gameOverRestart">PLAY AGAIN</button>
+                <span class="score-label">level</span>
+                <span class="score-value" id="currentLevel">1</span>
             </div>
         </div>
 
-        <!-- audio context activation -->
-        <div class="tap-to-start-overlay" id="tapToStartScreen" style="display: flex;">
-            <div class="tap-to-start-content">
-                <h1>Pinball</h1>
-                <h2>all stars</h2>
-                <div class="tap-icon">🎮</div>
-                <h2>TAP TO START</h2>
-                
-                <div class="tap-hint">
-                    <div class="tap-pulse"></div>
-                    
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+        <div class="game-ui">
+            <div class="flipper-zones">
+                <div class="flipper-zone left" id="leftFlipperZone">
+                    <div class="flipper-hint">L</div>
+                </div>
+                <div class="flipper-zone right" id="rightFlipperZone">
+                    <div class="flipper-hint">R</div>
                 </div>
             </div>
         </div>
 
-        <!-- Loading screen -->
+        <!-- game over overlay -->
+        <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
+            <div class="game-over-content">
+                <h1>GAME OVER</h1>
+                <div class="final-stats">
+                    <div class="stat">
+                        <span class="stat-label">final score</span>
+                        <span class="stat-value" id="finalScore">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">level reached</span>
+                        <span class="stat-value" id="levelReached">1</span>
+                    </div>
+                </div>
+                <div class="game-over-controls">
+                    <button class="restart-btn" id="restartGame">RESTART</button>
+                    <button class="menu-btn" id="backToMenu">CHANGE ROOM</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- tap to start screen -->
+        <div class="tap-to-start-overlay" id="tapToStartScreen">
+            <div class="tap-to-start-content">
+                <h1>PINBALL: ALL STARS</h1>
+                <p class="tap-instruction">tap to start</p>
+            </div>
+        </div>
+
+        <!-- loading screen -->
         <div class="loading-overlay" id="loadingScreen" style="display: none;">
             <div class="loading-content">
-                <h1>loading balls</h1>
-                <div class="loading-progress-container">
-                    <div class="loading-progress-bar">
-                        <div class="loading-progress-fill" id="progressFill"></div>
-                    </div>
-                    <div class="loading-text" id="loadingText">initializing...</div>
+                <h1>LOADING</h1>
+                <div class="loading-bar-container">
+                    <div class="loading-bar" id="loadingBar"></div>
                     <div class="loading-percentage" id="loadingPercentage">0%</div>
                 </div>
                 <div class="loading-details" id="loadingDetails">
@@ -111,13 +122,34 @@
         </div>
     </div>
     
-    <!-- Farcaster MiniApp SDK - обновленный -->
-    <script type="module">
-        import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
+    <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
+    <script>
+        // Устанавливаем флаг окружения Mini App
+        window.isMiniApp = window.parent !== window || 
+                          window.location.search.includes('frame=true') ||
+                          window.location.search.includes('miniApp=true') ||
+                          document.referrer.includes('warpcast.com') ||
+                          document.referrer.includes('farcaster');
         
-        // Делаем SDK доступным глобально
-        window.miniAppSDK = sdk;
-        console.log('Farcaster MiniApp SDK loaded via ESM:', sdk);
+        console.log('Mini App environment detected:', window.isMiniApp);
+    </script>
+
+    <!-- ИСПРАВЛЕНО: Правильная загрузка SDK -->
+    <script type="module">
+        if (window.isMiniApp) {
+            try {
+                console.log('Loading Farcaster SDK...');
+                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
+                
+                // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
+                window.sdk = sdk;
+                console.log('✅ Farcaster SDK loaded successfully:', sdk);
+            } catch (error) {
+                console.error('❌ Failed to load Farcaster SDK:', error);
+            }
+        } else {
+            console.log('⏭️ Skipping SDK load - not in Mini App environment');
+        }
     </script>
     
     <!-- 1. SoundManager -->
@@ -235,12 +267,12 @@
         }
 
         /* Дополнительные стили для Farcaster элементов */
-        #farcaster-user-info {
+        #farcasterUserInfo {
             margin: 15px 0;
             text-align: center;
         }
 
-        #farcaster-user-info img {
+        #farcasterUserInfo img {
             display: block;
             margin: 0 auto 10px;
         }
