@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Pinball: all stars</title>
-
+    
     <!-- Farcaster Frame Embed Meta Tags -->
     <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball Game","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
 
@@ -20,7 +20,7 @@
     <meta name="twitter:title" content="Pinball Game - Classic Arcade Experience" />
     <meta name="twitter:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta name="twitter:image" content="https://pinballll.space/gm.png" />
-
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -142,7 +142,7 @@
             </div>
         </div>
     </div>
-
+    
     <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
     <script>
         // Устанавливаем флаг окружения Mini App
@@ -151,7 +151,7 @@
                           window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
                           document.referrer.includes('farcaster');
-
+        
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>
 
@@ -161,7 +161,7 @@
             try {
                 console.log('Loading Farcaster SDK...');
                 const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
-
+                
                 // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
                 window.sdk = sdk;
                 console.log('✅ Farcaster SDK loaded successfully:', sdk);
@@ -172,54 +172,71 @@
             console.log('⏭️ Skipping SDK load - not in Mini App environment');
         }
     </script>
-
+    
     <!-- 1. SoundManager -->
     <script src="core/SoundManager.js"></script>
-
+    
     <!-- 2. Core modules -->
     <script src="core/GameConfig.js"></script>
     <script src="core/FarcasterManager.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
-
+    
     <!-- 3. Physics modules -->
     <script src="physics/FlipperShape.js"></script>
     <script src="physics/Ball.js"></script>
     <script src="physics/Wall.js"></script>
     <script src="physics/Flipper.js"></script>
-
+    
     <!-- 4. Game objects -->
     <script src="gameObjects/Bumper.js"></script>
     <script src="gameObjects/Spinner.js"></script>
     <script src="gameObjects/DropTarget.js"></script>
     <script src="gameObjects/Tunnel.js"></script>
     <script src="gameObjects/Ramp.js"></script>
-
+    
     <!-- 5. UI components -->
     <script src="ui/ScorePanel.js"></script>
     <script src="ui/GameOverOverlay.js"></script>
     <script src="ui/LevelSelectOverlay.js"></script>
-
+    
     <!-- 6. Game engine -->
     <script src="game/GameRenderer.js"></script>
     <script src="game/InputManager.js"></script>
     <script src="game/LevelManager.js"></script>
     <script src="game/LevelSelector.js"></script>
     <script src="game/PinballGame.js"></script>
-
+    
     <!-- 7. Initialize game -->
     <script>
         window.addEventListener('load', () => {
             console.log('Page loaded, initializing game...');
-
+            
+            // Проверяем URL параметры для автозапуска
+            const urlParams = new URLSearchParams(window.location.search);
+            const isMiniApp = urlParams.get('miniApp') === 'true';
+            const isFrame = window.parent !== window;
+            
             const game = new PinballGame();
-
-            // УБИРАЕМ АВТОЗАПУСК! Всегда показываем TAP TO START
-            // НЕ ДЕЛАЕМ:
-            // if (isFrame || isMiniApp) {
-            //     game.startLoadingProcess(); // ЭТО БЛОКИРОВАЛО!
-            // }
+            
+            // Автозапуск для frame окружения
+            if (isFrame || isMiniApp) {
+                console.log('Frame/MiniApp environment detected, will auto-start after loading...');
+                
+                // Ждем готовности Farcaster Manager
+                const checkReadyAndStart = () => {
+                    if (window.farcasterManager?.isReady) {
+                        console.log('FarcasterManager ready, starting loading process...');
+                        game.startLoadingProcess();
+                    } else {
+                        console.log('Waiting for FarcasterManager...');
+                        setTimeout(checkReadyAndStart, 500);
+                    }
+                };
+                
+                setTimeout(checkReadyAndStart, 1000);
+            }
         });
 
         // Prevent mobile scrolling and context menu

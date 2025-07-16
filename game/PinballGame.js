@@ -270,20 +270,20 @@ class PinballGame {
             `;
 
             let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
-
+            
             if (pfpUrl) {
                 userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
             }
-
+            
             userContent += `<div>`;
             userContent += `<div style="font-weight: bold;">@${username}</div>`;
-
+            
             if (displayName && displayName !== username) {
                 userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
             }
-
+            
             userContent += `</div></div>`;
-
+            
             userInfoElement.innerHTML = userContent;
             tapToStartContent.appendChild(userInfoElement);
 
@@ -354,7 +354,6 @@ class PinballGame {
 
     async startLoadingProcess() {
         console.log('PinballGame: Starting loading process...');
-
         // Скрываем экран "tap to start" и показываем загрузку
         this.tapToStartScreen.style.display = 'none';
         this.showLoadingScreen();
@@ -366,27 +365,55 @@ class PinballGame {
             });
         }
 
-        // ОСТАВЛЯЕМ ожидание звуков - как в оригинале!
+        // Ждем готовности звуков
         window.addEventListener('soundManagerReady', () => {
             console.log('PinballGame: Sound system ready!');
             this.loadingState.sounds = true;
             this.checkLoadingComplete();
         });
 
-        // Активируем аудио с задержкой
+        // Затем активируем аудио с задержкой, увеличенной для deployed версии
         const isDeployed = window.location.hostname.includes('replit.app') || 
                           window.location.hostname.includes('replit.dev') || 
                           window.location.protocol === 'https:';
 
-        const delay = isDeployed ? 1000 : 500;
+        const delay = isDeployed ? 2000 : 1000;
 
         setTimeout(async () => {
-            if (window.soundManager) {
-                await window.soundManager.unlock();
+            try {
+                this.loadingState.audio = true;
+                this.updateLoadingProgress('audio', 100, 'Audio system initialized');
+
+                // SoundManager уже готов, просто помечаем как завершенный
+                if (window.soundManager && window.soundManager.isReady) {
+                    this.loadingState.sounds = true;
+                    this.updateLoadingProgress('sounds', 100, 'Sounds ready');
+                    this.checkLoadingComplete();
+                } else {
+                    console.log('Waiting for SoundManager to be ready...');
+                    // Слушатель уже настроен выше для события 'soundManagerReady'
+                }
+            } catch (error) {
+                console.error('Error initializing audio:', error);
+                this.loadingState.audio = true;
+                this.loadingState.sounds = true;
+                this.checkLoadingComplete();
             }
         }, delay);
 
-        await this.loadLevels();
+        // Загружаем уровни
+        setTimeout(async () => {
+            try {
+                await this.levelSelector.getAvailableLevels();
+                this.loadingState.levels = true;
+                this.updateLoadingProgress('levels', 100, 'Levels loaded');
+                this.checkLoadingComplete();
+            } catch (error) {
+                console.error('Error loading levels:', error);
+                this.loadingState.levels = true;
+                this.checkLoadingComplete();
+            }
+        }, 500);
     }
 
     updateLoadingProgress(type, progress, message) {
@@ -684,19 +711,6 @@ class PinballGame {
         }
         if (this.gameLoopRunning) {
             requestAnimationFrame(() => this.gameLoop());
-        }
-    }
-
-    async loadLevels() {
-        try {
-            await this.levelSelector.getAvailableLevels();
-            this.loadingState.levels = true;
-            this.updateLoadingProgress('levels', 100, 'Levels loaded');
-            this.checkLoadingComplete();
-        } catch (error) {
-            console.error('Error loading levels:', error);
-            this.loadingState.levels = true;
-            this.checkLoadingComplete();
         }
     }
 }
