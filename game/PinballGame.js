@@ -18,6 +18,7 @@ class PinballGame {
         this.ball = null;
         this.gameStarted = false;
         this.currentLevel = null;
+        this.userHasInteracted = false;
 
         // Состояние загрузки
         this.loadingState = {
@@ -77,10 +78,14 @@ class PinballGame {
 
         // Обработчик для экрана "tap to start"
         this.tapToStartScreen.addEventListener('click', () => {
+            console.log('PinballGame: User clicked TAP TO START');
+            this.userHasInteracted = true;
             this.startLoadingProcess();
         });
 
         this.tapToStartScreen.addEventListener('touchstart', () => {
+            console.log('PinballGame: User touched TAP TO START');
+            this.userHasInteracted = true;
             this.startLoadingProcess();
         }, { passive: true });
     }
@@ -353,6 +358,12 @@ class PinballGame {
     }
 
     async startLoadingProcess() {
+        // ЗАЩИТА ОТ АВТОЗАПУСКА!
+        if (!this.userHasInteracted) {
+            console.log('PinballGame: Blocking auto-start - user must click TAP TO START first');
+            return;
+        }
+
         console.log('PinballGame: Starting loading process...');
         // Скрываем экран "tap to start" и показываем загрузку
         this.tapToStartScreen.style.display = 'none';
