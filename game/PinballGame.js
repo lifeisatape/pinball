@@ -134,56 +134,62 @@ class PinballGame {
 
         // Применяем безопасные отступы если доступны
         try {
-            // В новом SDK context.client и safeAreaInsets - это функции!
-            const client = typeof context.client === 'function' ? context.client() : context.client;
-            const safeAreaInsets = client && typeof client.safeAreaInsets === 'function' ? client.safeAreaInsets() : client?.safeAreaInsets;
+            // ИСПРАВЛЕНО: Убираем проверку на функции - в исправленной версии это простые объекты
+            const client = context?.client;
+            const safeAreaInsets = client?.safeAreaInsets;
 
             if (safeAreaInsets) {
                 console.log('PinballGame: Got safe area insets:', safeAreaInsets);
 
-                // Извлекаем значения - они тоже могут быть функциями
-                const top = typeof safeAreaInsets.top === 'function' ? safeAreaInsets.top() : (safeAreaInsets.top || 0);
-                const bottom = typeof safeAreaInsets.bottom === 'function' ? safeAreaInsets.bottom() : (safeAreaInsets.bottom || 0);
-                const left = typeof safeAreaInsets.left === 'function' ? safeAreaInsets.left() : (safeAreaInsets.left || 0);
-                const right = typeof safeAreaInsets.right === 'function' ? safeAreaInsets.right() : (safeAreaInsets.right || 0);
+                // ИСПРАВЛЕНО: Извлекаем простые значения
+                const top = safeAreaInsets.top || 0;
+                const bottom = safeAreaInsets.bottom || 0;
+                const left = safeAreaInsets.left || 0;
+                const right = safeAreaInsets.right || 0;
 
-                document.body.style.paddingTop = Number(top) + 'px';
-                document.body.style.paddingBottom = Number(bottom) + 'px';
-                document.body.style.paddingLeft = Number(left) + 'px';
-                document.body.style.paddingRight = Number(right) + 'px';
+                // Применяем безопасные отступы
+                const gameContainer = document.querySelector('.game-container');
+                if (gameContainer) {
+                    gameContainer.style.paddingTop = `${top}px`;
+                    gameContainer.style.paddingBottom = `${bottom}px`;
+                    gameContainer.style.paddingLeft = `${left}px`;
+                    gameContainer.style.paddingRight = `${right}px`;
+                }
 
-                console.log('PinballGame: Applied insets:', { top, bottom, left, right });
+                console.log('PinballGame: Applied safe area insets:', { top, bottom, left, right });
             }
+
+            // Скрываем веб-специфичные элементы в frame окружении
+            const webOnlyElements = document.querySelectorAll('.web-only');
+            webOnlyElements.forEach(element => {
+                element.style.display = 'none';
+            });
+
+            // Показываем frame-специфичные элементы
+            const frameOnlyElements = document.querySelectorAll('.frame-only');
+            frameOnlyElements.forEach(element => {
+                element.style.display = 'block';
+            });
+
         } catch (error) {
-            console.warn('PinballGame: Failed to apply safe area insets:', error);
+            console.error('PinballGame: Error adapting UI for frame:', error);
         }
 
-        // Можно скрыть некоторые кнопки или изменить layout
-        const selectLevelBtn = document.getElementById('selectLevelBtn');
-        if (selectLevelBtn) {
-            selectLevelBtn.style.display = 'none';
-        }
-
-        // Добавляем кнопки для Farcaster
-        this.addFarcasterButtons();
-    }
-
-    addFarcasterButtons() {
-        // Добавляем кнопку "Add to Apps" в главное меню
+        // Добавляем кнопку "Add to Apps" если еще не добавлена
         const tapToStartContent = document.querySelector('.tap-to-start-content');
         if (tapToStartContent && !document.getElementById('addToAppsBtn')) {
             const addButton = document.createElement('button');
             addButton.id = 'addToAppsBtn';
             addButton.className = 'restart-btn';
-            addButton.textContent = '⭐ Add to My Apps';
+            addButton.textContent = '⭐ Add to Apps';
             addButton.style.marginTop = '10px';
-            addButton.style.background = 'var(--accent-color, #ff6b35)';
+            addButton.style.background = 'var(--accent-color, #4CAF50)';
 
             addButton.addEventListener('click', async () => {
                 try {
                     const success = await window.farcasterManager.addToFavorites();
                     if (success) {
-                        this.showNotification('Request sent! 🎮', 'success');
+                        this.showNotification('Added to your apps! 🎮', 'success');
                     } else {
                         this.showNotification('Already in your apps! ⭐', 'info');
                     }
@@ -233,55 +239,59 @@ class PinballGame {
         if (!tapToStartContent) return;
 
         try {
-            // В новом SDK user - это функция!
-            const userData = typeof user === 'function' ? user() : user;
+            // ИСПРАВЛЕНО: Убираем проверку на функцию - user уже простой объект
+            const userData = user;
 
             if (!userData) return;
 
-            // Извлекаем данные - они тоже могут быть функциями
-            const username = typeof userData.username === 'function' ? userData.username() : userData.username;
-            const pfpUrl = typeof userData.pfpUrl === 'function' ? userData.pfpUrl() : userData.pfpUrl;
+            // ИСПРАВЛЕНО: Данные уже простые свойства, не функции
+            const username = userData.username;
+            const pfpUrl = userData.pfpUrl;
+            const displayName = userData.displayName;
 
             if (!username) return;
 
-            console.log('PinballGame: Got user data:', { username, pfpUrl });
-
-            // Убираем предыдущую информацию о пользователе
-            const existingUserInfo = document.querySelector('#farcaster-user-info');
+            // Удаляем предыдущий элемент если есть
+            const existingUserInfo = document.getElementById('farcasterUserInfo');
             if (existingUserInfo) {
                 existingUserInfo.remove();
             }
 
-            const userInfo = document.createElement('div');
-            userInfo.id = 'farcaster-user-info';
-            userInfo.style.cssText = `
-                color: var(--accent-color, #ff6b35);
-                margin: 15px 0;
+            // Создаем элемент с информацией о пользователе
+            const userInfoElement = document.createElement('div');
+            userInfoElement.id = 'farcasterUserInfo';
+            userInfoElement.style.cssText = `
+                margin-top: 15px;
+                padding: 10px;
+                background: rgba(0, 0, 0, 0.7);
+                border-radius: 8px;
                 text-align: center;
-                font-size: 16px;
+                color: #ffffff;
+                font-size: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
             `;
 
-            const welcomeText = `Welcome, @${username}! 👋`;
-            userInfo.innerHTML = `<p>${welcomeText}</p>`;
+            let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
 
-            // Добавляем аватар если доступен
             if (pfpUrl) {
-                const avatar = document.createElement('img');
-                avatar.src = pfpUrl;
-                avatar.style.cssText = `
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    margin-bottom: 10px;
-                    border: 2px solid var(--accent-color, #ff6b35);
-                `;
-                userInfo.insertBefore(avatar, userInfo.firstChild);
+                userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
             }
 
-            tapToStartContent.insertBefore(userInfo, tapToStartContent.querySelector('h2'));
-            console.log('PinballGame: User info displayed for', username);
+            userContent += `<div>`;
+            userContent += `<div style="font-weight: bold;">@${username}</div>`;
+
+            if (displayName && displayName !== username) {
+                userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
+            }
+
+            userContent += `</div></div>`;
+
+            userInfoElement.innerHTML = userContent;
+            tapToStartContent.appendChild(userInfoElement);
+
+            console.log('FarcasterManager: User info displayed for', username);
         } catch (error) {
-            console.warn('PinballGame: Failed to display user info:', error);
+            console.error('FarcasterManager: Error displaying user info:', error);
         }
     }
 
@@ -684,3 +694,4 @@ class PinballGame {
         }
     }
 }
+```
