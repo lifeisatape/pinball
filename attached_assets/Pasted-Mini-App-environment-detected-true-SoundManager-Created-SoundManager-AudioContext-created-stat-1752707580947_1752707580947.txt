@@ -1,0 +1,41 @@
+Mini App environment detected: true
+SoundManager: Created
+SoundManager: AudioContext created, state: running
+SoundManager: Preloading sounds...
+Creating global FarcasterManager instance...
+FarcasterManager: Initializing...
+🔄 Initializing Farcaster integration...
+Loading Farcaster SDK...
+Page loaded, initializing game...
+PinballGame: Setting up Farcaster integration...
+Frame/MiniApp environment detected, will auto-start after loading...
+✅ Farcaster SDK loaded successfully: 
+Object {eventNames: ƒ, listenerCount: ƒ, listeners: ƒ, addListener: ƒ, emit: ƒ, …}
+FarcasterManager: SDK loaded after 900ms
+🔍 SDK environment check: false
+⚠️ SDK reports not in Mini App environment
+FarcasterManager: Simulated ready state for web environment
+PinballGame: Farcaster SDK ready null
+FarcasterManager ready, starting loading process...
+PinballGame: Starting loading process...
+SoundManager: Loaded menu (1/9)
+Sound Manager Status: 
+Object {isReady: false, enabled: true, contextState: "running", buffersLoaded: 1, totalSounds: 9}
+Waiting for SoundManager to be ready...
+SoundManager: Loaded level (2/9)
+SoundManager: Loaded flipperIn (3/9)
+SoundManager: Loaded flipperOut (4/9)
+SoundManager: Loaded bumper (5/9)
+SoundManager: Loaded spinner (6/9)
+SoundManager: Loaded targetHit (7/9)
+SoundManager: Loaded targetIn (8/9)
+SoundManager: Loaded newGameLaunch (9/9)
+SoundManager: All sounds preloaded
+PinballGame: Sound system ready!
+Loaded level: farcaster
+Cannot read properties of null (reading 'style')
+at GameOverOverlay.show (https://ce765c40-063d-4851-ba15-b1b822015386-00-10dbzp8ymbe1q.sisko.replit.dev/ui/GameOverOverlay.js:13:38)
+at PinballGame.gameOver (https://ce765c40-063d-4851-ba15-b1b822015386-00-10dbzp8ymbe1q.sisko.replit.dev/game/PinballGame.js:663:30)
+at PinballGame.update (https://ce765c40-063d-4851-ba15-b1b822015386-00-10dbzp8ymbe1q.sisko.replit.dev/game/PinballGame.js:575:22)
+at PinballGame.gameLoop (https://ce765c40-063d-4851-ba15-b1b822015386-00-10dbzp8ymbe1q.sisko.replit.dev/game/PinballGame.js:709:18)
+at https://ce765c40-063d-4851-ba15-b1b822015386-00-10dbzp8ymbe1q.sisko.replit.dev/game/PinballGame.js:713:46
