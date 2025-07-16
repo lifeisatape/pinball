@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pinball Game - Classic Arcade Experience</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pinball: all stars</title>
     
     <!-- Farcaster Frame Embed Meta Tags -->
     <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball Game","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
@@ -20,95 +20,66 @@
     <meta name="twitter:title" content="Pinball Game - Classic Arcade Experience" />
     <meta name="twitter:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta name="twitter:image" content="https://pinballll.space/gm.png" />
-
-    <!-- Standard Meta Tags -->
-    <meta name="description" content="Play classic pinball with immersive soundtrack and multiple themed rooms. A retro arcade experience in your browser." />
-    <meta name="keywords" content="pinball, arcade, game, retro, classic, soundtrack, browser game" />
-    <meta name="author" content="Pinball Game" />
-
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#951212" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Pinball" />
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="generated-icon.png" />
-    <link rel="apple-touch-icon" href="generated-icon.png" />
-
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
-        <!-- game canvas -->
+        <div class="score-panel">
+            <div class="score-item">
+                <span class="score-label">score</span>
+                <span class="score-value" id="currentScore">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">balls</span>
+                <span class="score-value" id="ballsLeft">3</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">high</span>
+                <span class="score-value" id="highScore">0</span>
+            </div>
+            <button class="restart-btn" id="restartBtn">new game</button>
+            <button class="restart-btn" id="selectLevelBtn">select room</button>
+        </div>
+
         <canvas id="gameCanvas"></canvas>
-        
-        <!-- game ui overlay -->
-        <div class="ui-overlay">
-            <div class="score-panel" id="scorePanel">
-                <div class="score-item">
-                    <span class="score-label">SCORE</span>
-                    <span class="score-value" id="scoreValue">0</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">BALLS</span>
-                    <span class="score-value" id="ballsValue">3</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">MULTIPLIER</span>
-                    <span class="score-value" id="multiplierValue">1x</span>
-                </div>
-            </div>
-        </div>
 
-        <!-- sound loading indicator -->
-        <div id="sound-loading-indicator" style="display: none;">
-            <div class="loading-content">
-                <h2>🔊 ACTIVATING AUDIO</h2>
-                <p>preparing immersive sound experience...</p>
-                <div id="sound-loading-progress"></div>
-            </div>
-        </div>
-
-        <!-- tap to start screen -->
-        <div class="tap-to-start-overlay" id="tapToStartScreen">
-            <div class="tap-to-start-content">
-                <h1>PINBALL: ALL STARS</h1>
-                <p class="tap-instruction">tap anywhere to start</p>
-                <div class="game-controls">
-                    <button class="level-btn primary" id="startGameBtn">START GAME</button>
-                    <button class="level-btn secondary" id="selectLevelBtn">SELECT ROOM</button>
-                </div>
-                <!-- Место для информации о пользователе Farcaster -->
-            </div>
-        </div>
-
-        <!-- game over overlay -->
-        <div class="game-over-overlay" id="gameOverScreen" style="display: none;">
+        <div class="game-over-overlay" id="gameOverOverlay">
             <div class="game-over-content">
-                <h1>GAME OVER</h1>
-                <div class="final-score">
-                    <p>Final Score</p>
-                    <span id="finalScore">0</span>
-                </div>
-                <div class="game-over-controls">
-                    <button class="level-btn primary" id="restartBtn">PLAY AGAIN</button>
-                    <button class="level-btn secondary" id="menuBtn">MAIN MENU</button>
-                </div>
-                <!-- Место для кнопок Farcaster -->
+                <h2>GAME OVER</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p id="newHighScore" class="new-high-score">NEW HIGH SCORE!</p>
+                <button class="restart-btn" id="gameOverRestart">PLAY AGAIN</button>
             </div>
         </div>
 
-        <!-- loading screen -->
+        <!-- audio context activation -->
+        <div class="tap-to-start-overlay" id="tapToStartScreen" style="display: flex;">
+            <div class="tap-to-start-content">
+                <h1>Pinball</h1>
+                <h2>all stars</h2>
+                <div class="tap-icon">🎮</div>
+                <h2>TAP TO START</h2>
+                
+                <div class="tap-hint">
+                    <div class="tap-pulse"></div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading screen -->
         <div class="loading-overlay" id="loadingScreen" style="display: none;">
             <div class="loading-content">
-                <h1>PINBALL: ALL STARS</h1>
-                <h2>⚡ INITIALIZING SYSTEMS ⚡</h2>
-                <div class="loading-list">
-                    <div class="loading-item">
-                        <span class="loading-item-name">game engine</span>
-                        <span class="loading-item-status" id="engineStatus">⏳</span>
+                <h1>loading balls</h1>
+                <div class="loading-progress-container">
+                    <div class="loading-progress-bar">
+                        <div class="loading-progress-fill" id="progressFill"></div>
                     </div>
+                    <div class="loading-text" id="loadingText">initializing...</div>
+                    <div class="loading-percentage" id="loadingPercentage">0%</div>
+                </div>
+                <div class="loading-details" id="loadingDetails">
                     <div class="loading-item">
                         <span class="loading-item-name">audio system</span>
                         <span class="loading-item-status" id="audioStatus">⏳</span>
@@ -121,275 +92,126 @@
                         <span class="loading-item-name">rooms</span>
                         <span class="loading-item-status" id="levelsStatus">⏳</span>
                     </div>
-                    <div class="loading-item">
-                        <span class="loading-item-name">input system</span>
-                        <span class="loading-item-status" id="inputStatus">⏳</span>
-                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- level select screen -->
+        <!-- select room screen -->
         <div class="level-select-overlay" id="levelSelectScreen" style="display: none;">
             <div class="level-select-content">
                 <h1>PINBALL: ALL STARS</h1>
                 <h2>select room</h2>
                 <div class="level-list" id="levelList">
-                    <!-- rooms will be populated dynamically -->
+                    <!-- rooms -->
                 </div>
                 <div class="level-select-controls">
                     <button class="level-btn primary" id="startLevel">START GAME</button>
-                    <button class="level-btn secondary" id="backToMenu">BACK</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Farcaster MiniApp SDK - обновленная версия -->
+    <!-- Farcaster MiniApp SDK - обновленный -->
     <script type="module">
         import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
         
-        // Делаем SDK доступным глобально для совместимости с существующим кодом
+        // Делаем SDK доступным глобально
         window.miniAppSDK = sdk;
         console.log('Farcaster MiniApp SDK loaded via ESM:', sdk);
     </script>
     
-    <!-- 1. Core modules - порядок важен -->
+    <!-- 1. SoundManager -->
     <script src="core/SoundManager.js"></script>
+    
+    <!-- 2. Core modules -->
     <script src="core/GameConfig.js"></script>
     <script src="core/FarcasterManager.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
     
-    <!-- 2. Physics modules -->
+    <!-- 3. Physics modules -->
     <script src="physics/FlipperShape.js"></script>
     <script src="physics/Ball.js"></script>
     <script src="physics/Wall.js"></script>
     <script src="physics/Flipper.js"></script>
     
-    <!-- 3. Game objects -->
+    <!-- 4. Game objects -->
     <script src="gameObjects/Bumper.js"></script>
     <script src="gameObjects/Spinner.js"></script>
     <script src="gameObjects/DropTarget.js"></script>
     <script src="gameObjects/Tunnel.js"></script>
     <script src="gameObjects/Ramp.js"></script>
     
-    <!-- 4. UI components -->
+    <!-- 5. UI components -->
     <script src="ui/ScorePanel.js"></script>
     <script src="ui/GameOverOverlay.js"></script>
     <script src="ui/LevelSelectOverlay.js"></script>
     
-    <!-- 5. Game engine -->
+    <!-- 6. Game engine -->
     <script src="game/GameRenderer.js"></script>
     <script src="game/InputManager.js"></script>
     <script src="game/LevelManager.js"></script>
     <script src="game/LevelSelector.js"></script>
     <script src="game/PinballGame.js"></script>
     
-    <!-- 6. Initialize game -->
+    <!-- 7. Initialize game -->
     <script>
         window.addEventListener('load', () => {
             console.log('Page loaded, initializing game...');
             
-            // Проверяем URL параметры и окружение
+            // Проверяем URL параметры для автозапуска
             const urlParams = new URLSearchParams(window.location.search);
-            const isMiniApp = urlParams.get('miniApp') === 'true' || urlParams.has('frame');
+            const isMiniApp = urlParams.get('miniApp') === 'true';
             const isFrame = window.parent !== window;
-            const isFrameEnvironment = isFrame || isMiniApp || 
-                                     document.referrer.includes('warpcast.com') ||
-                                     document.referrer.includes('farcaster');
             
-            console.log('Environment detection:', {
-                isFrame,
-                isMiniApp,
-                isFrameEnvironment,
-                referrer: document.referrer,
-                search: window.location.search
-            });
+            const game = new PinballGame();
             
-            // Ждем загрузки PinballGame класса
-            const initializeGame = () => {
-                if (typeof PinballGame === 'undefined') {
-                    console.log('Waiting for PinballGame class to load...');
-                    setTimeout(initializeGame, 100);
-                    return;
-                }
+            // Автозапуск для frame окружения
+            if (isFrame || isMiniApp) {
+                console.log('Frame/MiniApp environment detected, will auto-start after loading...');
                 
-                console.log('PinballGame class available, creating instance...');
+                // Ждем готовности Farcaster Manager
+                const checkReadyAndStart = () => {
+                    if (window.farcasterManager?.isReady) {
+                        console.log('FarcasterManager ready, starting loading process...');
+                        game.startLoadingProcess();
+                    } else {
+                        console.log('Waiting for FarcasterManager...');
+                        setTimeout(checkReadyAndStart, 500);
+                    }
+                };
                 
-                // Создаем экземпляр игры
-                const game = new PinballGame();
-                
-                // Автозапуск для frame окружения
-                if (isFrameEnvironment) {
-                    console.log('Frame environment detected, setting up auto-start...');
-                    
-                    const startGameWithTimeout = () => {
-                        let attempts = 0;
-                        const maxAttempts = 30; // 15 секунд максимум
-                        
-                        const checkReadyAndStart = () => {
-                            attempts++;
-                            
-                            // Проверяем готовность FarcasterManager и SDK
-                            const farcasterReady = window.farcasterManager?.isReady;
-                            const sdkAvailable = !!window.miniAppSDK;
-                            
-                            console.log(`Attempt ${attempts}: Farcaster ready: ${farcasterReady}, SDK available: ${sdkAvailable}`);
-                            
-                            if (farcasterReady || attempts >= maxAttempts) {
-                                if (farcasterReady) {
-                                    console.log('FarcasterManager ready, starting game...');
-                                } else {
-                                    console.warn('FarcasterManager timeout, starting anyway...');
-                                }
-                                
-                                // Небольшая задержка для плавности
-                                setTimeout(() => {
-                                    game.startLoadingProcess();
-                                }, 500);
-                            } else {
-                                // Продолжаем ждать
-                                setTimeout(checkReadyAndStart, 500);
-                            }
-                        };
-                        
-                        checkReadyAndStart();
-                    };
-                    
-                    // Запускаем процесс с небольшой задержкой для загрузки SDK
-                    setTimeout(startGameWithTimeout, 2000);
-                } else {
-                    console.log('Web environment - waiting for user interaction');
-                }
-
-                // Делаем игру доступной глобально для отладки
-                window.game = game;
-            };
-            
-            // Запускаем инициализацию
-            initializeGame();
+                setTimeout(checkReadyAndStart, 1000);
+            }
         });
 
-        // Предотвращаем прокрутку на мобильных устройствах
+        // Prevent mobile scrolling and context menu
         document.addEventListener('touchmove', (e) => {
             e.preventDefault();
         }, { passive: false });
 
-        // Предотвращаем контекстное меню
         document.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
 
-        // Предотвращаем выделение текста
-        document.addEventListener('selectstart', (e) => {
-            e.preventDefault();
-        });
-
-        // Обработка ошибок JavaScript
-        window.addEventListener('error', (e) => {
-            console.error('Global error:', e.error);
-        });
-
-        window.addEventListener('unhandledrejection', (e) => {
-            console.error('Unhandled promise rejection:', e.reason);
-        });
-
-        // Debug информация для мобильных устройств
+        // Debug info for mobile
         window.addEventListener('load', () => {
             setTimeout(() => {
-                console.log('=== DEBUG INFO ===');
-                console.log('User Agent:', navigator.userAgent);
-                console.log('Screen size:', screen.width + 'x' + screen.height);
-                console.log('Window size:', window.innerWidth + 'x' + window.innerHeight);
-                console.log('Device pixel ratio:', window.devicePixelRatio);
-                console.log('Touch support:', 'ontouchstart' in window);
-                console.log('MiniApp SDK available:', !!window.miniAppSDK);
-                console.log('PinballGame class available:', typeof PinballGame !== 'undefined');
-                
                 if (window.soundManager) {
                     console.log('Sound Manager Status:', window.soundManager.getStatus());
                 }
-                
-                if (window.farcasterManager) {
-                    console.log('Farcaster Manager Status:', window.farcasterManager.getStatus());
-                }
-                
-                console.log('==================');
             }, 3000);
         });
-
-        // Функции для отладки (доступны в консоли)
-        window.debugFarcaster = () => {
-            if (window.farcasterManager) {
-                return window.farcasterManager.debug();
-            }
-            return 'FarcasterManager not available';
-        };
-
-        window.debugGame = () => {
-            if (window.game) {
-                return window.game.debugInfo();
-            }
-            return 'Game not available';
-        };
-
-        window.testNotification = (message, type) => {
-            if (window.game) {
-                window.game.showNotification(message || 'Test notification', type || 'info');
-            }
-        };
-
-        // Тестовые функции для Farcaster
-        window.testAddFrame = async () => {
-            if (window.farcasterManager) {
-                const result = await window.farcasterManager.addToFavorites();
-                console.log('Add frame result:', result);
-                return result;
-            }
-            return false;
-        };
-
-        window.testComposeCast = async () => {
-            if (window.farcasterManager) {
-                const result = await window.farcasterManager.composeCast({
-                    text: 'Just played Pinball! 🎮',
-                    embeds: [window.location.href]
-                });
-                console.log('Compose cast result:', result);
-                return result;
-            }
-            return null;
-        };
     </script>
 
     <style>
-        /* Дополнительные стили для улучшений */
-        
-        /* Стили для уведомлений Farcaster */
-        .farcaster-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-size: 14px;
-            font-weight: 500;
-            max-width: 300px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-        }
-
-        /* Индикатор загрузки */
+        /* Дополнительные стили для индикатора загрузки */
         .level-btn.loading {
             background: #444 !important;
             color: #888 !important;
             cursor: not-allowed !important;
             animation: pulse 2s infinite;
-            pointer-events: none;
         }
 
         @keyframes pulse {
@@ -397,7 +219,22 @@
             50% { opacity: 1; }
         }
 
-        /* Стили для информации о пользователе Farcaster */
+        .level-btn:disabled {
+            pointer-events: none;
+        }
+
+        /* Стили для индикатора загрузки звуков */
+        #sound-loading-indicator {
+            backdrop-filter: blur(10px);
+        }
+
+        #sound-loading-progress {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #00ff00;
+        }
+
+        /* Дополнительные стили для Farcaster элементов */
         #farcaster-user-info {
             margin: 15px 0;
             text-align: center;
@@ -408,100 +245,9 @@
             margin: 0 auto 10px;
         }
 
-        /* Кнопки для frame окружения */
         #addToAppsBtn,
         #shareScoreBtn {
             margin-top: 10px;
-            background: var(--accent-color);
-            border: 2px solid var(--accent-color);
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        #addToAppsBtn:hover,
-        #shareScoreBtn:hover {
-            background: transparent;
-            color: var(--accent-color);
-        }
-
-        /* Адаптация для frame окружения */
-        .frame-mode .level-select-overlay {
-            padding-top: 40px;
-        }
-
-        .frame-mode .tap-to-start-overlay {
-            padding-top: 40px;
-        }
-
-        /* Улучшенная загрузка */
-        #sound-loading-indicator {
-            backdrop-filter: blur(10px);
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        #sound-loading-progress {
-            margin-top: 10px;
-            font-size: 14px;
-            color: var(--accent-color);
-        }
-
-        /* Мобильная оптимизация */
-        @media (max-width: 768px) {
-            .farcaster-notification {
-                right: 10px;
-                left: 10px;
-                max-width: none;
-                transform: translateY(-100%);
-            }
-
-            .farcaster-notification.show {
-                transform: translateY(0);
-            }
-
-            #farcaster-user-info {
-                font-size: 14px;
-            }
-
-            #addToAppsBtn,
-            #shareScoreBtn {
-                font-size: 14px;
-                padding: 8px 16px;
-            }
-        }
-
-        /* Состояния загрузки */
-        .loading-item-status {
-            transition: all 0.3s ease;
-        }
-
-        .loading-item-status.success {
-            color: #4CAF50;
-        }
-
-        .loading-item-status.error {
-            color: #f44336;
-        }
-
-        /* Анимации */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .fade-in-up {
-            animation: fadeInUp 0.5s ease;
-        }
-
-        /* Фокус для доступности */
-        .level-btn:focus {
-            outline: 2px solid var(--accent-color);
-            outline-offset: 2px;
         }
     </style>
 </body>
