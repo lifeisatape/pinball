@@ -384,12 +384,14 @@ class PinballGame {
                 this.loadingState.audio = true;
                 this.updateLoadingProgress('audio', 100, 'Audio system initialized');
 
-                if (window.soundManager) {
-                    await window.soundManager.initialize();
-                } else {
-                    console.warn('SoundManager not available');
+                // SoundManager уже готов, просто помечаем как завершенный
+                if (window.soundManager && window.soundManager.isReady) {
                     this.loadingState.sounds = true;
+                    this.updateLoadingProgress('sounds', 100, 'Sounds ready');
                     this.checkLoadingComplete();
+                } else {
+                    console.log('Waiting for SoundManager to be ready...');
+                    // Слушатель уже настроен выше для события 'soundManagerReady'
                 }
             } catch (error) {
                 console.error('Error initializing audio:', error);
