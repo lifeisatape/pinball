@@ -384,7 +384,7 @@ class PinballGame {
                 this.loadingState.audio = true;
                 this.updateLoadingProgress('audio', 100, 'Audio system initialized');
 
-                // SoundManager уже готов, просто помечаем как завершенный
+                // ИСПРАВЛЕНО: SoundManager уже готов, просто помечаем как завершенный
                 if (window.soundManager && window.soundManager.isReady) {
                     this.loadingState.sounds = true;
                     this.updateLoadingProgress('sounds', 100, 'Sounds ready');
