@@ -1,0 +1,152 @@
+// 1. В index.html УБРАТЬ автозапуск для Farcaster:
+
+window.addEventListener('load', () => {
+    console.log('Page loaded, initializing game...');
+    
+    const game = new PinballGame();
+    
+    // УБИРАЕМ АВТОЗАПУСК! Всегда показываем TAP TO START
+    // НЕ ДЕЛАЕМ:
+    // if (isFrame || isMiniApp) {
+    //     game.startLoadingProcess(); // ЭТО БЛОКИРОВАЛО!
+    // }
+});
+
+// 2. В PinballGame.js ОСТАВЛЯЕМ полное ожидание звуков, как в оригинале:
+
+async startLoadingProcess() {
+    console.log('PinballGame: Starting loading process...');
+    
+    // Скрываем экран "tap to start" и показываем загрузку
+    this.tapToStartScreen.style.display = 'none';
+    this.showLoadingScreen();
+
+    // Настраиваем коллбек для отслеживания прогресса
+    if (window.soundManager) {
+        window.soundManager.setLoadingCallback((type, progress, message) => {
+            this.updateLoadingProgress(type, progress, message);
+        });
+    }
+
+    // ОСТАВЛЯЕМ ожидание звуков - как в оригинале!
+    window.addEventListener('soundManagerReady', () => {
+        console.log('PinballGame: Sound system ready!');
+        this.loadingState.sounds = true;
+        this.checkLoadingComplete();
+    });
+
+    // Активируем аудио с задержкой
+    const isDeployed = window.location.hostname.includes('replit.app') || 
+                      window.location.hostname.includes('replit.dev') || 
+                      window.location.protocol === 'https:';
+
+    const delay = isDeployed ? 1000 : 500;
+
+    setTimeout(async () => {
+        if (window.soundManager) {
+            await window.soundManager.unlock();
+        }
+    }, delay);
+
+    await this.loadLevels();
+}
+
+// 3. В SoundManager.js ИСПРАВИТЬ только активацию AudioContext:
+
+async unlock() {
+    if (this.isLoading) {
+        console.log('SoundManager: Already loading, skipping unlock');
+        return;
+    }
+
+    this.isLoading = true;
+    console.log('SoundManager: Starting unlock process...');
+
+    try {
+        // Создаем контекст если его нет
+        if (!this.audioContext) {
+            this.tryCreateContext();
+            console.log('SoundManager: AudioContext created in unlock, state:', this.audioContext.state);
+        }
+
+        if (this.loadingCallback) {
+            this.loadingCallback('audio', 30, 'Audio context created...');
+        }
+
+        // ИСПРАВЛЕНИЕ: Более агрессивная активация для всех сред
+        if (this.audioContext.state === 'suspended') {
+            console.log('SoundManager: Resuming suspended AudioContext...');
+            if (this.loadingCallback) {
+                this.loadingCallback('audio', 50, 'Activating audio...');
+            }
+
+            // Множественные попытки активации
+            for (let i = 0; i < 5; i++) {
+                try {
+                    await this.audioContext.resume();
+                    if (this.audioContext.state === 'running') {
+                        console.log('SoundManager: AudioContext activated successfully');
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (err) {
+                    console.warn(`SoundManager: Activation attempt ${i + 1} failed:`, err);
+                }
+            }
+        }
+
+        if (this.loadingCallback) {
+            this.loadingCallback('audio', 70, 'Audio context activated');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Загружаем звуки если контекст готов
+        if (this.audioContext.state === 'running') {
+            console.log('SoundManager: AudioContext running, loading sounds...');
+
+            if (this.loadingCallback) {
+                this.loadingCallback('audio', 100, 'Audio system ready');
+            }
+
+            // ПОЛНАЯ ЗАГРУЗКА ЗВУКОВ - как в оригинале!
+            await this.preloadAllSounds();
+            console.log('SoundManager: Ready!');
+        } else {
+            console.warn('SoundManager: AudioContext not running, state:', this.audioContext.state);
+            
+            // Финальная попытка - создаем новый контекст
+            if (this.loadingCallback) {
+                this.loadingCallback('audio', 90, 'Final audio activation attempt...');
+            }
+
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            await this.audioContext.resume();
+
+            if (this.audioContext.state === 'running') {
+                if (this.loadingCallback) {
+                    this.loadingCallback('audio', 100, 'Audio system ready');
+                }
+                await this.preloadAllSounds();
+            } else {
+                throw new Error(`AudioContext state: ${this.audioContext.state}`);
+            }
+        }
+
+    } catch (error) {
+        console.error('SoundManager: Failed to unlock audio:', error);
+        if (this.loadingCallback) {
+            this.loadingCallback('audio', 0, 'Audio initialization failed');
+        }
+
+        // НЕ БЛОКИРУЕМ игру при ошибке
+        this.isReady = true;
+        this.enabled = false;
+        
+        // Отправляем событие готовности
+        window.dispatchEvent(new CustomEvent('soundManagerReady'));
+
+    } finally {
+        this.isLoading = false;
+    }
+}
