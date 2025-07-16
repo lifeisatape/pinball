@@ -213,30 +213,10 @@
         window.addEventListener('load', () => {
             console.log('Page loaded, initializing game...');
             
-            // Проверяем URL параметры для автозапуска
-            const urlParams = new URLSearchParams(window.location.search);
-            const isMiniApp = urlParams.get('miniApp') === 'true';
-            const isFrame = window.parent !== window;
-            
             const game = new PinballGame();
             
-            // Автозапуск для frame окружения
-            if (isFrame || isMiniApp) {
-                console.log('Frame/MiniApp environment detected, will auto-start after loading...');
-                
-                // Ждем готовности Farcaster Manager
-                const checkReadyAndStart = () => {
-                    if (window.farcasterManager?.isReady) {
-                        console.log('FarcasterManager ready, starting loading process...');
-                        game.startLoadingProcess();
-                    } else {
-                        console.log('Waiting for FarcasterManager...');
-                        setTimeout(checkReadyAndStart, 500);
-                    }
-                };
-                
-                setTimeout(checkReadyAndStart, 1000);
-            }
+            // No auto-start! Game will show TAP TO START screen
+            // User clicks and then startLoadingProcess() is called
         });
 
         // Prevent mobile scrolling and context menu
