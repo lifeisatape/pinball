@@ -58,15 +58,13 @@ class PinballGame {
     }
 
     setupEventListeners() {
-        document.getElementById('restartBtn').addEventListener('click', () => {
+        document.getElementById('restartGame').addEventListener('click', () => {
             this.restartGame();
         });
 
-        document.getElementById('selectLevelBtn').addEventListener('click', () => {
+        document.getElementById('backToMenu').addEventListener('click', () => {
             this.showLevelSelect();
         });
-
-        document.getElementById('gameOverRestart').addEventListener('click', () => this.restartGame());
 
         document.getElementById('startLevel').addEventListener('click', () => {
             const selectedLevel = this.levelSelector.getCurrentLevel();
@@ -272,20 +270,20 @@ class PinballGame {
             `;
 
             let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
-
+            
             if (pfpUrl) {
                 userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
             }
-
+            
             userContent += `<div>`;
             userContent += `<div style="font-weight: bold;">@${username}</div>`;
-
+            
             if (displayName && displayName !== username) {
                 userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
             }
-
+            
             userContent += `</div></div>`;
-
+            
             userInfoElement.innerHTML = userContent;
             tapToStartContent.appendChild(userInfoElement);
 
@@ -379,49 +377,69 @@ class PinballGame {
                           window.location.hostname.includes('replit.dev') || 
                           window.location.protocol === 'https:';
 
-        const delay = isDeployed ? 1000 : 500; // Больше времени для deployed версии
+        const delay = isDeployed ? 2000 : 1000;
 
         setTimeout(async () => {
-            if (window.soundManager) {
-                await window.soundManager.unlock();
+            try {
+                this.loadingState.audio = true;
+                this.updateLoadingProgress('audio', 100, 'Audio system initialized');
+
+                if (window.soundManager) {
+                    await window.soundManager.initialize();
+                } else {
+                    console.warn('SoundManager not available');
+                    this.loadingState.sounds = true;
+                    this.checkLoadingComplete();
+                }
+            } catch (error) {
+                console.error('Error initializing audio:', error);
+                this.loadingState.audio = true;
+                this.loadingState.sounds = true;
+                this.checkLoadingComplete();
             }
         }, delay);
 
-        await this.loadLevels();
-    }
-
-    async loadLevels() {
-        this.updateLoadingProgress('levels', 0, 'Loading levels...');
-
-        try {
-            const levels = await this.levelSelector.getAvailableLevels();
-            this.updateLoadingProgress('levels', 100, `Loaded ${levels.length} levels`);
-            this.loadingState.levels = true;
-            this.checkLoadingComplete();
-        } catch (error) {
-            console.error('Failed to load levels:', error);
-            this.updateLoadingProgress('levels', 100, 'Failed to load levels');
-            this.loadingState.levels = true;
-            this.checkLoadingComplete();
-        }
+        // Загружаем уровни
+        setTimeout(async () => {
+            try {
+                await this.levelSelector.getAvailableLevels();
+                this.loadingState.levels = true;
+                this.updateLoadingProgress('levels', 100, 'Levels loaded');
+                this.checkLoadingComplete();
+            } catch (error) {
+                console.error('Error loading levels:', error);
+                this.loadingState.levels = true;
+                this.checkLoadingComplete();
+            }
+        }, 500);
     }
 
     updateLoadingProgress(type, progress, message) {
-        const statusMap = {
-            'audio': 'audioStatus',
-            'sounds': 'soundsStatus', 
-            'levels': 'levelsStatus'
+        const statusElements = {
+            audio: 'audioStatus',
+            sounds: 'soundsStatus',
+            levels: 'levelsStatus'
         };
 
-        const statusElement = document.getElementById(statusMap[type]);
-        if (statusElement) {
-            if (progress === 100) {
-                statusElement.textContent = '✅';
-                if (type === 'audio') this.loadingState.audio = true;
-            } else if (progress > 0) {
-                statusElement.textContent = '🔄';
+        const elementId = statusElements[type];
+        if (elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = progress >= 100 ? '✅' : '⏳';
+            }
+        }
+
+        // Если это финальный статус, обновляем состояние загрузки
+        if (progress >= 100) {
+            if (type === 'audio') {
+                this.loadingState.audio = true;
+            } else if (type === 'sounds') {
+                this.loadingState.sounds = true;
+            } else if (type === 'levels') {
+                this.loadingState.levels = true;
             } else {
-                statusElement.textContent = '❌';
+                console.warn('Unknown loading type:', type);
+                return '❌';
             }
         }
 
@@ -440,7 +458,7 @@ class PinballGame {
         const total = Object.keys(this.loadingState).length;
         const percentage = Math.round((completed / total) * 100);
 
-        const progressFill = document.getElementById('progressFill');
+        const progressFill = document.getElementById('loadingBar');
         const progressPercentage = document.getElementById('loadingPercentage');
 
         if (progressFill) {
@@ -694,4 +712,3 @@ class PinballGame {
         }
     }
 }
-```
