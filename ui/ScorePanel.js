@@ -1,3 +1,4 @@
+
 // Score Panel UI Component
 class ScorePanel {
     constructor() {
@@ -7,15 +8,21 @@ class ScorePanel {
     }
 
     updateScore(score) {
-        this.scoreElement.textContent = score.toLocaleString();
+        if (this.scoreElement) {
+            this.scoreElement.textContent = score.toLocaleString();
+        }
     }
 
     updateHighScore(highScore) {
-        this.highScoreElement.textContent = highScore.toLocaleString();
+        if (this.highScoreElement) {
+            this.highScoreElement.textContent = highScore.toLocaleString();
+        }
     }
 
     updateBalls(balls) {
-        this.ballsElement.textContent = balls;
+        if (this.ballsElement) {
+            this.ballsElement.textContent = balls;
+        }
     }
 
     updateAll(gameState) {
