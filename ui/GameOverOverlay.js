@@ -1,24 +1,45 @@
-// Game Over Overlay UI Component
+
 class GameOverOverlay {
     constructor() {
         this.overlay = document.getElementById('gameOverOverlay');
-        this.finalScoreElement = document.getElementById('finalScore');
-        this.newHighScoreElement = document.getElementById('newHighScore');
+        this.scoreElement = document.getElementById('finalScore');
+        this.highScoreElement = document.getElementById('finalHighScore');
+        
+        // Проверяем существование элементов
+        if (!this.overlay) {
+            console.warn('GameOverOverlay: gameOverOverlay element not found');
+        }
+        if (!this.scoreElement) {
+            console.warn('GameOverOverlay: finalScore element not found');
+        }
+        if (!this.highScoreElement) {
+            console.warn('GameOverOverlay: finalHighScore element not found');
+        }
     }
 
     show(gameState) {
-        this.finalScoreElement.textContent = gameState.score.toLocaleString();
-
-        if (gameState.score === gameState.highScore && gameState.score > 0) {
-            this.newHighScoreElement.style.display = 'block';
-        } else {
-            this.newHighScoreElement.style.display = 'none';
+        if (!this.overlay) {
+            console.error('GameOverOverlay: Cannot show overlay - element not found');
+            return;
         }
 
         this.overlay.style.display = 'flex';
+        
+        if (this.scoreElement) {
+            this.scoreElement.textContent = gameState.score.toLocaleString();
+        }
+        
+        if (this.highScoreElement) {
+            this.highScoreElement.textContent = gameState.highScore.toLocaleString();
+        }
     }
 
     hide() {
+        if (!this.overlay) {
+            console.error('GameOverOverlay: Cannot hide overlay - element not found');
+            return;
+        }
+        
         this.overlay.style.display = 'none';
     }
 }
