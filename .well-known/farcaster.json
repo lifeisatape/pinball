@@ -1,0 +1,25 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEwMjIyMTIsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhmZTA0NmFGMmQ1NEVEZjcwM2E2QTBjQTc3RDU2RGI0ZjE0N2QzRWQ3In0",
+    "payload": "eyJkb21haW4iOiJmbG93ZXJzb25tYXJzLnNwYWNlIn0",
+    "signature": "MHhjNGUxZjE2Y2YyZjMxZGQ0NGY4ZWU0OGU4OGQxYzBjMjhmOTJmMzllMmRkNGViMzQyNDhiODZhNzNiN2U0NzhiNTExYWJiYzM4ODhhMjg3N2IxNGZmMGJjMTk2YmIwMjA3M2FjN2Y5OWFiOWIzYzE5ZTE4YzRjNDBlNDYxNzRmZjFj"
+  },
+  "frame": {
+    "version": "next",
+    "name": "all stars",
+    "iconUrl": "https://flowersonmars.space/generated-icon.png",
+    "homeUrl": "https://flowersonmars.space/?miniApp=true",
+    "imageUrl": "https://flowersonmars.space/gn.png",
+    "buttonTitle": "Play",
+    "splashImageUrl": "https://flowersonmars.space/gm.png",
+    "splashBackgroundColor": "#951212",
+    "subtitle": "pinball game",
+    "description": "oldscool pinball game & original soundtrack",
+    "primaryCategory": "games",
+    "tags": ["game", "arcade", "pinball"],
+    "heroImageUrl": "https://flowersonmars.space/generated-icon.png",
+    "ogTitle": "all stars",
+    "ogDescription": "oldscool pinball game & original soundtrack",
+    "ogImageUrl": "https://flowersonmars.space/generated-icon.png"
+  }
+}
