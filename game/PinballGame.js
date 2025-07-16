@@ -134,13 +134,25 @@ class PinballGame {
 
         // Применяем безопасные отступы если доступны
         if (context && context.client && context.client.safeAreaInsets) {
-            const insets = context.client.safeAreaInsets;
-            console.log('PinballGame: Applying safe area insets:', insets);
+            try {
+                const insets = context.client.safeAreaInsets;
+                console.log('PinballGame: Applying safe area insets:', insets);
 
-            document.body.style.paddingTop = insets.top + 'px';
-            document.body.style.paddingBottom = insets.bottom + 'px';
-            document.body.style.paddingLeft = insets.left + 'px';
-            document.body.style.paddingRight = insets.right + 'px';
+                // Безопасно извлекаем значения из Proxy объектов
+                const top = Number(insets.top) || 0;
+                const bottom = Number(insets.bottom) || 0;
+                const left = Number(insets.left) || 0;
+                const right = Number(insets.right) || 0;
+
+                document.body.style.paddingTop = top + 'px';
+                document.body.style.paddingBottom = bottom + 'px';
+                document.body.style.paddingLeft = left + 'px';
+                document.body.style.paddingRight = right + 'px';
+
+                console.log('PinballGame: Applied insets:', { top, bottom, left, right });
+            } catch (error) {
+                console.warn('PinballGame: Failed to apply safe area insets:', error);
+            }
         }
 
         // Можно скрыть некоторые кнопки или изменить layout
@@ -215,7 +227,15 @@ class PinballGame {
     displayUserInfo(user) {
         // Показываем информацию о пользователе Farcaster
         const tapToStartContent = document.querySelector('.tap-to-start-content');
-        if (tapToStartContent && user.username) {
+        if (!tapToStartContent) return;
+
+        try {
+            // Безопасно извлекаем данные из Proxy объекта
+            const username = user && user.username ? String(user.username) : null;
+            const pfpUrl = user && user.pfpUrl ? String(user.pfpUrl) : null;
+
+            if (!username) return;
+
             // Убираем предыдущую информацию о пользователе
             const existingUserInfo = document.querySelector('#farcaster-user-info');
             if (existingUserInfo) {
@@ -231,13 +251,13 @@ class PinballGame {
                 font-size: 16px;
             `;
 
-            const welcomeText = `Welcome, @${user.username}! 👋`;
+            const welcomeText = `Welcome, @${username}! 👋`;
             userInfo.innerHTML = `<p>${welcomeText}</p>`;
 
             // Добавляем аватар если доступен
-            if (user.pfpUrl) {
+            if (pfpUrl) {
                 const avatar = document.createElement('img');
-                avatar.src = user.pfpUrl;
+                avatar.src = pfpUrl;
                 avatar.style.cssText = `
                     width: 40px;
                     height: 40px;
@@ -249,6 +269,9 @@ class PinballGame {
             }
 
             tapToStartContent.insertBefore(userInfo, tapToStartContent.querySelector('h2'));
+            console.log('PinballGame: User info displayed for', username);
+        } catch (error) {
+            console.warn('PinballGame: Failed to display user info:', error);
         }
     }
 
