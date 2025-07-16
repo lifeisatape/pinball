@@ -133,26 +133,29 @@ class PinballGame {
         console.log('PinballGame: Adapting UI for Farcaster frame');
 
         // Применяем безопасные отступы если доступны
-        if (context && context.client && context.client.safeAreaInsets) {
-            try {
-                const insets = context.client.safeAreaInsets;
-                console.log('PinballGame: Applying safe area insets:', insets);
+        try {
+            // В новом SDK context.client и safeAreaInsets - это функции!
+            const client = typeof context.client === 'function' ? context.client() : context.client;
+            const safeAreaInsets = client && typeof client.safeAreaInsets === 'function' ? client.safeAreaInsets() : client?.safeAreaInsets;
 
-                // Безопасно извлекаем значения из Proxy объектов
-                const top = Number(insets.top) || 0;
-                const bottom = Number(insets.bottom) || 0;
-                const left = Number(insets.left) || 0;
-                const right = Number(insets.right) || 0;
+            if (safeAreaInsets) {
+                console.log('PinballGame: Got safe area insets:', safeAreaInsets);
 
-                document.body.style.paddingTop = top + 'px';
-                document.body.style.paddingBottom = bottom + 'px';
-                document.body.style.paddingLeft = left + 'px';
-                document.body.style.paddingRight = right + 'px';
+                // Извлекаем значения - они тоже могут быть функциями
+                const top = typeof safeAreaInsets.top === 'function' ? safeAreaInsets.top() : (safeAreaInsets.top || 0);
+                const bottom = typeof safeAreaInsets.bottom === 'function' ? safeAreaInsets.bottom() : (safeAreaInsets.bottom || 0);
+                const left = typeof safeAreaInsets.left === 'function' ? safeAreaInsets.left() : (safeAreaInsets.left || 0);
+                const right = typeof safeAreaInsets.right === 'function' ? safeAreaInsets.right() : (safeAreaInsets.right || 0);
+
+                document.body.style.paddingTop = Number(top) + 'px';
+                document.body.style.paddingBottom = Number(bottom) + 'px';
+                document.body.style.paddingLeft = Number(left) + 'px';
+                document.body.style.paddingRight = Number(right) + 'px';
 
                 console.log('PinballGame: Applied insets:', { top, bottom, left, right });
-            } catch (error) {
-                console.warn('PinballGame: Failed to apply safe area insets:', error);
             }
+        } catch (error) {
+            console.warn('PinballGame: Failed to apply safe area insets:', error);
         }
 
         // Можно скрыть некоторые кнопки или изменить layout
@@ -230,11 +233,18 @@ class PinballGame {
         if (!tapToStartContent) return;
 
         try {
-            // Безопасно извлекаем данные из Proxy объекта
-            const username = user && user.username ? String(user.username) : null;
-            const pfpUrl = user && user.pfpUrl ? String(user.pfpUrl) : null;
+            // В новом SDK user - это функция!
+            const userData = typeof user === 'function' ? user() : user;
+
+            if (!userData) return;
+
+            // Извлекаем данные - они тоже могут быть функциями
+            const username = typeof userData.username === 'function' ? userData.username() : userData.username;
+            const pfpUrl = typeof userData.pfpUrl === 'function' ? userData.pfpUrl() : userData.pfpUrl;
 
             if (!username) return;
+
+            console.log('PinballGame: Got user data:', { username, pfpUrl });
 
             // Убираем предыдущую информацию о пользователе
             const existingUserInfo = document.querySelector('#farcaster-user-info');

@@ -49,7 +49,14 @@ class FarcasterManager {
 
             // В новом SDK нет init() - сразу получаем контекст
             this.context = this.sdk.context;
-            this.user = this.context?.user;
+
+            // В новом SDK user - это функция, нужно ее вызвать
+            try {
+                this.user = typeof this.context.user === 'function' ? this.context.user() : this.context.user;
+            } catch (error) {
+                console.warn('FarcasterManager: Failed to get user data:', error);
+                this.user = null;
+            }
 
             console.log('FarcasterManager: Context received:', {
                 user: this.user,
