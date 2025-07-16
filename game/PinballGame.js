@@ -414,30 +414,9 @@ class PinballGame {
 
         if (allLoaded) {
             setTimeout(() => {
-                // В frame окружении сразу переходим к игре
-                if (window.farcasterManager && window.farcasterManager.isInFrame()) {
-                    console.log('PinballGame: Frame environment - auto-starting first level');
-                    this.autoStartFirstLevel();
-                } else {
-                    this.showLevelSelectScreen();
-                }
-            }, 1000); // Небольшая задержка для красоты
-        }
-    }
-
-    async autoStartFirstLevel() {
-        try {
-            const levels = await this.levelSelector.getAvailableLevels();
-            if (levels.length > 0) {
-                const firstLevel = levels[0];
-                await this.loadSelectedLevel(firstLevel);
-                this.showNotification(`Playing ${firstLevel.name}! 🎮`, 'success');
-            } else {
+                // ВСЕГДА показываем экран выбора уровня - как в оригинале
                 this.showLevelSelectScreen();
-            }
-        } catch (error) {
-            console.error('Failed to auto-start level:', error);
-            this.showLevelSelectScreen();
+            }, 1000); // Небольшая задержка для красоты
         }
     }
 
