@@ -943,9 +943,9 @@ class PinballGame {
         );
         
         // If ball is in dangerous zone
-        if (ballInfo.dangerLevel > 0.5 && ballInfo.escapeDirection) {
+        if (ballInfo.dangerLevel > 0.9 && ballInfo.escapeDirection) {
             // Gently guide ball to safety
-            const escapeForce = ballInfo.dangerLevel * 0.5;
+            const escapeForce = ballInfo.dangerLevel * 0.1;
             
             this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
             this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
