@@ -795,7 +795,7 @@ class PinballGame {
 
     // Pixel-Perfect Collision Grid System
     createSimpleCollisionGrid() {
-        const cellSize = 1; // ПИКСЕЛЬНАЯ ТОЧНОСТЬ!
+        const cellSize = 4; // ПИКСЕЛЬНАЯ ТОЧНОСТЬ!
         const cols = CONFIG.VIRTUAL_WIDTH;   // 320 колонок
         const rows = CONFIG.VIRTUAL_HEIGHT;  // 480 строк
         
