@@ -639,12 +639,10 @@ class PinballGame {
     }
 
     checkCollisions() {
-        // Double-pass wall collision detection to handle corners and joints
-        for (let i = 0; i < 2; i++) { // Проверяем стены 2 раза
-            this.currentLevel.walls.forEach(wall => {
-                wall.checkCollision(this.ball);
-            });
-        }
+        // Single pass collision detection with improved corner handling
+        this.currentLevel.walls.forEach(wall => {
+            wall.checkCollision(this.ball);
+        });
 
         this.currentLevel.flippers.forEach(flipper => {
             flipper.checkCollision(this.ball);

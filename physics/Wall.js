@@ -40,31 +40,48 @@ class Wall {
 
     // Проверка коллизии с прямой линией + sweep test
     checkLineCollision(ball) {
-        // Блокируем повторные коллизии с той же стеной в течение одного кадра
-        if (!this.lastCollisionFrame) this.lastCollisionFrame = 0;
-        const currentFrame = performance.now();
-        
-        if (currentFrame - this.lastCollisionFrame < 20) { // 20ms защита
-            return false; // Пропускаем повторную коллизию
-        }
-        
         // Обычная проверка текущей позиции
         const distance = distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
         if (distance < ball.radius + this.width / 2) {
-            this.lastCollisionFrame = currentFrame; // Запоминаем время коллизии
-            
             const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
+            // Более агрессивное отталкивание
             const overlap = ball.radius + this.width / 2 - distance;
-            const pushDistance = overlap * 0.8;
+            const pushDistance = overlap + 3; // Было overlap * 0.8, стало overlap + 3
             ball.position.x += normal.x * pushDistance;
             ball.position.y += normal.y * pushDistance;
 
-            const dotProduct = ball.velocity.dot(normal);
-            ball.velocity.x -= 2 * dotProduct * normal.x;
-            ball.velocity.y -= 2 * dotProduct * normal.y;
-            ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            // Проверяем, не слишком ли близко к концам стены (углы)
+            const ballToStart = Math.sqrt(
+                Math.pow(ball.position.x - this.x1, 2) + 
+                Math.pow(ball.position.y - this.y1, 2)
+            );
+            const ballToEnd = Math.sqrt(
+                Math.pow(ball.position.x - this.x2, 2) + 
+                Math.pow(ball.position.y - this.y2, 2)
+            );
+            
+            const cornerThreshold = ball.radius * 2; // Радиус "опасной зоны" угла
+            const isNearCorner = ballToStart < cornerThreshold || ballToEnd < cornerThreshold;
+            
+            if (isNearCorner) {
+                // Для углов: более сильное отталкивание + дополнительный импульс
+                ball.position.x += normal.x * 5; // Дополнительный отступ
+                ball.position.y += normal.y * 5;
+                
+                // Более сильный отскок для углов
+                const dotProduct = ball.velocity.dot(normal);
+                ball.velocity.x -= 2.5 * dotProduct * normal.x; // Было 2, стало 2.5
+                ball.velocity.y -= 2.5 * dotProduct * normal.y;
+                ball.velocity.multiply(CONFIG.BOUNCE_DAMPING * 1.1); // Меньше затухание
+            } else {
+                // Обычное отражение для середины стены
+                const dotProduct = ball.velocity.dot(normal);
+                ball.velocity.x -= 2 * dotProduct * normal.x;
+                ball.velocity.y -= 2 * dotProduct * normal.y;
+                ball.velocity.multiply(CONFIG.BOUNCE_DAMPING);
+            }
 
             return true;
         }
@@ -92,8 +109,6 @@ class Wall {
         );
 
         if (intersection.hit) {
-            this.lastCollisionFrame = currentFrame; // Запоминаем время коллизии
-            
             // Перемещаем мяч в точку коллизии
             ball.position.x = intersection.point.x;
             ball.position.y = intersection.point.y;
