@@ -15,6 +15,10 @@ class PinballGame {
         this.loadingScreen = document.getElementById('loadingScreen');
         this.levelSelectScreen = document.getElementById('levelSelectScreen');
 
+        // Collision grid system for improved corner handling
+        this.useCollisionGrid = true;
+        this.collisionGrid = null;
+
         this.ball = null;
         this.gameStarted = false;
         this.currentLevel = null;
@@ -41,6 +45,13 @@ class PinballGame {
             this.resetBall();
             this.updateUI();
             this.gameStarted = true;
+
+            // Initialize collision grid after level is loaded
+            if (this.useCollisionGrid && this.currentLevel) {
+                console.log('🔍 Creating collision grid...');
+                this.collisionGrid = this.createSimpleCollisionGrid();
+                console.log('✅ Collision grid ready!');
+            }
 
             if (!this.gameLoopRunning) {
                 this.gameLoopRunning = true;
@@ -639,6 +650,11 @@ class PinballGame {
     }
 
     checkCollisions() {
+        // Check grid-based collisions first if enabled
+        if (this.useCollisionGrid && this.collisionGrid) {
+            this.checkGridBasedCollisions();
+        }
+
         // Single pass collision detection with improved corner handling
         this.currentLevel.walls.forEach(wall => {
             wall.checkCollision(this.ball);
@@ -709,6 +725,11 @@ class PinballGame {
             this.renderer.drawOverlayImage(this.currentLevel.overlayImage, 1.0);
         }
 
+        // Debug collision grid visualization (change false to true to enable)
+        if (this.useCollisionGrid && false) {
+            this.drawCollisionGridDebug();
+        }
+
         this.renderer.endVirtualRendering();
     }
 
@@ -772,3 +793,195 @@ class PinballGame {
         }
     }
 }
+
+
+    // Collision Grid System Implementation
+    createSimpleCollisionGrid() {
+        const cellSize = 16;
+        const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);
+        const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize);
+        
+        const grid = [];
+        
+        // Initialize grid
+        for (let row = 0; row < rows; row++) {
+            grid[row] = [];
+            for (let col = 0; col < cols; col++) {
+                grid[row][col] = {
+                    solid: false,
+                    dangerLevel: 0,
+                    escapeDirection: null
+                };
+            }
+        }
+        
+        // Mark wall cells
+        this.currentLevel.walls.forEach(wall => {
+            this.markWallCells(grid, wall, cellSize, cols, rows);
+        });
+        
+        // Compute danger levels and escape directions
+        this.computeDangerLevels(grid, cols, rows);
+        this.computeEscapeDirections(grid, cols, rows, cellSize);
+        
+        return {
+            grid: grid,
+            cellSize: cellSize,
+            cols: cols,
+            rows: rows,
+            
+            checkPosition: (x, y) => {
+                const col = Math.floor(x / cellSize);
+                const row = Math.floor(y / cellSize);
+                
+                if (row >= 0 && row < rows && col >= 0 && col < cols) {
+                    return grid[row][col];
+                }
+                return { solid: false, dangerLevel: 0, escapeDirection: null };
+            }
+        };
+    }
+    
+    markWallCells(grid, wall, cellSize, cols, rows) {
+        // Simple wall rasterization
+        const steps = Math.max(
+            Math.abs(wall.x2 - wall.x1), 
+            Math.abs(wall.y2 - wall.y1)
+        ) / cellSize;
+        
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = wall.x1 + (wall.x2 - wall.x1) * t;
+            const y = wall.y1 + (wall.y2 - wall.y1) * t;
+            
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+            
+            // Mark cell and neighbors (for wall thickness)
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    
+                    if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                        grid[newRow][newCol].solid = true;
+                    }
+                }
+            }
+        }
+    }
+    
+    computeDangerLevels(grid, cols, rows) {
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                let solidNeighbors = 0;
+                let totalNeighbors = 0;
+                
+                // Check 3x3 neighbors
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        
+                        const newRow = row + dr;
+                        const newCol = col + dc;
+                        
+                        if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                            totalNeighbors++;
+                            if (grid[newRow][newCol].solid) {
+                                solidNeighbors++;
+                            }
+                        }
+                    }
+                }
+                
+                // Danger level = fraction of solid neighbors
+                grid[row][col].dangerLevel = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
+            }
+        }
+    }
+    
+    computeEscapeDirections(grid, cols, rows, cellSize) {
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                if (grid[row][col].dangerLevel > 0.3) {
+                    // Dangerous cell - find direction to safety
+                    let bestDirection = null;
+                    let bestSafety = -1;
+                    
+                    // Check directions
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
+                            if (dr === 0 && dc === 0) continue;
+                            
+                            const newRow = row + dr;
+                            const newCol = col + dc;
+                            
+                            if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                                const safety = 1 - grid[newRow][newCol].dangerLevel;
+                                if (safety > bestSafety) {
+                                    bestSafety = safety;
+                                    bestDirection = { x: dc, y: dr };
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (bestDirection) {
+                        const length = Math.sqrt(bestDirection.x ** 2 + bestDirection.y ** 2);
+                        grid[row][col].escapeDirection = {
+                            x: bestDirection.x / length,
+                            y: bestDirection.y / length
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
+    checkGridBasedCollisions() {
+        const ballInfo = this.collisionGrid.checkPosition(
+            this.ball.position.x, 
+            this.ball.position.y
+        );
+        
+        // If ball is in dangerous zone
+        if (ballInfo.dangerLevel > 0.5 && ballInfo.escapeDirection) {
+            // Gently guide ball to safety
+            const escapeForce = ballInfo.dangerLevel * 0.5;
+            
+            this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
+            this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
+            
+            console.log(`🚨 Ball in danger zone (${ballInfo.dangerLevel.toFixed(2)}), applying escape force`);
+        }
+    }
+    
+    drawCollisionGridDebug() {
+        if (!this.collisionGrid) return;
+        
+        const ctx = this.renderer.ctx;
+        if (!ctx) return;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        
+        // Draw grid
+        for (let row = 0; row < this.collisionGrid.rows; row++) {
+            for (let col = 0; col < this.collisionGrid.cols; col++) {
+                const cell = this.collisionGrid.grid[row][col];
+                const x = col * this.collisionGrid.cellSize;
+                const y = row * this.collisionGrid.cellSize;
+                
+                if (cell.solid) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
+                } else if (cell.dangerLevel > 0.3) {
+                    const intensity = Math.floor(cell.dangerLevel * 255);
+                    ctx.fillStyle = `rgb(${intensity}, ${255 - intensity}, 0)`;
+                    ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
+                }
+            }
+        }
+        
+        ctx.restore();
+    }
