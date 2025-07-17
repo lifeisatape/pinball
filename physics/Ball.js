@@ -16,14 +16,14 @@ class Ball {
 
         // ОРИГИНАЛЬНАЯ ФИЗИКА (не изменяем!)
         this.velocity.add(new Vector2D(0, CONFIG.GRAVITY));
-        this.velocity.clamp(CONFIG.MAX_BALL_SPEED);
+        this.velocity.clamp(Math.min(CONFIG.MAX_BALL_SPEED, 15)); // Ограничение скорости при высоком FPS
         this.velocity.multiply(CONFIG.FRICTION);
 
         // Anti-tunneling: если скорость слишком высокая, разбиваем движение на шаги
         const speed = this.velocity.magnitude();
-        if (speed > this.radius) {
+        if (speed > this.radius * 0.3) { // Более агрессивная проверка
             // Разбиваем движение на шаги размером с радиус мяча
-            const steps = Math.ceil(speed / this.radius);
+            const steps = Math.ceil(speed / (this.radius * 0.25)); // Меньшие шаги
             const stepVelocity = new Vector2D(this.velocity.x / steps, this.velocity.y / steps);
 
             for (let i = 0; i < steps; i++) {
