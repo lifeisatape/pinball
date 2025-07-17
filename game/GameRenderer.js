@@ -19,7 +19,7 @@ class GameRenderer {
         this.scale = Math.min(scaleX, scaleY);
 
         this.offsetX = (this.canvas.width - CONFIG.VIRTUAL_WIDTH * this.scale) / 2;
-        this.offsetY = (this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale) / 2;
+        this.offsetY = this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale;
     }
 
     clear() {
