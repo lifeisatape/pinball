@@ -795,7 +795,7 @@ class PinballGame {
 
     // Simple Collision Grid System
     createSimpleCollisionGrid() {
-        const cellSize = 4; // Простой разумный размер
+        const cellSize = 2; // Простой разумный размер
         const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);  // 40 колонок  
         const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize); // 60 строк
         
