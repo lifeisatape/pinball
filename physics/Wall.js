@@ -40,10 +40,20 @@ class Wall {
 
     // Проверка коллизии с прямой линией + sweep test
     checkLineCollision(ball) {
+        // Блокируем повторные коллизии с той же стеной в течение одного кадра
+        if (!this.lastCollisionFrame) this.lastCollisionFrame = 0;
+        const currentFrame = performance.now();
+        
+        if (currentFrame - this.lastCollisionFrame < 20) { // 20ms защита
+            return false; // Пропускаем повторную коллизию
+        }
+        
         // Обычная проверка текущей позиции
         const distance = distanceToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
         if (distance < ball.radius + this.width / 2) {
+            this.lastCollisionFrame = currentFrame; // Запоминаем время коллизии
+            
             const normal = getNormalToLineSegment(ball.position, new Vector2D(this.x1, this.y1), new Vector2D(this.x2, this.y2));
 
             const overlap = ball.radius + this.width / 2 - distance;
@@ -82,6 +92,8 @@ class Wall {
         );
 
         if (intersection.hit) {
+            this.lastCollisionFrame = currentFrame; // Запоминаем время коллизии
+            
             // Перемещаем мяч в точку коллизии
             ball.position.x = intersection.point.x;
             ball.position.y = intersection.point.y;
