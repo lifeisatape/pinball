@@ -11,14 +11,22 @@ class GameRenderer {
     }
 
     setupCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 60;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
 
-        const scaleX = this.canvas.width / CONFIG.VIRTUAL_WIDTH;
-        const scaleY = this.canvas.height / CONFIG.VIRTUAL_HEIGHT;
+        const scaleX = screenWidth / CONFIG.VIRTUAL_WIDTH;
+        const scaleY = screenHeight / CONFIG.VIRTUAL_HEIGHT;
         this.scale = Math.min(scaleX, scaleY);
 
-        this.offsetX = (this.canvas.width - CONFIG.VIRTUAL_WIDTH * this.scale) / 2;
+        const gameAreaWidth = CONFIG.VIRTUAL_WIDTH * this.scale;
+        const gameAreaHeight = CONFIG.VIRTUAL_HEIGHT * this.scale;
+
+        this.canvas.width = screenWidth;
+        this.canvas.height = gameAreaHeight;
+
+        this.canvas.style.height = `${gameAreaHeight}px`;
+
+        this.offsetX = (this.canvas.width - gameAreaWidth) / 2;
         this.offsetY = this.canvas.height - CONFIG.VIRTUAL_HEIGHT * this.scale;
     }
 
