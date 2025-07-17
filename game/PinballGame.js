@@ -77,15 +77,23 @@ class PinballGame {
         });
 
         // Обработчик для экрана "tap to start"
-        this.tapToStartScreen.addEventListener('click', () => {
+        this.tapToStartScreen.addEventListener('click', async () => {
             console.log('PinballGame: User clicked TAP TO START');
             this.userHasInteracted = true;
+            
+            // НЕМЕДЛЕННАЯ активация AudioContext
+            await this.activateAudioContext();
+            
             this.startLoadingProcess();
         });
 
-        this.tapToStartScreen.addEventListener('touchstart', () => {
+        this.tapToStartScreen.addEventListener('touchstart', async () => {
             console.log('PinballGame: User touched TAP TO START');
             this.userHasInteracted = true;
+            
+            // НЕМЕДЛЕННАЯ активация AudioContext
+            await this.activateAudioContext();
+            
             this.startLoadingProcess();
         }, { passive: true });
     }
@@ -357,6 +365,44 @@ class PinballGame {
         this.levelSelectScreen.style.display = 'none';
     }
 
+    async activateAudioContext() {
+        console.log('PinballGame: Activating AudioContext immediately...');
+        
+        if (!window.soundManager || !window.soundManager.audioContext) {
+            console.warn('PinballGame: SoundManager not ready for activation');
+            return;
+        }
+
+        try {
+            const context = window.soundManager.audioContext;
+            console.log('PinballGame: AudioContext state before activation:', context.state);
+
+            // Агрессивная активация с двумя попытками
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    await context.resume();
+                    console.log(`PinballGame: AudioContext activation attempt ${attempt}, state:`, context.state);
+                    
+                    if (context.state === 'running') {
+                        console.log('PinballGame: AudioContext successfully activated!');
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`PinballGame: AudioContext activation attempt ${attempt} failed:`, error);
+                }
+                
+                // Небольшая пауза между попытками
+                if (attempt < 2) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+
+            console.warn('PinballGame: AudioContext activation failed after 2 attempts, state:', context.state);
+        } catch (error) {
+            console.error('PinballGame: Error during AudioContext activation:', error);
+        }
+    }
+
     async startLoadingProcess() {
         // ЗАЩИТА ОТ АВТОЗАПУСКА!
         if (!this.userHasInteracted) {
@@ -383,15 +429,15 @@ class PinballGame {
             this.checkLoadingComplete();
         });
 
-        // Затем активируем аудио с задержкой, увеличенной для deployed версии
-        const isDeployed = window.location.hostname.includes('replit.app') || 
-                          window.location.hostname.includes('replit.dev') || 
-                          window.location.protocol === 'https:';
-
-        const delay = isDeployed ? 2000 : 1000;
-
+        // AudioContext уже активирован в activateAudioContext(), сразу запускаем unlock
         setTimeout(async () => {
             try {
+                console.log('PinballGame: Starting SoundManager unlock...');
+                
+                if (window.soundManager) {
+                    await window.soundManager.unlock();
+                }
+                
                 this.loadingState.audio = true;
                 this.updateLoadingProgress('audio', 100, 'Audio system initialized');
 
@@ -410,7 +456,7 @@ class PinballGame {
                 this.loadingState.sounds = true;
                 this.checkLoadingComplete();
             }
-        }, delay);
+        }, 100); // Минимальная задержка
 
         // Загружаем уровни
         setTimeout(async () => {
