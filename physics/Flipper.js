@@ -56,25 +56,29 @@ class Flipper {
         this.updateShape();
     }
 
-    // ПРОСТАЯ И НАДЕЖНАЯ ПРОВЕРКА КОЛЛИЗИЙ + ANTI-TUNNELING
+    // БЫСТРАЯ И НАДЕЖНАЯ ПРОВЕРКА КОЛЛИЗИЙ (С ОТЛАДКОЙ)
     checkCollision(ball) {
-        // Сначала проверяем статическую коллизию (текущая позиция)
-        if (this.checkStaticCollision(ball)) {
-            return true;
-        }
+        // Простая проверка статической коллизии с улучшенной обработкой
+        const staticResult = this.checkStaticCollision(ball);
+        if (staticResult) return true;
 
-        // Затем проверяем swept collision (траекторию движения)
-        if (ball.lastPosition && ball.velocity.magnitude() > 2) {
-            return this.checkSweptCollision(ball);
+        // Упрощенная проверка траектории (только для очень быстрых мячей)
+        if (ball.lastPosition && ball.velocity.magnitude() > 6) {
+            return this.simpleTrajectoryCheck(ball);
         }
 
         return false;
     }
 
-    // Проверка статической коллизии (текущая позиция)
+    // Улучшенная проверка статической коллизии
     checkStaticCollision(ball) {
         const start = this.getFlipperStart();
         const end = this.getFlipperEnd();
+
+        // Отладка для правого флиппера
+        // if (!this.isLeft) {
+        //     console.log(`Right flipper: start(${start.x.toFixed(1)}, ${start.y.toFixed(1)}) end(${end.x.toFixed(1)}, ${end.y.toFixed(1)}) angle: ${this.angle.toFixed(2)}`);
+        // }
 
         // Найти ближайшую точку на линии флиппера к мячу
         const lineVec = new Vector2D(end.x - start.x, end.y - start.y);
@@ -83,7 +87,7 @@ class Flipper {
         const lineLength = lineVec.magnitude();
         if (lineLength === 0) return false;
 
-        // Проекция мяча на линию флиппера (нормализованная)
+        // Проекция мяча на линию флиппера
         const t = Math.max(0, Math.min(1, ballVec.dot(lineVec) / (lineLength * lineLength)));
 
         // Ближайшая точка на флиппере
@@ -98,8 +102,10 @@ class Flipper {
             (ball.position.y - closestPoint.y) ** 2
         );
 
-        // Проверка коллизии
-        const totalRadius = this.radius + ball.radius;
+        // Проверка коллизии с более щедрым радиусом для правого флиппера
+        const radiusMultiplier = this.isLeft ? 1.0 : 1.1; // Правый флиппер чуть больше
+        const totalRadius = (this.radius + ball.radius) * radiusMultiplier;
+
         if (distance < totalRadius && distance > 0.1) {
 
             // Вычисляем нормаль (от флиппера к мячу)
@@ -108,14 +114,14 @@ class Flipper {
                 (ball.position.y - closestPoint.y) / distance
             );
 
-            // Расталкиваем мяч
+            // Мгновенно расталкиваем мяч (БЕЗ ЗАДЕРЖЕК!)
             const overlap = totalRadius - distance;
-            const pushDistance = overlap + 1; // +1 для предотвращения залипания
+            const pushDistance = overlap + 2; // +2 для более четкого разделения
 
             ball.position.x += normal.x * pushDistance;
             ball.position.y += normal.y * pushDistance;
 
-            // ПРОСТАЯ И ЭФФЕКТИВНАЯ ФИЗИКА ОТСКОКА
+            // Мгновенная физика отскока
             this.handleSimpleCollision(ball, normal, closestPoint, t);
 
             return true;
@@ -124,131 +130,68 @@ class Flipper {
         return false;
     }
 
-    // Проверка swept collision (траектория движения)
-    checkSweptCollision(ball) {
-        const ballStart = ball.lastPosition.copy();
-        const ballEnd = ball.position.copy();
-        const ballRadius = ball.radius;
+    // Простая проверка траектории (БЕЗ СЛОЖНЫХ ВЫЧИСЛЕНИЙ)
+    simpleTrajectoryCheck(ball) {
+        const ballStart = ball.lastPosition;
+        const ballEnd = ball.position;
 
-        const flipperStart = this.getFlipperStart();
-        const flipperEnd = this.getFlipperEnd();
-        const flipperRadius = this.radius;
-
-        // Проверяем пересечение moving circle vs stationary capsule
-        const intersection = this.movingCircleVsCapsule(
-            ballStart, ballEnd, ballRadius,
-            flipperStart, flipperEnd, flipperRadius
+        // Проверяем только среднюю точку траектории
+        const midPoint = new Vector2D(
+            (ballStart.x + ballEnd.x) / 2,
+            (ballStart.y + ballEnd.y) / 2
         );
 
-        if (intersection.hit) {
-            // Перемещаем мяч в точку коллизии
-            ball.position.x = intersection.point.x;
-            ball.position.y = intersection.point.y;
+        // Создаем временный "виртуальный мяч" в средней точке
+        const virtualBall = {
+            position: midPoint,
+            radius: ball.radius
+        };
+
+        // Проверяем коллизию с виртуальным мячом
+        const start = this.getFlipperStart();
+        const end = this.getFlipperEnd();
+
+        const lineVec = new Vector2D(end.x - start.x, end.y - start.y);
+        const ballVec = new Vector2D(virtualBall.position.x - start.x, virtualBall.position.y - start.y);
+
+        const lineLength = lineVec.magnitude();
+        if (lineLength === 0) return false;
+
+        const t = Math.max(0, Math.min(1, ballVec.dot(lineVec) / (lineLength * lineLength)));
+
+        const closestPoint = new Vector2D(
+            start.x + t * lineVec.x,
+            start.y + t * lineVec.y
+        );
+
+        const distance = Math.sqrt(
+            (virtualBall.position.x - closestPoint.x) ** 2 + 
+            (virtualBall.position.y - closestPoint.y) ** 2
+        );
+
+        const totalRadius = this.radius + virtualBall.radius;
+
+        if (distance < totalRadius) {
+            // Была коллизия! Возвращаем мяч в среднюю точку
+            ball.position.x = midPoint.x;
+            ball.position.y = midPoint.y;
 
             // Применяем физику
-            this.handleSimpleCollision(ball, intersection.normal, intersection.contactPoint, intersection.t);
+            const normal = new Vector2D(
+                (ball.position.x - closestPoint.x) / distance,
+                (ball.position.y - closestPoint.y) / distance
+            );
+
+            const pushDistance = (totalRadius - distance) + 2;
+            ball.position.x += normal.x * pushDistance;
+            ball.position.y += normal.y * pushDistance;
+
+            this.handleSimpleCollision(ball, normal, closestPoint, t);
 
             return true;
         }
 
         return false;
-    }
-
-    // Пересечение движущейся окружности с капсулой
-    movingCircleVsCapsule(circleStart, circleEnd, circleRadius, capsuleStart, capsuleEnd, capsuleRadius) {
-        const totalRadius = circleRadius + capsuleRadius;
-
-        // Вектор движения мяча
-        const movement = new Vector2D(circleEnd.x - circleStart.x, circleEnd.y - circleStart.y);
-        const movementLength = movement.magnitude();
-
-        if (movementLength < 0.1) return { hit: false };
-
-        // Нормализуем вектор движения
-        const moveDir = new Vector2D(movement.x / movementLength, movement.y / movementLength);
-
-        // Ищем ближайшее расстояние между линией движения мяча и линией флиппера
-        let minDistance = Infinity;
-        let bestT = 0;
-        let bestFlipperT = 0;
-
-        // Проверяем несколько точек вдоль траектории
-        const steps = Math.max(5, Math.ceil(movementLength / 2)); // Адаптивное количество шагов
-
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const testPoint = new Vector2D(
-                circleStart.x + movement.x * t,
-                circleStart.y + movement.y * t
-            );
-
-            // Найти ближайшую точку на флиппере к этой тестовой точке
-            const flipperVec = new Vector2D(capsuleEnd.x - capsuleStart.x, capsuleEnd.y - capsuleStart.y);
-            const testVec = new Vector2D(testPoint.x - capsuleStart.x, testPoint.y - capsuleStart.y);
-
-            const flipperLength = flipperVec.magnitude();
-            if (flipperLength === 0) continue;
-
-            const flipperT = Math.max(0, Math.min(1, testVec.dot(flipperVec) / (flipperLength * flipperLength)));
-
-            const closestFlipperPoint = new Vector2D(
-                capsuleStart.x + flipperVec.x * flipperT,
-                capsuleStart.y + flipperVec.y * flipperT
-            );
-
-            const distance = Math.sqrt(
-                (testPoint.x - closestFlipperPoint.x) ** 2 + 
-                (testPoint.y - closestFlipperPoint.y) ** 2
-            );
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestT = t;
-                bestFlipperT = flipperT;
-            }
-        }
-
-        // Проверяем, была ли коллизия
-        if (minDistance < totalRadius) {
-            // Вычисляем точку коллизии
-            const collisionPoint = new Vector2D(
-                circleStart.x + movement.x * bestT,
-                circleStart.y + movement.y * bestT
-            );
-
-            // Вычисляем contact point на флиппере
-            const flipperVec = new Vector2D(capsuleEnd.x - capsuleStart.x, capsuleEnd.y - capsuleStart.y);
-            const contactPoint = new Vector2D(
-                capsuleStart.x + flipperVec.x * bestFlipperT,
-                capsuleStart.y + flipperVec.y * bestFlipperT
-            );
-
-            // Вычисляем нормаль
-            const normalVec = new Vector2D(
-                collisionPoint.x - contactPoint.x,
-                collisionPoint.y - contactPoint.y
-            );
-            const normalLength = normalVec.magnitude();
-
-            if (normalLength > 0.1) {
-                normalVec.x /= normalLength;
-                normalVec.y /= normalLength;
-            } else {
-                // Fallback нормаль
-                normalVec.x = 0;
-                normalVec.y = -1;
-            }
-
-            return {
-                hit: true,
-                point: collisionPoint,
-                normal: normalVec,
-                contactPoint: contactPoint,
-                t: bestFlipperT
-            };
-        }
-
-        return { hit: false };
     }
 
     // УПРОЩЕННАЯ ОБРАБОТКА КОЛЛИЗИЙ (БЕЗ СЛОЖНОЙ ЛОГИКИ)
@@ -309,7 +252,7 @@ class Flipper {
         return this.position.copy();
     }
 
-    // Получение конечной точки флиппера
+    // Получение конечной точки флиппера (УПРОЩЕНО)
     getFlipperEnd() {
         const cos = Math.cos(this.angle);
         const sin = Math.sin(this.angle);
