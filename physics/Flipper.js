@@ -56,9 +56,23 @@ class Flipper {
         this.updateShape();
     }
 
-    // ПРОСТАЯ И НАДЕЖНАЯ ПРОВЕРКА КОЛЛИЗИЙ
+    // ПРОСТАЯ И НАДЕЖНАЯ ПРОВЕРКА КОЛЛИЗИЙ + ANTI-TUNNELING
     checkCollision(ball) {
-        // Трактуем флиппер как capsule (линия с радиусом)
+        // Сначала проверяем статическую коллизию (текущая позиция)
+        if (this.checkStaticCollision(ball)) {
+            return true;
+        }
+
+        // Затем проверяем swept collision (траекторию движения)
+        if (ball.lastPosition && ball.velocity.magnitude() > 2) {
+            return this.checkSweptCollision(ball);
+        }
+
+        return false;
+    }
+
+    // Проверка статической коллизии (текущая позиция)
+    checkStaticCollision(ball) {
         const start = this.getFlipperStart();
         const end = this.getFlipperEnd();
 
@@ -108,6 +122,133 @@ class Flipper {
         }
 
         return false;
+    }
+
+    // Проверка swept collision (траектория движения)
+    checkSweptCollision(ball) {
+        const ballStart = ball.lastPosition.copy();
+        const ballEnd = ball.position.copy();
+        const ballRadius = ball.radius;
+
+        const flipperStart = this.getFlipperStart();
+        const flipperEnd = this.getFlipperEnd();
+        const flipperRadius = this.radius;
+
+        // Проверяем пересечение moving circle vs stationary capsule
+        const intersection = this.movingCircleVsCapsule(
+            ballStart, ballEnd, ballRadius,
+            flipperStart, flipperEnd, flipperRadius
+        );
+
+        if (intersection.hit) {
+            // Перемещаем мяч в точку коллизии
+            ball.position.x = intersection.point.x;
+            ball.position.y = intersection.point.y;
+
+            // Применяем физику
+            this.handleSimpleCollision(ball, intersection.normal, intersection.contactPoint, intersection.t);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // Пересечение движущейся окружности с капсулой
+    movingCircleVsCapsule(circleStart, circleEnd, circleRadius, capsuleStart, capsuleEnd, capsuleRadius) {
+        const totalRadius = circleRadius + capsuleRadius;
+
+        // Вектор движения мяча
+        const movement = new Vector2D(circleEnd.x - circleStart.x, circleEnd.y - circleStart.y);
+        const movementLength = movement.magnitude();
+
+        if (movementLength < 0.1) return { hit: false };
+
+        // Нормализуем вектор движения
+        const moveDir = new Vector2D(movement.x / movementLength, movement.y / movementLength);
+
+        // Ищем ближайшее расстояние между линией движения мяча и линией флиппера
+        let minDistance = Infinity;
+        let bestT = 0;
+        let bestFlipperT = 0;
+
+        // Проверяем несколько точек вдоль траектории
+        const steps = Math.max(5, Math.ceil(movementLength / 2)); // Адаптивное количество шагов
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const testPoint = new Vector2D(
+                circleStart.x + movement.x * t,
+                circleStart.y + movement.y * t
+            );
+
+            // Найти ближайшую точку на флиппере к этой тестовой точке
+            const flipperVec = new Vector2D(capsuleEnd.x - capsuleStart.x, capsuleEnd.y - capsuleStart.y);
+            const testVec = new Vector2D(testPoint.x - capsuleStart.x, testPoint.y - capsuleStart.y);
+
+            const flipperLength = flipperVec.magnitude();
+            if (flipperLength === 0) continue;
+
+            const flipperT = Math.max(0, Math.min(1, testVec.dot(flipperVec) / (flipperLength * flipperLength)));
+
+            const closestFlipperPoint = new Vector2D(
+                capsuleStart.x + flipperVec.x * flipperT,
+                capsuleStart.y + flipperVec.y * flipperT
+            );
+
+            const distance = Math.sqrt(
+                (testPoint.x - closestFlipperPoint.x) ** 2 + 
+                (testPoint.y - closestFlipperPoint.y) ** 2
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestT = t;
+                bestFlipperT = flipperT;
+            }
+        }
+
+        // Проверяем, была ли коллизия
+        if (minDistance < totalRadius) {
+            // Вычисляем точку коллизии
+            const collisionPoint = new Vector2D(
+                circleStart.x + movement.x * bestT,
+                circleStart.y + movement.y * bestT
+            );
+
+            // Вычисляем contact point на флиппере
+            const flipperVec = new Vector2D(capsuleEnd.x - capsuleStart.x, capsuleEnd.y - capsuleStart.y);
+            const contactPoint = new Vector2D(
+                capsuleStart.x + flipperVec.x * bestFlipperT,
+                capsuleStart.y + flipperVec.y * bestFlipperT
+            );
+
+            // Вычисляем нормаль
+            const normalVec = new Vector2D(
+                collisionPoint.x - contactPoint.x,
+                collisionPoint.y - contactPoint.y
+            );
+            const normalLength = normalVec.magnitude();
+
+            if (normalLength > 0.1) {
+                normalVec.x /= normalLength;
+                normalVec.y /= normalLength;
+            } else {
+                // Fallback нормаль
+                normalVec.x = 0;
+                normalVec.y = -1;
+            }
+
+            return {
+                hit: true,
+                point: collisionPoint,
+                normal: normalVec,
+                contactPoint: contactPoint,
+                t: bestFlipperT
+            };
+        }
+
+        return { hit: false };
     }
 
     // УПРОЩЕННАЯ ОБРАБОТКА КОЛЛИЗИЙ (БЕЗ СЛОЖНОЙ ЛОГИКИ)
