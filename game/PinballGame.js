@@ -793,131 +793,219 @@ class PinballGame {
         }
     }
 
-    // Collision Grid System Implementation
+    // Pixel-Perfect Collision Grid System
     createSimpleCollisionGrid() {
-        const cellSize = 16;
-        const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);
-        const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize);
+        const cellSize = 1; // ПИКСЕЛЬНАЯ ТОЧНОСТЬ!
+        const cols = CONFIG.VIRTUAL_WIDTH;   // 320 колонок
+        const rows = CONFIG.VIRTUAL_HEIGHT;  // 480 строк
         
-        const grid = [];
+        console.log(`🔍 Creating pixel-perfect grid: ${cols}×${rows} (${cols * rows} cells)`);
+        const startTime = performance.now();
         
-        // Initialize grid
-        for (let row = 0; row < rows; row++) {
-            grid[row] = [];
-            for (let col = 0; col < cols; col++) {
-                grid[row][col] = {
-                    solid: false,
-                    dangerLevel: 0,
-                    escapeDirection: null
-                };
-            }
-        }
+        // Используем типизированные массивы для производительности
+        const solidGrid = new Uint8Array(cols * rows);           // 0/1 для solid
+        const dangerGrid = new Float32Array(cols * rows);        // 0.0-1.0 для danger level
+        const escapeXGrid = new Float32Array(cols * rows);       // escape direction X
+        const escapeYGrid = new Float32Array(cols * rows);       // escape direction Y
         
-        // Mark wall cells
+        // Mark wall pixels
         this.currentLevel.walls.forEach(wall => {
-            this.markWallCells(grid, wall, cellSize, cols, rows);
+            this.rasterizeWallPixelPerfect(wall, solidGrid, cols, rows);
         });
         
-        // Compute danger levels and escape directions
-        this.computeDangerLevels(grid, cols, rows);
-        this.computeEscapeDirections(grid, cols, rows, cellSize);
+        console.log(`⚡ Wall rasterization: ${(performance.now() - startTime).toFixed(1)}ms`);
+        
+        // Compute danger levels
+        this.computeDangerLevelsPixelPerfect(solidGrid, dangerGrid, cols, rows);
+        
+        console.log(`⚡ Danger computation: ${(performance.now() - startTime).toFixed(1)}ms`);
+        
+        // Compute escape directions
+        this.computeEscapeDirectionsPixelPerfect(dangerGrid, escapeXGrid, escapeYGrid, cols, rows);
+        
+        const totalTime = (performance.now() - startTime).toFixed(1);
+        console.log(`✅ Pixel-perfect grid ready in ${totalTime}ms`);
         
         return {
-            grid: grid,
-            cellSize: cellSize,
-            cols: cols,
-            rows: rows,
+            solidGrid,
+            dangerGrid,
+            escapeXGrid,
+            escapeYGrid,
+            cellSize: 1,
+            cols,
+            rows,
             
+            // Сверхбыстрая проверка позиции
             checkPosition: (x, y) => {
-                const col = Math.floor(x / cellSize);
-                const row = Math.floor(y / cellSize);
+                const col = Math.floor(x);
+                const row = Math.floor(y);
                 
                 if (row >= 0 && row < rows && col >= 0 && col < cols) {
-                    return grid[row][col];
+                    const index = row * cols + col;
+                    return {
+                        solid: solidGrid[index] > 0,
+                        dangerLevel: dangerGrid[index],
+                        escapeDirection: escapeXGrid[index] !== 0 || escapeYGrid[index] !== 0 ? 
+                            { x: escapeXGrid[index], y: escapeYGrid[index] } : null
+                    };
                 }
                 return { solid: false, dangerLevel: 0, escapeDirection: null };
             }
         };
     }
     
-    markWallCells(grid, wall, cellSize, cols, rows) {
-        // Simple wall rasterization
-        const steps = Math.max(
-            Math.abs(wall.x2 - wall.x1), 
-            Math.abs(wall.y2 - wall.y1)
-        ) / cellSize;
+    
+    
+    checkGridBasedCollisions() {
+        const ballX = Math.floor(this.ball.position.x);
+        const ballY = Math.floor(this.ball.position.y);
+        const ballRadius = CONFIG.BALL_RADIUS;
         
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const x = wall.x1 + (wall.x2 - wall.x1) * t;
-            const y = wall.y1 + (wall.y2 - wall.y1) * t;
-            
-            const col = Math.floor(x / cellSize);
-            const row = Math.floor(y / cellSize);
-            
-            // Mark cell and neighbors (for wall thickness)
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    const newRow = row + dr;
-                    const newCol = col + dc;
+        // Проверяем не один пиксель, а область под мячом
+        let maxDangerLevel = 0;
+        let bestEscapeDirection = null;
+        let totalDanger = 0;
+        let checkedPixels = 0;
+        
+        // Проверяем все пиксели в радиусе мяча
+        for (let dy = -ballRadius; dy <= ballRadius; dy++) {
+            for (let dx = -ballRadius; dx <= ballRadius; dx++) {
+                // Проверяем, находится ли пиксель внутри окружности мяча
+                if (dx * dx + dy * dy <= ballRadius * ballRadius) {
+                    const pixelInfo = this.collisionGrid.checkPosition(ballX + dx, ballY + dy);
                     
-                    if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-                        grid[newRow][newCol].solid = true;
+                    if (pixelInfo.dangerLevel > 0) {
+                        totalDanger += pixelInfo.dangerLevel;
+                        checkedPixels++;
+                        
+                        if (pixelInfo.dangerLevel > maxDangerLevel) {
+                            maxDangerLevel = pixelInfo.dangerLevel;
+                            bestEscapeDirection = pixelInfo.escapeDirection;
+                        }
                     }
                 }
             }
         }
+        
+        // Используем среднюю опасность для принятия решения
+        const avgDangerLevel = checkedPixels > 0 ? totalDanger / checkedPixels : 0;
+        
+        // Применяем escape force только при реальной опасности
+        if (avgDangerLevel > 0.8 && bestEscapeDirection) {
+            const escapeForce = avgDangerLevel * 0.3;
+            
+            this.ball.velocity.x += bestEscapeDirection.x * escapeForce;
+            this.ball.velocity.y += bestEscapeDirection.y * escapeForce;
+            
+            console.log(`🚨 Pixel-perfect danger (avg: ${avgDangerLevel.toFixed(2)}, max: ${maxDangerLevel.toFixed(2)}), applying escape force`);
+        }
     }
-    
-    computeDangerLevels(grid, cols, rows) {
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
+
+    // Пиксельно-точная растеризация стен
+    rasterizeWallPixelPerfect(wall, solidGrid, cols, rows) {
+        const x1 = Math.round(wall.x1);
+        const y1 = Math.round(wall.y1);
+        const x2 = Math.round(wall.x2);
+        const y2 = Math.round(wall.y2);
+        
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const sx = x1 < x2 ? 1 : -1;
+        const sy = y1 < y2 ? 1 : -1;
+        let err = dx - dy;
+        
+        let x = x1;
+        let y = y1;
+        
+        while (true) {
+            const wallWidth = Math.max(wall.width || 5, 3);
+            const radius = Math.floor(wallWidth / 2);
+            
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const px = x + dx;
+                    const py = y + dy;
+                    
+                    if (px >= 0 && px < cols && py >= 0 && py < rows) {
+                        if (dx * dx + dy * dy <= radius * radius) {
+                            const index = py * cols + px;
+                            solidGrid[index] = 1;
+                        }
+                    }
+                }
+            }
+            
+            if (x === x2 && y === y2) break;
+            
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y += sy;
+            }
+        }
+    }
+
+    // Оптимизированный расчет danger levels
+    computeDangerLevelsPixelPerfect(solidGrid, dangerGrid, cols, rows) {
+        for (let row = 1; row < rows - 1; row++) {
+            for (let col = 1; col < cols - 1; col++) {
+                const index = row * cols + col;
+                
+                if (solidGrid[index]) {
+                    dangerGrid[index] = 0;
+                    continue;
+                }
+                
                 let solidNeighbors = 0;
                 let totalNeighbors = 0;
                 
-                // Check 3x3 neighbors
                 for (let dr = -1; dr <= 1; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {
                         if (dr === 0 && dc === 0) continue;
                         
-                        const newRow = row + dr;
-                        const newCol = col + dc;
-                        
-                        if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-                            totalNeighbors++;
-                            if (grid[newRow][newCol].solid) {
-                                solidNeighbors++;
-                            }
+                        const neighborIndex = (row + dr) * cols + (col + dc);
+                        totalNeighbors++;
+                        if (solidGrid[neighborIndex]) {
+                            solidNeighbors++;
                         }
                     }
                 }
                 
-                // Danger level = fraction of solid neighbors
-                grid[row][col].dangerLevel = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
+                dangerGrid[index] = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
             }
         }
     }
-    
-    computeEscapeDirections(grid, cols, rows, cellSize) {
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                if (grid[row][col].dangerLevel > 0.3) {
-                    // Dangerous cell - find direction to safety
+
+    // Escape directions только для опасных пикселей
+    computeEscapeDirectionsPixelPerfect(dangerGrid, escapeXGrid, escapeYGrid, cols, rows) {
+        for (let row = 2; row < rows - 2; row++) {
+            for (let col = 2; col < cols - 2; col++) {
+                const index = row * cols + col;
+                
+                if (dangerGrid[index] > 0.7) {
                     let bestDirection = null;
                     let bestSafety = -1;
                     
-                    // Check directions
-                    for (let dr = -2; dr <= 2; dr++) {
-                        for (let dc = -2; dc <= 2; dc++) {
+                    for (let dr = -5; dr <= 5; dr++) {
+                        for (let dc = -5; dc <= 5; dc++) {
                             if (dr === 0 && dc === 0) continue;
                             
-                            const newRow = row + dr;
-                            const newCol = col + dc;
+                            const checkRow = row + dr;
+                            const checkCol = col + dc;
                             
-                            if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-                                const safety = 1 - grid[newRow][newCol].dangerLevel;
-                                if (safety > bestSafety) {
-                                    bestSafety = safety;
+                            if (checkRow >= 0 && checkRow < rows && checkCol >= 0 && checkCol < cols) {
+                                const checkIndex = checkRow * cols + checkCol;
+                                const safety = 1 - dangerGrid[checkIndex];
+                                const distance = Math.sqrt(dr * dr + dc * dc);
+                                
+                                const score = safety - (distance * 0.05);
+                                
+                                if (score > bestSafety) {
+                                    bestSafety = score;
                                     bestDirection = { x: dc, y: dr };
                                 }
                             }
@@ -926,31 +1014,11 @@ class PinballGame {
                     
                     if (bestDirection) {
                         const length = Math.sqrt(bestDirection.x ** 2 + bestDirection.y ** 2);
-                        grid[row][col].escapeDirection = {
-                            x: bestDirection.x / length,
-                            y: bestDirection.y / length
-                        };
+                        escapeXGrid[index] = bestDirection.x / length;
+                        escapeYGrid[index] = bestDirection.y / length;
                     }
                 }
             }
-        }
-    }
-    
-    checkGridBasedCollisions() {
-        const ballInfo = this.collisionGrid.checkPosition(
-            this.ball.position.x, 
-            this.ball.position.y
-        );
-        
-        // If ball is in dangerous zone
-        if (ballInfo.dangerLevel > 0.9 && ballInfo.escapeDirection) {
-            // Gently guide ball to safety
-            const escapeForce = ballInfo.dangerLevel * 0.1;
-            
-            this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
-            this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
-            
-            console.log(`🚨 Ball in danger zone (${ballInfo.dangerLevel.toFixed(2)}), applying escape force`);
         }
     }
     
