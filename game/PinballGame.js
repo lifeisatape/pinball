@@ -792,8 +792,6 @@ class PinballGame {
             requestAnimationFrame(() => this.gameLoop());
         }
     }
-}
-
 
     // Collision Grid System Implementation
     createSimpleCollisionGrid() {
@@ -985,3 +983,4 @@ class PinballGame {
         
         ctx.restore();
     }
+}
