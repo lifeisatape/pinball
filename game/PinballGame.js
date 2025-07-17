@@ -795,9 +795,9 @@ class PinballGame {
 
     // Pixel-Perfect Collision Grid System
     createSimpleCollisionGrid() {
-        const cellSize = 4; // ПИКСЕЛЬНАЯ ТОЧНОСТЬ!
-        const cols = CONFIG.VIRTUAL_WIDTH;   // 320 колонок
-        const rows = CONFIG.VIRTUAL_HEIGHT;  // 480 строк
+        const cellSize = 4; // Разумный размер сетки 4×4
+        const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);   // 80 колонок
+        const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize);  // 120 строк
         
         console.log(`🔍 Creating pixel-perfect grid: ${cols}×${rows} (${cols * rows} cells)`);
         const startTime = performance.now();
@@ -831,14 +831,14 @@ class PinballGame {
             dangerGrid,
             escapeXGrid,
             escapeYGrid,
-            cellSize: 1,
+            cellSize: cellSize,
             cols,
             rows,
             
             // Сверхбыстрая проверка позиции
             checkPosition: (x, y) => {
-                const col = Math.floor(x);
-                const row = Math.floor(y);
+                const col = Math.floor(x / cellSize);
+                const row = Math.floor(y / cellSize);
                 
                 if (row >= 0 && row < rows && col >= 0 && col < cols) {
                     const index = row * cols + col;
