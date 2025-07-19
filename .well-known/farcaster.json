@@ -7,7 +7,7 @@
   "frame": {
     "version": "next",
     "name": "pinbal",
-    "iconUrl": "https://pinballll.space/generated-icon.png",
+    "iconUrl": "https://pinballll.space/gm.png",
     "homeUrl": "https://pinballll.space/",
     "splashImageUrl": "https://pinballll.space/gm.png",
     "splashBackgroundColor": "#951212",
@@ -18,9 +18,9 @@
     ],
     "primaryCategory": "games",
     "tags": ["game", "arcade", "pinball"],
-    "heroImageUrl": "https://pinballll.space/generated-icon.png",
+    "heroImageUrl": "https://pinballll.space/gm.png",
     "ogTitle": "pinbal",
     "ogDescription": "pinball game with original soundtrack",
-    "ogImageUrl": "https://pinballll.space/generated-icon.png"
+    "ogImageUrl": "https://pinballll.space/gm.png"
   }
 }
