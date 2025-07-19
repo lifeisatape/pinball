@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pinball: all stars</title>
     
     <!-- Farcaster Frame Embed Meta Tags -->
@@ -137,14 +137,16 @@
     
     <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
     <script>
-        // Устанавливаем флаг окружения Mini App
+        // Устанавливаем флаг окружения Mini App с критическими проверками для мобильных устройств
         window.isMiniApp = window.parent !== window || 
                           window.location.search.includes('frame=true') ||
                           window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
-                          document.referrer.includes('farcaster');
+                          document.referrer.includes('farcaster') ||
+                          navigator.userAgent.includes('Warpcast') ||
+                          navigator.userAgent.includes('Farcaster');
         
-        console.log('Mini App environment detected:', window.isMiniApp);
+        console.log(window.isMiniApp ? '🚀 Running in Farcaster Mini App mode' : '🌐 Running in regular web mode');
     </script>
 
     <!-- ИСПРАВЛЕНО: Правильная загрузка SDK -->
