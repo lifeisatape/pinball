@@ -1,0 +1,140 @@
+🎯 ЦЕЛЬ
+Применить рабочую логику Farcaster Mini App из проекта FlowersOnMars в проект Pinball для корректной работы на мобильных устройствах (особенно iPhone).
+📋 ЗАДАЧИ ДЛЯ ВЫПОЛНЕНИЯ
+1. ОБНОВИТЬ ОПРЕДЕЛЕНИЕ MINI APP В INDEX.HTML
+javascript// ЗАМЕНИТЬ СУЩЕСТВУЮЩИЙ КОД НА:
+window.isMiniApp = window.parent !== window || 
+                  window.location.search.includes('frame=true') ||
+                  window.location.search.includes('miniApp=true') ||
+                  document.referrer.includes('warpcast.com') ||
+                  document.referrer.includes('farcaster') ||
+                  // ✅ ДОБАВИТЬ ЭТИ КРИТИЧЕСКИЕ ПРОВЕРКИ:
+                  navigator.userAgent.includes('Warpcast') ||
+                  navigator.userAgent.includes('Farcaster');
+2. ПЕРЕПИСАТЬ FARCASTERMANAGER.JS ПО ОБРАЗЦУ FARCASTERINTEGRATION.JS
+Ключевые изменения структуры:
+A. Конструктор - упростить
+javascriptconstructor() {
+    this.sdk = null;
+    this.context = null;
+    this.isInMiniApp = false;
+    this.isFarcasterApp = false;
+    // Убрать сложные callbacks, сделать проще
+}
+B. Метод init() - копировать логику из FlowersOnMars
+javascriptasync init() {
+    // Точно такая же проверка как в FlowersOnMars
+    if (!window.isMiniApp) {
+        console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
+        return; // НЕ вызывать simulateReady()
+    }
+
+    try {
+        const sdk = await this.waitForSDK();
+        this.sdk = sdk;
+
+        // УПРОЩЕННАЯ проверка окружения (как в FlowersOnMars)
+        let isInMiniAppEnv = true;
+        try {
+            if (typeof sdk.isInMiniApp === 'function') {
+                isInMiniAppEnv = await sdk.isInMiniApp();
+            }
+        } catch (error) {
+            console.log('⚠️ Could not verify environment with SDK:', error);
+        }
+
+        if (isInMiniAppEnv) {
+            this.isInMiniApp = true;
+            this.isFarcasterApp = true;
+            
+            // Получить контекст
+            this.context = await sdk.context;
+            
+            // Вызвать setupMiniAppFeatures (БЕЗ ready() внутри)
+            await this.setupMiniAppFeatures();
+        }
+    } catch (error) {
+        console.error('❌ Error initializing Farcaster SDK:', error);
+        this.isInMiniApp = false;
+    }
+}
+C. Метод setupMiniAppFeatures() - точная копия из FlowersOnMars
+javascriptasync setupMiniAppFeatures() {
+    try {
+        // Ждем готовности UI перед вызовом ready()
+        await new Promise(resolve => {
+            requestAnimationFrame(() => {
+                setTimeout(resolve, 500); // Даем время на рендеринг
+            });
+        });
+        console.log('🎉 Mini App features setup complete');
+    } catch (error) {
+        console.error('Error setting up Mini App features:', error);
+    }
+}
+D. Метод notifyAppReady() - точная копия из FlowersOnMars
+javascriptasync notifyAppReady() {
+    if (this.isInMiniApp && this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+        try {
+            await this.sdk.actions.ready({
+                disableNativeGestures: false
+            });
+            console.log('🎉 Farcaster splash screen dismissed');
+        } catch (error) {
+            console.error('❌ Failed to dismiss splash screen:', error);
+        }
+    }
+}
+3. ОБНОВИТЬ ВЫЗОВЫ В PINBALLGAME.JS
+Найти где вызывается FarcasterManager и изменить:
+javascript// СТАРЫЙ КОД:
+window.farcasterManager.onReady((context) => {
+    // логика
+});
+
+// НОВЫЙ КОД (как в FlowersOnMars):
+if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
+    // логика
+    // Вызвать ready() ВРУЧНУЮ когда игра готова:
+    await window.farcasterIntegration.notifyAppReady();
+}
+4. ПЕРЕИМЕНОВАТЬ МЕТОДЫ ПО ОБРАЗЦУ FLOWERSONMARS
+javascript// СТАРЫЕ МЕТОДЫ → НОВЫЕ МЕТОДЫ
+isInFrame() → isInMiniApp (свойство)
+addToFavorites() → оставить как есть
+shareScore() → точная копия из FlowersOnMars
+getUserInfo() → новый метод из FlowersOnMars
+sendDonation() → точная копия из FlowersOnMars
+5. ОБНОВИТЬ ГЛОБАЛЬНУЮ ИНИЦИАЛИЗАЦИЮ
+В конце FarcasterManager.js:
+javascript// ЗАМЕНИТЬ:
+window.farcasterManager = new FarcasterManager();
+
+// НА:
+window.farcasterIntegration = new FarcasterManager(); // или переименовать класс в FarcasterIntegration
+6. КРИТИЧЕСКИЕ ИЗМЕНЕНИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ
+A. В HTML добавить мета-теги из FlowersOnMars:
+html<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+B. Убрать из FarcasterManager:
+
+Сложные callbacks системы
+simulateReady() вызовы
+Блокирующие проверки
+
+C. Добавить логирование для отладки:
+javascriptconsole.log(window.isMiniApp ? '🚀 Running in Farcaster Mini App mode' : '🌐 Running in regular web mode');
+🚨 ВАЖНЫЕ ПРИНЦИПЫ ИЗ FLOWERSONMARS
+
+НЕ вызывать ready() автоматически - только через notifyAppReady() когда нужно
+НЕ блокировать инициализацию на сложных проверках
+Простая структура класса - минимум сложности
+Проверка User Agent для Warpcast/Farcaster
+Отдельная инициализация SDK от вызова ready()
+
+🎯 РЕЗУЛЬТАТ
+После применения этих изменений проект Pinball должен:
+
+✅ Корректно определять Mini App окружение на iPhone
+✅ Правильно инициализировать Farcaster SDK
+✅ Вызывать ready() в нужный момент
+✅ Работать стабильно на всех устройствах

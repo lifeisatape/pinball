@@ -152,7 +152,7 @@
         if (window.isMiniApp) {
             try {
                 console.log('Loading Farcaster SDK...');
-                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
+                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
                 
                 // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
                 window.sdk = sdk;
