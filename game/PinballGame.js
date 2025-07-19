@@ -886,20 +886,6 @@ class PinballGame {
             for (let col = 0; col < cols; col++) {
                 let solidNeighbors = 0;
                 let totalNeighbors = 0;
-                
-
-
-    async shareGameResult(score, level) {
-                    try {
-                        if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
-                            await window.farcasterIntegration.shareScore(score, level);
-                            this.showNotification('Score shared! 📤', 'success');
-                        }
-                    } catch (error) {
-                        console.error('Failed to share score:', error);
-                        this.showNotification('Failed to share score', 'error');
-                    }
-                }
 
                 // Проверяем 3x3 соседей
                 for (let dr = -1; dr <= 1; dr++) {
@@ -930,6 +916,7 @@ class PinballGame {
                 if (grid[row][col].dangerLevel > 0.7) {
                     // Опасная клетка - ищем направление к безопасности
                     let bestDirection = null;
+                    ```text
                     let bestSafety = -1;
 
                     // Проверяем направления (небольшой радиус)
@@ -959,6 +946,18 @@ class PinballGame {
                     }
                 }
             }
+        }
+    }
+
+    async shareGameResult(score, level) {
+        try {
+            if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
+                await window.farcasterIntegration.shareScore(score, level);
+                this.showNotification('Score shared! 📤', 'success');
+            }
+        } catch (error) {
+            console.error('Failed to share score:', error);
+            this.showNotification('Failed to share score', 'error');
         }
     }
 
