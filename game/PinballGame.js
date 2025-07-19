@@ -112,41 +112,28 @@ class PinballGame {
     setupFarcasterIntegration() {
         console.log('PinballGame: Setting up Farcaster integration...');
 
-        // Ждем готовности Farcaster SDK
-        if (window.farcasterManager) {
-            window.farcasterManager.onReady((context) => {
-                console.log('PinballGame: Farcaster SDK ready', context);
+        // Проверяем готовность Farcaster SDK
+        if (window.farcasterIntegration) {
+            console.log('PinballGame: FarcasterIntegration available');
 
-                if (window.farcasterManager.isInFrame()) {
-                    // В frame окружении - скрываем некоторые UI элементы
+            if (window.farcasterIntegration.isInMiniApp) {
+                console.log('PinballGame: Running in Mini App environment');
+                
+                // В Mini App окружении - адаптируем UI
+                const context = window.farcasterIntegration.getContext();
+                if (context) {
                     this.adaptUIForFrame(context);
-
-                    // Показываем информацию о пользователе если доступна
-                    const user = window.farcasterManager.getUser();
-                    if (user) {
-                        console.log('PinballGame: Farcaster user:', user);
-                        this.displayUserInfo(user);
-                    }
                 }
-            });
 
-            // Слушаем обновления контекста
-            window.farcasterManager.onContextUpdate((context) => {
-                console.log('PinballGame: Farcaster context updated', context);
-            });
-
-            // Слушаем события frame
-            window.farcasterManager.onFrameAdded(() => {
-                console.log('PinballGame: App was added to favorites');
-                this.showNotification('Game added to your apps! 🎉', 'success');
-            });
-
-            window.farcasterManager.onFrameRemoved(() => {
-                console.log('PinballGame: App was removed from favorites');
-                this.showNotification('Game removed from apps', 'info');
-            });
+                // Показываем информацию о пользователе если доступна
+                const user = window.farcasterIntegration.getUserInfo();
+                if (user) {
+                    console.log('PinballGame: Farcaster user:', user);
+                    this.displayUserInfo(user);
+                }
+            }
         } else {
-            console.warn('PinballGame: FarcasterManager not available');
+            console.warn('PinballGame: FarcasterIntegration not available');
         }
     }
 
@@ -209,7 +196,7 @@ class PinballGame {
 
             addButton.addEventListener('click', async () => {
                 try {
-                    const success = await window.farcasterManager.addToFavorites();
+                    const success = await window.farcasterIntegration.addToFavorites();
                     if (success) {
                         this.showNotification('Added to your apps! 🎮', 'success');
                     } else {
@@ -239,11 +226,7 @@ class PinballGame {
                 const level = this.currentLevel ? this.currentLevel.name : 'Pinball';
 
                 try {
-                    await window.farcasterManager.composeCast({
-                        text: `Just scored ${currentScore} points in ${level}! 🎮⚡\n\nPlay the game yourself:`,
-                        embeds: [window.location.href]
-                    });
-
+                    await window.farcasterIntegration.shareScore(currentScore, level);
                     this.showNotification('Cast created! 📝', 'success');
                 } catch (error) {
                     console.error('Failed to share score:', error);
@@ -741,8 +724,8 @@ class PinballGame {
         this.gameState.isGameOver = true;
         this.gameOverOverlay.show(this.gameState);
 
-        // В frame окружении предлагаем поделиться результатом
-        if (window.farcasterManager && window.farcasterManager.isInFrame()) {
+        // В Mini App окружении предлагаем поделиться результатом
+        if (window.farcasterIntegration && window.farcasterIntegration.isInMiniApp) {
             setTimeout(() => {
                 this.showNotification('Share your score! 📱', 'info');
             }, 1000);
@@ -904,6 +887,20 @@ class PinballGame {
                 let solidNeighbors = 0;
                 let totalNeighbors = 0;
                 
+
+
+    async shareGameResult(score, level) {
+        try {
+            if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
+                await window.farcasterIntegration.shareScore(score, level);
+                this.showNotification('Score shared! 📤', 'success');
+            }
+        } catch (error) {
+            console.error('Failed to share score:', error);
+            this.showNotification('Failed to share score', 'error');
+        }
+    }
+
                 // Проверяем 3x3 соседей
                 for (let dr = -1; dr <= 1; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {

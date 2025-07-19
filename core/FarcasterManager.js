@@ -338,6 +338,6 @@ class FarcasterManager {
     }
 }
 
-// Создаем глобальный экземпляр с новым именем
+// Создаем глобальный экземпляр с правильным именем
 console.log('Creating global FarcasterIntegration instance...');
 window.farcasterIntegration = new FarcasterManager();
