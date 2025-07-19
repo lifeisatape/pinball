@@ -70,16 +70,16 @@ class FarcasterManager {
 
             // Получаем контекст
             try {
-                this.context = this.sdk.context;
+                this.context = await this.sdk.context;
                 console.log('📋 Farcaster context received');
 
                 // Получаем пользователя
                 if (this.context && this.context.user) {
                     this.user = this.context.user;
                     console.log('👤 User info:', {
-                        fid: this.user.fid,
-                        username: this.user.username,
-                        displayName: this.user.displayName
+                        fid: await this.user.fid,
+                        username: await this.user.username,
+                        displayName: await this.user.displayName
                     });
                 }
             } catch (error) {
@@ -411,15 +411,20 @@ class FarcasterManager {
     }
 
     // ИСПРАВЛЕНО: Добавляем метод getUserInfo как в рабочем примере
-    getUserInfo() {
+    async getUserInfo() {
         if (this.isFrameEnvironment && this.context && this.context.user) {
             const user = this.context.user;
-            return {
-                fid: user.fid || null,
-                username: user.username || null,
-                displayName: user.displayName || null,
-                pfpUrl: user.pfpUrl || null
-            };
+            try {
+                return {
+                    fid: await user.fid || null,
+                    username: await user.username || null,
+                    displayName: await user.displayName || null,
+                    pfpUrl: await user.pfpUrl || null
+                };
+            } catch (error) {
+                console.log('⚠️ Error getting user info:', error);
+                return null;
+            }
         }
         return null;
     }
@@ -448,13 +453,22 @@ class FarcasterManager {
 
     // === УТИЛИТЫ ===
 
-    getSafeAreaInsets() {
-        return this.context?.client?.safeAreaInsets || {
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0
-        };
+    async getSafeAreaInsets() {
+        if (this.context?.client?.safeAreaInsets) {
+            try {
+                const insets = this.context.client.safeAreaInsets;
+                return {
+                    top: await insets.top || 0,
+                    bottom: await insets.bottom || 0,
+                    left: await insets.left || 0,
+                    right: await insets.right || 0
+                };
+            } catch (error) {
+                console.log('⚠️ Error getting safe area insets:', error);
+                return { top: 0, bottom: 0, left: 0, right: 0 };
+            }
+        }
+        return { top: 0, bottom: 0, left: 0, right: 0 };
     }
 
     getNotificationDetails() {

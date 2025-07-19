@@ -150,11 +150,11 @@
     <!-- ИСПРАВЛЕНО: Правильная загрузка SDK как в рабочем проекте -->
     <script type="module">
         if (window.isMiniApp) {
-            console.log('📦 Loading Farcaster SDK...');
+            console.log('📦 Loading Farcaster Mini App SDK...');
             try {
-                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
+                const { default: sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
                 window.sdk = sdk;
-                console.log('✅ Farcaster SDK loaded successfully');
+                console.log('✅ Farcaster Mini App SDK loaded successfully');
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => {
                         if (window.farcasterIntegration) {
@@ -169,7 +169,7 @@
                     }
                 }
             } catch (error) {
-                console.error('❌ Failed to load Farcaster SDK:', error);
+                console.error('❌ Failed to load Farcaster Mini App SDK:', error);
             }
         }
     </script>
