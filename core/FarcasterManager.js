@@ -41,8 +41,11 @@ class FarcasterManager {
 
             // Получаем контекст
             try {
-                this.context = await sdk.context;
                 console.log('📋 Farcaster context received');
+
+                // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после получения контекста
+                await this.notifyAppReady();
+                console.log('🎉 Ready called immediately after context');
 
                 // Безопасное получение пользователя
                 try {
