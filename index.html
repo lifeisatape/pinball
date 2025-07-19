@@ -147,21 +147,30 @@
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>
 
-    <!-- ИСПРАВЛЕНО: Правильная загрузка SDK -->
+    <!-- ИСПРАВЛЕНО: Правильная загрузка SDK как в рабочем проекте -->
     <script type="module">
         if (window.isMiniApp) {
+            console.log('📦 Loading Farcaster SDK...');
             try {
-                console.log('Loading Farcaster SDK...');
-                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
-                
-                // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
+                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
                 window.sdk = sdk;
-                console.log('✅ Farcaster SDK loaded successfully:', sdk);
+                console.log('✅ Farcaster SDK loaded successfully');
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        if (window.farcasterIntegration) {
+                            window.farcasterIntegration.sdk = sdk;
+                            window.farcasterIntegration.init();
+                        }
+                    });
+                } else {
+                    if (window.farcasterIntegration) {
+                        window.farcasterIntegration.sdk = sdk;
+                        window.farcasterIntegration.init();
+                    }
+                }
             } catch (error) {
                 console.error('❌ Failed to load Farcaster SDK:', error);
             }
-        } else {
-            console.log('⏭️ Skipping SDK load - not in Mini App environment');
         }
     </script>
     

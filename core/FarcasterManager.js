@@ -20,49 +20,25 @@ class FarcasterManager {
     async init() {
         console.log('FarcasterManager: Initializing...');
 
-        // ИСПРАВЛЕНО: Проверяем window.isMiniApp как в рабочем примере
         if (!window.isMiniApp) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
             this.simulateReady();
             return;
         }
 
-        try {
-            console.log('🔄 Initializing Farcaster integration...');
+        // Если SDK уже установлен через index.html, используем его
+        if (this.sdk) {
+            console.log('🔄 Using pre-loaded SDK...');
+            await this.setupMiniAppFeatures();
+            return;
+        }
 
-            // ИСПРАВЛЕНО: Ждем правильный SDK - window.sdk, а не window.miniAppSDK
+        try {
+            console.log('🔄 Waiting for SDK...');
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
-
-            // ИСПРАВЛЕНО: Если SDK загрузился - значит мы в Mini App окружении
-            // Игнорируем ненадежную проверку sdk.isInMiniApp()
             this.isFrameEnvironment = true;
             console.log('✅ Farcaster SDK initialized successfully');
-
-            // Получаем контекст
-            try {
-                console.log('📋 Farcaster context received');
-
-                // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после получения контекста
-                await this.notifyAppReady();
-                console.log('🎉 Ready called immediately after context');
-
-                // Безопасное получение пользователя
-                try {
-                    const user = this.context.user;
-                    this.user = user;
-                    console.log('👤 User info:', {
-                        fid: user?.fid,
-                        username: user?.username,
-                        displayName: user?.displayName
-                    });
-                } catch (userError) {
-                    console.log('ℹ️ User data not immediately available');
-                    this.user = null;
-                }
-            } catch (error) {
-                console.log('⚠️ Could not get context:', error.message);
-            }
 
             await this.setupMiniAppFeatures();
         } catch (error) {
@@ -90,19 +66,29 @@ class FarcasterManager {
 
     async setupMiniAppFeatures() {
         try {
-            // Устанавливаем слушатели событий
             this.setupEventListeners();
 
-            // Ждем готовности UI перед вызовом ready()
-            await new Promise(resolve => {
-                requestAnimationFrame(() => {
-                    setTimeout(resolve, 500); // Даем время на рендеринг
-                });
-            });
+            // Получаем контекст
+            try {
+                this.context = this.sdk.context;
+                console.log('📋 Farcaster context received');
+
+                // Получаем пользователя
+                if (this.context && this.context.user) {
+                    this.user = this.context.user;
+                    console.log('👤 User info:', {
+                        fid: this.user.fid,
+                        username: this.user.username,
+                        displayName: this.user.displayName
+                    });
+                }
+            } catch (error) {
+                console.log('⚠️ Could not get context:', error.message);
+            }
 
             this.isReady = true;
 
-            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() для скрытия splash screen
+            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО
             await this.notifyAppReady();
 
             // Уведомляем колбэки
@@ -117,6 +103,7 @@ class FarcasterManager {
             console.log('🎉 Mini App features setup complete');
         } catch (error) {
             console.error('Error setting up Mini App features:', error);
+            this.simulateReady();
         }
     }
 
