@@ -6,10 +6,10 @@
     <title>Pinball: all stars</title>
     
     <!-- Farcaster Frame Embed Meta Tags -->
-    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball Game","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Pinball Game - Classic Arcade Experience" />
+    <meta property="og:title" content="Pinball: all stars" />
     <meta property="og:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta property="og:image" content="https://pinballll.space/gm.png" />
     <meta property="og:url" content="https://pinballll.space/" />
@@ -17,7 +17,7 @@
 
     <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Pinball Game - Classic Arcade Experience" />
+    <meta name="twitter:title" content="Pinball: all stars" />
     <meta name="twitter:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta name="twitter:image" content="https://pinballll.space/gm.png" />
     
@@ -152,7 +152,7 @@
         if (window.isMiniApp) {
             try {
                 console.log('Loading Farcaster SDK...');
-                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
+                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
                 
                 // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
                 window.sdk = sdk;
