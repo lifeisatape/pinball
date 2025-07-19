@@ -1,0 +1,65 @@
+🚨 КРИТИЧЕСКИЕ СИНТАКСИЧЕСКИЕ ОШИБКИ В КОДЕ!
+Вижу главную проблему - метод shareGameResult вставлен ВНУТРИ метода computeDangerLevels на строке ~892, что ломает весь синтаксис JavaScript!
+🔧 ИСПРАВЛЕНИЯ:
+1. УДАЛИТЕ неправильно размещенный код:
+Найдите и УДАЛИТЕ эти строки (примерно строки 892-902):
+javascriptasync shareGameResult(score, level) {
+    try {
+        if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
+            await window.farcasterIntegration.shareScore(score, level);
+            this.showNotification('Score shared! 📤', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to share score:', error);
+        this.showNotification('Failed to share score', 'error');
+    }
+}
+2. ИСПРАВЬТЕ метод adaptUIForFrame:
+javascript// ❌ НЕПРАВИЛЬНО:
+const success = await window.farcasterIntegration.addToFavorites();
+
+// ✅ ПРАВИЛЬНО:
+await window.farcasterIntegration.sdk.actions.addFrame();
+
+// ❌ НЕПРАВИЛЬНО:
+await window.farcasterIntegration.shareScore(currentScore, level);
+
+// ✅ ПРАВИЛЬНО:
+await window.farcasterIntegration.sdk.actions.composeCast({
+    text: `Just scored ${currentScore} points in ${level}! 🎮⚡\n\nPlay the game yourself:`,
+    embeds: [window.location.href]
+});
+3. ИСПРАВЬТЕ метод setupFarcasterIntegration:
+javascriptsetupFarcasterIntegration() {
+    console.log('PinballGame: Setting up Farcaster integration...');
+
+    // ✅ ИСПРАВЛЕННАЯ ПРОВЕРКА:
+    if (window.farcasterIntegration) {
+        console.log('PinballGame: FarcasterIntegration available');
+
+        // Ждем инициализации
+        setTimeout(() => {
+            if (window.farcasterIntegration.isFarcasterApp) { // ✅ ИСПРАВЛЕНО
+                console.log('PinballGame: Farcaster SDK ready');
+                
+                // ✅ ИСПРАВЛЕНО: Прямое обращение к context
+                const context = window.farcasterIntegration.context;
+                if (context) {
+                    this.adaptUIForFrame(context);
+                }
+
+                // Показываем информацию о пользователе
+                const userInfo = window.farcasterIntegration.getUserInfo();
+                if (userInfo) {
+                    console.log('PinballGame: Farcaster user:', userInfo);
+                    this.displayUserInfo(userInfo);
+                }
+
+                // ✅ Вызываем ready() когда игра готова
+                window.farcasterIntegration.notifyAppReady();
+            }
+        }, 1000);
+    } else {
+        console.log('PinballGame: FarcasterIntegration not available');
+    }
+}

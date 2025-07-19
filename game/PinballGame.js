@@ -91,20 +91,20 @@ class PinballGame {
         this.tapToStartScreen.addEventListener('click', async () => {
             console.log('PinballGame: User clicked TAP TO START');
             this.userHasInteracted = true;
-            
+
             // НЕМЕДЛЕННАЯ активация AudioContext
             await this.activateAudioContext();
-            
+
             this.startLoadingProcess();
         });
 
         this.tapToStartScreen.addEventListener('touchstart', async () => {
             console.log('PinballGame: User touched TAP TO START');
             this.userHasInteracted = true;
-            
+
             // НЕМЕДЛЕННАЯ активация AudioContext
             await this.activateAudioContext();
-            
+
             this.startLoadingProcess();
         }, { passive: true });
     }
@@ -118,7 +118,7 @@ class PinballGame {
 
             if (window.farcasterIntegration.isInMiniApp) {
                 console.log('PinballGame: Running in Mini App environment');
-                
+
                 // В Mini App окружении - адаптируем UI
                 const context = window.farcasterIntegration.getContext();
                 if (context) {
@@ -277,20 +277,20 @@ class PinballGame {
             `;
 
             let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
-            
+
             if (pfpUrl) {
                 userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
             }
-            
+
             userContent += `<div>`;
             userContent += `<div style="font-weight: bold;">@${username}</div>`;
-            
+
             if (displayName && displayName !== username) {
                 userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
             }
-            
+
             userContent += `</div></div>`;
-            
+
             userInfoElement.innerHTML = userContent;
             tapToStartContent.appendChild(userInfoElement);
 
@@ -361,7 +361,7 @@ class PinballGame {
 
     async activateAudioContext() {
         console.log('PinballGame: Activating AudioContext immediately...');
-        
+
         if (!window.soundManager || !window.soundManager.audioContext) {
             console.warn('PinballGame: SoundManager not ready for activation');
             return;
@@ -376,7 +376,7 @@ class PinballGame {
                 try {
                     await context.resume();
                     console.log(`PinballGame: AudioContext activation attempt ${attempt}, state:`, context.state);
-                    
+
                     if (context.state === 'running') {
                         console.log('PinballGame: AudioContext successfully activated!');
                         return;
@@ -384,7 +384,7 @@ class PinballGame {
                 } catch (error) {
                     console.warn(`PinballGame: AudioContext activation attempt ${attempt} failed:`, error);
                 }
-                
+
                 // Небольшая пауза между попытками
                 if (attempt < 2) {
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -427,11 +427,11 @@ class PinballGame {
         setTimeout(async () => {
             try {
                 console.log('PinballGame: Starting SoundManager unlock...');
-                
+
                 if (window.soundManager) {
                     await window.soundManager.unlock();
                 }
-                
+
                 this.loadingState.audio = true;
                 this.updateLoadingProgress('audio', 100, 'Audio system initialized');
 
@@ -781,13 +781,13 @@ class PinballGame {
         const cellSize = 2; // Простой разумный размер
         const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);  // 40 колонок  
         const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize); // 60 строк
-        
+
         console.log(`🔍 Creating collision grid: ${cols}×${rows} (${cols * rows} cells)`);
         const startTime = performance.now();
-        
+
         // ПРОСТЫЕ ОБЫЧНЫЕ МАССИВЫ (не типизированные!)
         const grid = [];
-        
+
         // Initialize grid
         for (let row = 0; row < rows; row++) {
             grid[row] = [];
@@ -799,31 +799,31 @@ class PinballGame {
                 };
             }
         }
-        
+
         // Mark wall cells (ПРОСТОЙ СПОСОБ)
         this.currentLevel.walls.forEach(wall => {
             this.markWallCells(grid, wall, cellSize, cols, rows);
         });
-        
+
         // Compute danger levels (ПРОСТОЙ АЛГОРИТМ)
         this.computeDangerLevels(grid, cols, rows);
-        
+
         // Compute escape directions (ПРОСТОЙ АЛГОРИТМ)
         this.computeEscapeDirections(grid, cols, rows, cellSize);
-        
+
         const totalTime = (performance.now() - startTime).toFixed(1);
         console.log(`✅ Collision grid ready in ${totalTime}ms`);
-        
+
         return {
             grid: grid,
             cellSize: cellSize,
             cols: cols,
             rows: rows,
-            
+
             checkPosition: (x, y) => {
                 const col = Math.floor(x / cellSize);
                 const row = Math.floor(y / cellSize);
-                
+
                 if (row >= 0 && row < rows && col >= 0 && col < cols) {
                     return grid[row][col];
                 }
@@ -831,23 +831,23 @@ class PinballGame {
             }
         };
     }
-    
-    
-    
+
+
+
     checkGridBasedCollisions() {
         const ballInfo = this.collisionGrid.checkPosition(
-            this.ball.position.x, 
+            this.ball.position.x,
             this.ball.position.y
         );
-        
+
         // If ball is in dangerous zone - ВЫСОКИЙ ПОРОГ!
         if (ballInfo.dangerLevel > 0.85 && ballInfo.escapeDirection) {
             // Gently guide ball to safety - СЛАБАЯ СИЛА!
             const escapeForce = ballInfo.dangerLevel * 0.3;
-            
+
             this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
             this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
-            
+
             console.log(`🚨 Ball in danger zone (${ballInfo.dangerLevel.toFixed(2)}), applying escape force`);
         }
     }
@@ -855,24 +855,24 @@ class PinballGame {
     markWallCells(grid, wall, cellSize, cols, rows) {
         // Простая растеризация стены
         const steps = Math.max(
-            Math.abs(wall.x2 - wall.x1), 
+            Math.abs(wall.x2 - wall.x1),
             Math.abs(wall.y2 - wall.y1)
         ) / cellSize;
-        
+
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
             const x = wall.x1 + (wall.x2 - wall.x1) * t;
             const y = wall.y1 + (wall.y2 - wall.y1) * t;
-            
+
             const col = Math.floor(x / cellSize);
             const row = Math.floor(y / cellSize);
-            
+
             // Отмечаем клетку и соседей (для толщины стены)
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     const newRow = row + dr;
                     const newCol = col + dc;
-                    
+
                     if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
                         grid[newRow][newCol].solid = true;
                     }
@@ -890,25 +890,25 @@ class PinballGame {
 
 
     async shareGameResult(score, level) {
-        try {
-            if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
-                await window.farcasterIntegration.shareScore(score, level);
-                this.showNotification('Score shared! 📤', 'success');
-            }
-        } catch (error) {
-            console.error('Failed to share score:', error);
-            this.showNotification('Failed to share score', 'error');
-        }
-    }
+                    try {
+                        if (window.farcasterIntegration && window.farcasterIntegration.isFarcasterApp) {
+                            await window.farcasterIntegration.shareScore(score, level);
+                            this.showNotification('Score shared! 📤', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Failed to share score:', error);
+                        this.showNotification('Failed to share score', 'error');
+                    }
+                }
 
                 // Проверяем 3x3 соседей
                 for (let dr = -1; dr <= 1; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {
                         if (dr === 0 && dc === 0) continue;
-                        
+
                         const newRow = row + dr;
                         const newCol = col + dc;
-                        
+
                         if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
                             totalNeighbors++;
                             if (grid[newRow][newCol].solid) {
@@ -917,7 +917,7 @@ class PinballGame {
                         }
                     }
                 }
-                
+
                 // Danger level = доля твердых соседей
                 grid[row][col].dangerLevel = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
             }
@@ -931,15 +931,15 @@ class PinballGame {
                     // Опасная клетка - ищем направление к безопасности
                     let bestDirection = null;
                     let bestSafety = -1;
-                    
+
                     // Проверяем направления (небольшой радиус)
                     for (let dr = -2; dr <= 2; dr++) {
                         for (let dc = -2; dc <= 2; dc++) {
                             if (dr === 0 && dc === 0) continue;
-                            
+
                             const newRow = row + dr;
                             const newCol = col + dc;
-                            
+
                             if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
                                 const safety = 1 - grid[newRow][newCol].dangerLevel;
                                 if (safety > bestSafety) {
@@ -949,7 +949,7 @@ class PinballGame {
                             }
                         }
                     }
-                    
+
                     if (bestDirection) {
                         const length = Math.sqrt(bestDirection.x * bestDirection.x + bestDirection.y * bestDirection.y);
                         grid[row][col].escapeDirection = {
@@ -961,23 +961,23 @@ class PinballGame {
             }
         }
     }
-    
+
     drawCollisionGridDebug() {
         if (!this.collisionGrid) return;
-        
+
         const ctx = this.renderer.ctx;
         if (!ctx) return;
-        
+
         ctx.save();
         ctx.globalAlpha = 0.3;
-        
+
         // Draw grid
         for (let row = 0; row < this.collisionGrid.rows; row++) {
             for (let col = 0; col < this.collisionGrid.cols; col++) {
                 const cell = this.collisionGrid.grid[row][col];
                 const x = col * this.collisionGrid.cellSize;
                 const y = row * this.collisionGrid.cellSize;
-                
+
                 if (cell.solid) {
                     ctx.fillStyle = '#ff0000';
                     ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
@@ -988,7 +988,7 @@ class PinballGame {
                 }
             }
         }
-        
+
         ctx.restore();
     }
 }
