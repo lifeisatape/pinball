@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Pinball: all stars</title>
     
     <!-- Farcaster Frame Embed Meta Tags -->
@@ -137,16 +137,14 @@
     
     <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
     <script>
-        // Устанавливаем флаг окружения Mini App с критическими проверками для мобильных устройств
+        // Устанавливаем флаг окружения Mini App
         window.isMiniApp = window.parent !== window || 
                           window.location.search.includes('frame=true') ||
                           window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
-                          document.referrer.includes('farcaster') ||
-                          navigator.userAgent.includes('Warpcast') ||
-                          navigator.userAgent.includes('Farcaster');
+                          document.referrer.includes('farcaster');
         
-        console.log(window.isMiniApp ? '🚀 Running in Farcaster Mini App mode' : '🌐 Running in regular web mode');
+        console.log('Mini App environment detected:', window.isMiniApp);
     </script>
 
     <!-- ИСПРАВЛЕНО: Правильная загрузка SDK -->
@@ -154,7 +152,7 @@
         if (window.isMiniApp) {
             try {
                 console.log('Loading Farcaster SDK...');
-                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
+                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
                 
                 // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
                 window.sdk = sdk;
