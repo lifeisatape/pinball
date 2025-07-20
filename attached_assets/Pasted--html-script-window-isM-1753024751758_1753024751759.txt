@@ -1,0 +1,101 @@
+ Упростите определение окружения
+html<script>
+    // ✅ УПРОЩЕНО: Более простая логика
+    window.isMiniApp = window.parent !== window || 
+                      document.referrer.includes('warpcast.com') ||
+                      window.location.search.includes('miniApp=true');
+    
+    console.log('Mini App environment detected:', window.isMiniApp);
+</script>
+Шаг 3: Переместите вызов ready() в правильное место
+В FarcasterManager.js - удалите вызов ready() из init() и добавьте в конец setupMiniAppFeatures():
+javascriptasync setupMiniAppFeatures() {
+    try {
+        this.setupEventListeners();
+
+        // Ждем полной готовности DOM
+        await new Promise(resolve => {
+            if (document.readyState !== 'complete') {
+                window.addEventListener('load', resolve);
+            } else {
+                resolve();
+            }
+        });
+
+        // Ждем готовности звуков на мобильных устройствах
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile && window.soundManager) {
+            let attempts = 0;
+            while (!window.soundManager.isReady && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            console.log('🔊 Sound manager ready for mobile');
+        }
+
+        this.isReady = true;
+
+        // Уведомляем колбэки
+        this.callbacks.ready.forEach(callback => {
+            try {
+                callback(this.context);
+            } catch (error) {
+                console.error('FarcasterManager: Error in ready callback:', error);
+            }
+        });
+
+        // ✅ ВЫЗЫВАЕМ ready() ТОЛЬКО КОГДА ВСЕ ГОТОВО
+        if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+            try {
+                console.log('🚀 Calling ready() - app fully loaded');
+                await this.callReadyWithRetry();
+                console.log('🎉 Splash screen dismissed');
+            } catch (error) {
+                console.error('❌ Failed to dismiss splash screen:', error);
+            }
+        }
+
+        console.log('🎉 Mini App features setup complete');
+    } catch (error) {
+        console.error('Error setting up Mini App features:', error);
+    }
+}
+Шаг 4: Удалите ранний вызов ready() из init()
+В методе init() удалите эти строки:
+javascript// ❌ УДАЛИТЬ - НЕ вызывайте ready() здесь
+try {
+    console.log('🚀 Calling ready() immediately after SDK loads...');
+    await this.callReadyWithRetry();
+    console.log('🎉 Farcaster splash screen dismissed successfully');
+} catch (error) {
+    console.error('❌ Failed to dismiss splash screen (will continue anyway):', error);
+}
+Шаг 5: Оптимизируйте загрузку звуков для мобильных устройств
+В SoundManager.js, добавьте проверку на мобильные устройства:
+javascriptasync loadSounds() {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        // На мобильных устройствах загружаем звуки только после взаимодействия
+        console.log('📱 Mobile detected - deferring sound loading');
+        this.isReady = true; // Помечаем как готовый для ready()
+        return;
+    }
+    
+    // Обычная загрузка для десктопа
+    // ... остальной код загрузки
+}
+📱 Почему это исправит проблему на iOS:
+
+Правильный SDK - устранит потенциальные несовместимости
+Правильный timing ready() - splash screen исчезнет только когда приложение действительно готово
+Ожидание звуков - на мобильных устройствах не будет блокировать ready()
+Упрощенная логика - меньше точек отказа
+
+🧪 Тестирование:
+
+Сначала протестируйте в браузере (должно работать как раньше)
+Затем в iOS Farcaster app
+Посмотрите логи в Safari Developer Tools при подключении к устройству
+
+Загрузка звуков НЕ является обязательной перед вызовом ready() - вы можете загружать их асинхронно после показа интерфейса.
