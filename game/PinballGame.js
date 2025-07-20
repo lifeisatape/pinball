@@ -12,6 +12,7 @@ class PinballGame {
         this.gameOverOverlay = new GameOverOverlay();
 
         this.tapToStartScreen = document.getElementById('tapToStartScreen');
+        this.loadingScreen = document.getElementById('loadingScreen');
         this.levelSelectScreen = document.getElementById('levelSelectScreen');
 
         this.ball = null;
@@ -339,7 +340,7 @@ class PinballGame {
     }
 
     restartGame() {
-        this.gameState.reset();
+        this.gameState.resetGame();
         this.resetBall();
         this.levelManager.resetLevel(this.currentLevel);
         this.gameOverOverlay.hide();
@@ -621,13 +622,11 @@ class PinballGame {
 
         const ballLost = this.ball.update();
 
-        if(this.currentLevel) {
-            this.currentLevel.flippers.forEach(flipper => flipper.update());
-            this.currentLevel.bumpers.forEach(bumper => bumper.update());
-            this.currentLevel.spinners.forEach(spinner => spinner.update());
-            this.currentLevel.dropTargets.forEach(target => target.update());
-            this.currentLevel.tunnels.forEach(tunnel => tunnel.update());
-        }
+        this.currentLevel.flippers.forEach(flipper => flipper.update());
+        this.currentLevel.bumpers.forEach(bumper => bumper.update());
+        this.currentLevel.spinners.forEach(spinner => spinner.update());
+        this.currentLevel.dropTargets.forEach(target => target.update());
+        this.currentLevel.tunnels.forEach(tunnel => tunnel.update());
 
         this.checkCollisions();
 
@@ -644,9 +643,6 @@ class PinballGame {
                 }, 1000);
             }
         }
-
-        // Check game state
-        this.checkGameState();
     }
 
     checkGameState() {
@@ -681,7 +677,7 @@ class PinballGame {
                 this.scorePanel.updateHighScore(this.gameState.highScore);
 
                 // Просто играем звук
-                this.playSound('bumper');
+                window.soundManager?.playSound('bumper');
             }
         });
 
@@ -692,7 +688,7 @@ class PinballGame {
                 this.scorePanel.updateScore(this.gameState.score);
                 this.scorePanel.updateHighScore(this.gameState.highScore);
 
-                this.playSound('spinner');
+                window.soundManager?.playSound('spinner');
             }
         });
 
@@ -703,7 +699,7 @@ class PinballGame {
                 this.scorePanel.updateScore(this.gameState.score);
                 this.scorePanel.updateHighScore(this.gameState.highScore);
 
-                this.playSound('targetHit');
+                window.soundManager?.playSound('targetHit');
             }
         });
 
