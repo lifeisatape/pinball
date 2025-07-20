@@ -135,51 +135,22 @@
         </div>
     </div>
     
-    <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
-    <script>
-        // Устанавливаем флаг окружения Mini App
+    <!-- Установка флага окружения -->
+    <script type="module">
+        // Устанавливаем флаг окружения
         window.isMiniApp = window.parent !== window || 
-                          window.location.search.includes('frame=true') ||
-                          window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
                           document.referrer.includes('farcaster');
         
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>
-
-    <!-- ИСПРАВЛЕНО: Правильная загрузка SDK как в рабочем проекте -->
-    <script type="module">
-        if (window.isMiniApp) {
-            console.log('📦 Loading Farcaster Mini App SDK...');
-            try {
-                const { default: sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
-                window.sdk = sdk;
-                console.log('✅ Farcaster Mini App SDK loaded successfully');
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => {
-                        if (window.farcasterIntegration) {
-                            window.farcasterIntegration.sdk = sdk;
-                            window.farcasterIntegration.init();
-                        }
-                    });
-                } else {
-                    if (window.farcasterIntegration) {
-                        window.farcasterIntegration.sdk = sdk;
-                        window.farcasterIntegration.init();
-                    }
-                }
-            } catch (error) {
-                console.error('❌ Failed to load Farcaster Mini App SDK:', error);
-            }
-        }
-    </script>
     
-    <!-- 1. SoundManager -->
-    <script src="core/SoundManager.js"></script>
-    
-    <!-- 2. Core modules -->
+    <!-- 1. Core modules -->
     <script src="core/GameConfig.js"></script>
     <script src="core/FarcasterManager.js"></script>
+    
+    <!-- 2. SoundManager -->
+    <script src="core/SoundManager.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
@@ -211,12 +182,17 @@
     
     <!-- 7. Initialize game -->
     <script>
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             console.log('Page loaded, initializing game...');
             
-            const game = new PinballGame();
+            // Инициализируем Farcaster Manager первым делом
+            if (window.farcasterIntegration && !window.farcasterIntegration.isReady) {
+                await new Promise(resolve => {
+                    window.farcasterIntegration.onReady(resolve);
+                });
+            }
             
-            // Убрали автозапуск - теперь всегда показывается TAP TO START
+            const game = new PinballGame();
         });
 
         // Prevent mobile scrolling and context menu

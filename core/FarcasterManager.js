@@ -13,36 +13,27 @@ class FarcasterManager {
             notificationsEnabled: [],
             notificationsDisabled: []
         };
-
-        this.init();
     }
 
-    async init() {
+    async initialize() {
         console.log('FarcasterManager: Initializing...');
-
+        
         if (!window.isMiniApp) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
             this.simulateReady();
             return;
         }
 
-        // Если SDK уже установлен через index.html, используем его
-        if (this.sdk) {
-            console.log('🔄 Using pre-loaded SDK...');
-            await this.setupMiniAppFeatures();
-            return;
-        }
-
         try {
-            console.log('🔄 Waiting for SDK...');
-            const sdk = await this.waitForSDK();
+            console.log('🔄 Loading Farcaster SDK...');
+            const { default: sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
             this.sdk = sdk;
             this.isFrameEnvironment = true;
             console.log('✅ Farcaster SDK initialized successfully');
-
+            
             await this.setupMiniAppFeatures();
         } catch (error) {
-            console.error('❌ Error initializing Farcaster SDK:', error);
+            console.error('❌ Error loading Farcaster SDK:', error);
             this.isFrameEnvironment = false;
             this.simulateReady();
         }
@@ -66,6 +57,9 @@ class FarcasterManager {
 
     async setupMiniAppFeatures() {
         try {
+            // ВАЖНО: Вызовите ready() сразу после получения SDK!
+            await this.notifyAppReady();
+            
             this.setupEventListeners();
 
             // Получаем контекст
@@ -88,9 +82,6 @@ class FarcasterManager {
 
             this.isReady = true;
 
-            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО
-            await this.notifyAppReady();
-
             // Уведомляем колбэки
             this.callbacks.ready.forEach(callback => {
                 try {
@@ -107,18 +98,19 @@ class FarcasterManager {
         }
     }
 
-    // ИСПРАВЛЕНО: Отдельный метод для ready() как в рабочем примере
     async notifyAppReady() {
-        if (this.isFrameEnvironment && this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+        if (this.isFrameEnvironment && this.sdk?.actions?.ready) {
             try {
                 await this.sdk.actions.ready({
                     disableNativeGestures: false
                 });
                 console.log('🎉 Farcaster splash screen dismissed');
+                return true;
             } catch (error) {
                 console.error('❌ Failed to dismiss splash screen:', error);
             }
         }
+        return false;
     }
 
     setupEventListeners() {
@@ -520,6 +512,7 @@ class FarcasterManager {
     }
 }
 
-// Создаем глобальный экземпляр
+// Создаем глобальный экземпляр и сразу инициализируем
 console.log('Creating global FarcasterIntegration instance...');
 window.farcasterIntegration = new FarcasterManager();
+window.farcasterIntegration.initialize(); // Инициализируем сразу!
