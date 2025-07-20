@@ -1,0 +1,155 @@
+Исправления для добавления кнопки Share Score
+1. Исправить HTML (index.html)
+Заменить существующий game-over-overlay на этот код:
+
+<!-- Game Over Overlay -->
+<div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
+    <div class="game-over-content">
+        <h1>GAME OVER</h1>
+        <div class="final-stats">
+            <div class="stat">
+                <span class="stat-label">final score</span>
+                <span class="stat-value" id="finalScore">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">level reached</span>
+                <span class="stat-value" id="levelReached">1</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">high score</span>
+                <span class="stat-value" id="finalHighScore">0</span>
+            </div>
+        </div>
+        <div class="game-over-controls">
+            <button class="restart-btn" id="restartGame">🔄 RESTART</button>
+            <button class="menu-btn" id="backToMenu">🏠 CHANGE ROOM</button>
+            <button id="shareScoreBtn" class="restart-btn farcaster-btn" style="display: none;">📤 Share Score</button>
+        </div>
+        <div id="farcasterUserInfo" style="display: none;"></div>
+    </div>
+</div>
+2. Добавить стили для Farcaster кнопки (style.css)
+/* Farcaster кнопка */
+.farcaster-btn {
+    background: linear-gradient(135deg, #7C3AED, #5B21B6) !important;
+    border: none !important;
+    color: white !important;
+    margin-top: 10px !important;
+}
+
+.farcaster-btn:hover {
+    background: linear-gradient(135deg, #5B21B6, #4C1D95) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4) !important;
+}
+
+#farcasterUserInfo {
+    margin: 15px 0;
+    text-align: center;
+    color: #00ff00;
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+#farcasterUserInfo img {
+    display: block;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+}
+3. Обновить GameOverOverlay.js
+class GameOverOverlay {
+    constructor() {
+        this.overlay = document.getElementById('gameOverOverlay');
+        this.scoreElement = document.getElementById('finalScore');
+        this.highScoreElement = document.getElementById('finalHighScore');
+        this.levelElement = document.getElementById('levelReached');
+        this.shareButton = document.getElementById('shareScoreBtn');
+        
+        // Проверяем существование элементов
+        if (!this.overlay) {
+            console.warn('GameOverOverlay: gameOverOverlay element not found');
+        }
+    }
+
+    show(gameState) {
+        if (!this.overlay) {
+            console.error('GameOverOverlay: Cannot show overlay - element not found');
+            return;
+        }
+
+        this.overlay.style.display = 'flex';
+        
+        if (this.scoreElement) {
+            this.scoreElement.textContent = gameState.score.toLocaleString();
+        }
+        
+        if (this.highScoreElement) {
+            this.highScoreElement.textContent = gameState.highScore.toLocaleString();
+        }
+        
+        if (this.levelElement) {
+            this.levelElement.textContent = gameState.level || 1;
+        }
+
+        // Показываем кнопку Share только в Farcaster окружении
+        this.showFarcasterButtons();
+    }
+
+    showFarcasterButtons() {
+        if (window.isMiniApp && window.sdk && this.shareButton) {
+            this.shareButton.style.display = 'block';
+            console.log('✅ Farcaster share button shown');
+        }
+    }
+
+    hide() {
+        if (!this.overlay) {
+            console.error('GameOverOverlay: Cannot hide overlay - element not found');
+            return;
+        }
+        
+        this.overlay.style.display = 'none';
+    }
+}
+4. Обновить PinballGame.js (метод gameOver)
+Найти метод gameOver() и убедиться, что там вызывается showFarcasterButtons:
+
+gameOver() {
+    console.log('🎮 Game Over! Final Score:', this.gameState.score);
+    
+    // Обновляем high score
+    if (this.gameState.score > this.gameState.highScore) {
+        this.gameState.highScore = this.gameState.score;
+        localStorage.setItem('pinball-highscore', this.gameState.highScore);
+        console.log('🏆 New High Score!', this.gameState.highScore);
+    }
+
+    // Останавливаем игру
+    this.gameState.isRunning = false;
+    
+    // Показываем overlay
+    this.gameOverOverlay.show(this.gameState);
+    
+    // Показываем Farcaster кнопки если доступны
+    this.showFarcasterButtons();
+}
+5. Проверить обработчики событий
+Убедиться что в setupEventListeners() есть обработчик для shareScoreBtn:
+
+// Farcaster buttons (в методе setupEventListeners)
+const shareBtn = document.getElementById('shareScoreBtn');
+if (shareBtn) {
+    shareBtn.addEventListener('click', () => {
+        this.shareScore();
+    });
+}
+Итог
+После этих изменений:
+
+✅ Кнопка "📤 Share Score" будет появляться на экране Game Over
+✅ Кнопка будет видна только в Farcaster Mini App окружении
+✅ При клике будет вызываться shareScore() метод
+✅ Пост будет создаваться в Farcaster с результатами игры
