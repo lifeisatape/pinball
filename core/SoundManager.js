@@ -380,8 +380,8 @@ class SoundManager {
         }
 
         // Обычная загрузка для десктопа
-        const soundPromises = [];
-}
+        await this.preloadAllSounds();
+    }
 
 // Создаем глобальный экземпляр
 if (!window.soundManager) {
