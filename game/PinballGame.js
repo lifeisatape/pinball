@@ -873,4 +873,8 @@ class PinballGame {
             gameOverContent.appendChild(shareButton);
         }
     }
+
+    startGameWithLevel(levelName) {
+        this.loadSelectedLevel(levelName);
+    }
 }

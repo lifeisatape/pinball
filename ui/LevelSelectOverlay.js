@@ -1,38 +1,13 @@
-
 // Level Select Overlay Class
 class LevelSelectOverlay {
     constructor(levelSelector, onLevelSelected) {
         this.levelSelector = levelSelector;
         this.onLevelSelected = onLevelSelected;
-        this.overlay = null;
-        this.createOverlay();
-    }
-
-    createOverlay() {
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'level-select-overlay';
-        this.overlay.innerHTML = `
-            <div class="level-select-content">
-                <h2>SELECT LEVEL</h2>
-                <div class="level-list" id="levelList">
-                    <!-- Levels will be populated here -->
-                </div>
-                <div class="level-select-controls">
-                    <button class="level-btn" id="cancelLevel">CANCEL</button>
-                    <button class="level-btn primary" id="startLevel">START GAME</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(this.overlay);
+        this.overlay = document.getElementById('levelSelectScreen');
         this.setupEventListeners();
     }
 
     setupEventListeners() {
-        document.getElementById('cancelLevel').addEventListener('click', () => {
-            this.hide();
-        });
-
         document.getElementById('startLevel').addEventListener('click', () => {
             const selectedLevel = this.levelSelector.getCurrentLevel();
             if (selectedLevel && this.onLevelSelected) {
@@ -73,7 +48,7 @@ class LevelSelectOverlay {
                 document.querySelectorAll('.level-item').forEach(item => {
                     item.classList.remove('selected');
                 });
-                
+
                 // Select new level
                 levelItem.classList.add('selected');
                 this.levelSelector.selectLevel(index);
