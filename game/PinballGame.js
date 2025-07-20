@@ -320,11 +320,7 @@ class PinballGame {
 
     updateUI() {
         if (this.scorePanel) {
-            this.scorePanel.update({
-                score: this.gameState.score,
-                level: this.gameState.level,
-                lives: this.gameState.lives || this.gameState.balls
-            });
+            this.scorePanel.updateAll(this.gameState);
         }
     }
 
@@ -391,7 +387,7 @@ class PinballGame {
     }
 
     checkGameState() {
-        if ((this.gameState.lives || this.gameState.balls) <= 0) {
+        if (this.gameState.balls <= 0) {
             this.gameOver();
         }
     }
@@ -405,7 +401,7 @@ class PinballGame {
         // Show game over screen
         this.gameOverOverlay.show({
             finalScore: this.gameState.score,
-            levelReached: this.gameState.level || 1
+            levelReached: 1
         });
 
         // Предлагаем поделиться в Farcaster если доступно
@@ -676,11 +672,11 @@ class PinballGame {
         this.checkCollisions();
 
         if (ballLost && this.gameState.ballInPlay) {
-            this.gameState.lives--;
+            this.gameState.balls--;
             this.gameState.ballInPlay = false;
-            this.scorePanel.updateBalls(this.gameState.lives);
+            this.scorePanel.updateBalls(this.gameState.balls);
 
-            if (this.gameState.lives <= 0) {
+            if (this.gameState.balls <= 0) {
                 this.gameOver();
             } else {
                 setTimeout(() => {
