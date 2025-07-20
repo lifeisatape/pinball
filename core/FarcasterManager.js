@@ -34,18 +34,7 @@ class FarcasterManager {
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
 
-            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после загрузки SDK с retry логикой
-            // Не зависим от isInMiniApp() - если SDK загружен, значит мы в Farcaster окружении
-            try {
-                console.log('🚀 Calling ready() immediately after SDK loads...');
-                await this.callReadyWithRetry();
-                console.log('🎉 Farcaster splash screen dismissed successfully');
-            } catch (error) {
-                console.error('❌ Failed to dismiss splash screen (will continue anyway):', error);
-            }
-
-            // ИСПРАВЛЕНО: Полностью убираем проверку sdk.isInMiniApp() 
-            // так как она неправильно работает на мобильных устройствах
+            // ИСПРАВЛЕНО: НЕ вызываем ready() здесь - только после полной загрузки приложения
             // Полагаемся только на наше определение window.isMiniApp
             
             this.isFrameEnvironment = true;
@@ -173,11 +162,14 @@ class FarcasterManager {
     async notifyAppReady() {
         if (this.isFrameEnvironment && this.sdk && this.sdk.actions && this.sdk.actions.ready) {
             try {
+                console.log('🚀 App fully loaded, calling ready() to dismiss splash screen...');
                 await this.callReadyWithRetry();
-                console.log('🎉 Farcaster splash screen dismissed');
+                console.log('🎉 Farcaster splash screen dismissed after full app load');
             } catch (error) {
-                console.error('❌ Failed to dismiss splash screen:', error);
+                console.error('❌ Failed to dismiss splash screen after full app load:', error);
             }
+        } else {
+            console.log('⏭️ Skipping ready() - not in frame environment or SDK unavailable');
         }
     }
 
