@@ -197,7 +197,12 @@ class PinballGame {
             } catch (error) {
                 console.error('❌ Error adding to favorites:', error);
                 this.showNotification('Failed to add to favorites');
-
+            }
+        } else {
+            console.log('⚠️ Cannot add to favorites - Farcaster not available');
+            this.showNotification('Add to favorites not available');
+        }
+    }
 
     populateLevelList(levels) {
         const levelList = document.getElementById('levelList');
