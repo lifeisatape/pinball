@@ -207,11 +207,22 @@ class PinballGame {
         }
     }
 
-    // ✅ Простое шарение (без сложной логики)
+    // ✅ Обновленный метод shareScore с красивыми названиями уровней
     async shareScore() {
         if (window.sdk && window.sdk.actions && window.sdk.actions.composeCast) {
             try {
-                const text = `🎮 I just scored ${this.gameState.score || 0} points and reached level ${this.gameState.level || 1} in Pinball All Stars! Can you beat that? 🚀`;
+                // Получаем название текущего уровня
+                const levelName = this.gameState.currentLevelName || 'Pinball All Stars';
+                
+                // Создаем более красивое название для шаринга
+                let displayLevelName = levelName;
+                if (levelName.toLowerCase() === 'degen') {
+                    displayLevelName = 'Degen Level 🎯';
+                } else if (levelName.toLowerCase() === 'farcaster') {
+                    displayLevelName = 'Farcaster Level 🚀';
+                }
+
+                const text = `🎮 I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 💥`;
                 const url = window.location.origin;
 
                 await window.sdk.actions.composeCast({

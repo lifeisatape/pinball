@@ -356,12 +356,20 @@ class FarcasterManager {
         }
     }
 
-    // ИСПРАВЛЕНО: Добавляем методы из рабочего примера
-    async shareScore(score, level) {
+    // ✅ Обновленный метод shareScore с красивыми названиями уровней
+    async shareScore(score, levelName) {
         if (!this.isFrameEnvironment || !this.sdk || !this.sdk.actions || !this.sdk.actions.composeCast) return;
 
         try {
-            const text = `🚀 I just scored ${score || 0} points and reached level ${level || 1} in Pinball All Stars! Can you beat that? 🎮💥`;
+            // Создаем красивое название для шаринга
+            let displayLevelName = levelName || 'Pinball All Stars';
+            if (levelName && levelName.toLowerCase() === 'degen') {
+                displayLevelName = 'Degen Level 🎯';
+            } else if (levelName && levelName.toLowerCase() === 'farcaster') {
+                displayLevelName = 'Farcaster Level 🚀';
+            }
+
+            const text = `🚀 I just scored ${score || 0} points in ${displayLevelName}! Can you beat that? 🎮💥`;
             const url = window.location.origin;
 
             await this.sdk.actions.composeCast({
