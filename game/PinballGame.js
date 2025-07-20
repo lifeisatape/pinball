@@ -1,4 +1,3 @@
-// Main Game Class - Simplified for Web Audio
 class PinballGame {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -11,29 +10,249 @@ class PinballGame {
         this.gameState = new GameState();
         this.scorePanel = new ScorePanel();
         this.gameOverOverlay = new GameOverOverlay();
-        this.tapToStartScreen = document.getElementById('tapToStartScreen');
-        this.loadingScreen = document.getElementById('loadingScreen');
-        this.levelSelectScreen = document.getElementById('levelSelectScreen');
 
-        // Collision grid system for improved corner handling
-        this.useCollisionGrid = true;
-        this.collisionGrid = null;
+        this.tapToStartScreen = document.getElementById('tapToStartScreen');
+        this.levelSelectScreen = document.getElementById('levelSelectScreen');
 
         this.ball = null;
         this.gameStarted = false;
+        this.gameLoopRunning = false;
         this.currentLevel = null;
         this.userHasInteracted = false;
 
-        // Состояние загрузки
-        this.loadingState = {
-            audio: false,
-            sounds: false,
-            levels: false
-        };
+        // ✅ Простое состояние звуков
+        this.soundsLoaded = false;
+
+        console.log('PinballGame: Constructor complete');
 
         this.setupEventListeners();
-        this.setupFarcasterIntegration();
         this.showTapToStartScreen();
+
+        // ✅ Загружаем звуки в фоне НЕЗАВИСИМО от готовности игры
+        this.loadSoundsInBackground();
+
+        // ✅ Настраиваем Farcaster если доступен
+        this.setupSimpleFarcasterIntegration();
+    }
+
+    setupEventListeners() {
+        // Обработчик для экрана "tap to start"
+        this.tapToStartScreen.addEventListener('click', () => {
+            console.log('🎮 User clicked TAP TO START');
+            this.userHasInteracted = true;
+            this.activateAudioContext();
+            this.startGame();
+        });
+
+        this.tapToStartScreen.addEventListener('touchstart', () => {
+            console.log('🎮 User touched TAP TO START');
+            this.userHasInteracted = true;
+            this.activateAudioContext();
+            this.startGame();
+        }, { passive: true });
+
+        // Game over controls
+        document.getElementById('restartGame').addEventListener('click', () => {
+            this.restartGame();
+        });
+
+        document.getElementById('backToMenu').addEventListener('click', () => {
+            this.showLevelSelect();
+        });
+
+        // Level selection
+        document.getElementById('startLevel').addEventListener('click', () => {
+            const selectedLevel = this.levelSelector.getCurrentLevel();
+            if (selectedLevel) {
+                this.loadSelectedLevel(selectedLevel);
+            } else {
+                alert('Please select a level first!');
+            }
+        });
+
+        // Farcaster buttons
+        document.getElementById('shareScoreBtn')?.addEventListener('click', () => {
+            this.shareScore();
+        });
+
+        document.getElementById('addToAppsBtn')?.addEventListener('click', () => {
+            this.addToFavorites();
+        });
+    }
+
+    // ✅ КРИТИЧНО: Загружаем звуки в фоне (НЕ БЛОКИРУЕМ игру)
+    async loadSoundsInBackground() {
+        if (window.soundManager) {
+            try {
+                console.log('🔊 Loading sounds in background (non-blocking)...');
+
+                // НЕ await - не блокируем ready()!
+                window.soundManager.preloadAllSounds().then(() => {
+                    this.soundsLoaded = true;
+                    console.log('✅ Sounds loaded in background');
+                }).catch(error => {
+                    console.warn('⚠️ Sound loading failed, continuing without audio:', error);
+                    this.soundsLoaded = false;
+                });
+
+            } catch (error) {
+                console.warn('⚠️ Sound manager not available:', error);
+            }
+        }
+    }
+
+    // ✅ Простая активация аудио (НЕ блокирующая)
+    activateAudioContext() {
+        if (window.soundManager && window.soundManager.audioContext) {
+            try {
+                console.log('🔊 Activating audio context...');
+                // НЕ await - не блокируем игру
+                window.soundManager.unlock().catch(error => {
+                    console.warn('⚠️ Audio activation failed:', error);
+                });
+            } catch (error) {
+                console.warn('⚠️ Audio activation error:', error);
+            }
+        }
+    }
+
+    // ✅ Простая настройка Farcaster (БЕЗ сложного FarcasterManager)
+    setupSimpleFarcasterIntegration() {
+        if (window.isMiniApp && window.sdk) {
+            console.log('🔄 Setting up simple Farcaster integration...');
+
+            // Показываем Farcaster кнопки
+            this.showFarcasterButtons();
+
+            // Показываем информацию о пользователе когда контекст загрузится
+            if (window.farcasterContext && window.farcasterContext.user) {
+                this.displayUserInfo(window.farcasterContext.user);
+            } else {
+                // Ждем загрузки контекста в фоне
+                setTimeout(() => {
+                    if (window.farcasterContext && window.farcasterContext.user) {
+                        this.displayUserInfo(window.farcasterContext.user);
+                    }
+                }, 1000);
+            }
+        }
+    }
+
+    showFarcasterButtons() {
+        const shareButton = document.getElementById('shareScoreBtn');
+        if (shareButton) {
+            shareButton.style.display = 'block';
+        }
+
+        const addToAppsButton = document.getElementById('addToAppsBtn');
+        if (addToAppsButton) {
+            addToAppsButton.style.display = 'block';
+        }
+    }
+
+    displayUserInfo(user) {
+        console.log('👤 Displaying user info:', user);
+
+        const userInfo = document.getElementById('farcasterUserInfo');
+        if (userInfo) {
+            userInfo.innerHTML = `
+                <div>Welcome, ${user.displayName || user.username || 'Player'}! 👋</div>
+                ${user.pfpUrl ? `<img src="${user.pfpUrl}" width="32" height="32">` : ''}
+            `;
+            userInfo.style.display = 'block';
+        }
+    }
+
+    // ✅ Простое шарение (без сложной логики)
+    async shareScore() {
+        if (window.sdk && window.sdk.actions && window.sdk.actions.composeCast) {
+            try {
+                const text = `🎮 I just scored ${this.gameState.score || 0} points and reached level ${this.gameState.level || 1} in Pinball All Stars! Can you beat that? 🚀`;
+                const url = window.location.origin;
+
+                await window.sdk.actions.composeCast({
+                    text: text,
+                    embeds: [url]
+                });
+
+                console.log('✅ Score shared successfully');
+                this.showNotification('Score shared! 🎉');
+            } catch (error) {
+                console.error('❌ Error sharing score:', error);
+                this.showNotification('Failed to share score');
+            }
+        } else {
+            console.log('⚠️ Cannot share - Farcaster not available');
+            this.showNotification('Sharing not available');
+        }
+    }
+
+    // ✅ Простое добавление в избранное
+    async addToFavorites() {
+        if (window.sdk && window.sdk.actions && window.sdk.actions.addFrame) {
+            try {
+                await window.sdk.actions.addFrame();
+                console.log('✅ Add to favorites prompted');
+                this.showNotification('App added to favorites! ⭐');
+            } catch (error) {
+                console.error('❌ Error adding to favorites:', error);
+                this.showNotification('Failed to add to favorites');
+            }
+        } else {
+            console.log('⚠️ Cannot add to favorites - Farcaster not available');
+            this.showNotification('Add to favorites not available');
+        }
+    }
+
+    // ✅ Простое уведомление
+    showNotification(message, type = 'info') {
+        console.log(`📢 ${message}`);
+        // Можно добавить визуальное уведомление если нужно
+    }
+
+    // ✅ Простой запуск игры (СРАЗУ)
+    startGame() {
+        console.log('🎮 Starting game immediately...');
+
+        this.tapToStartScreen.style.display = 'none';
+        this.showLevelSelect();
+    }
+
+    showTapToStartScreen() {
+        this.tapToStartScreen.style.display = 'flex';
+        this.levelSelectScreen.style.display = 'none';
+    }
+
+    showLevelSelect() {
+        this.tapToStartScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'flex';
+
+        if (this.levelSelector) {
+            this.levelSelector.render();
+        }
+    }
+
+    hideStartScreen() {
+        this.tapToStartScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'none';
+    }
+
+    async loadSelectedLevel(levelName) {
+        try {
+            console.log(`🎮 Loading level: ${levelName}`);
+
+            const levelData = await this.levelManager.loadLevel(levelName);
+            if (levelData) {
+                this.currentLevel = levelData;
+                await this.initializeGame();
+            } else {
+                console.error('Failed to load level:', levelName);
+                alert('Failed to load level. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error loading level:', error);
+            alert('Error loading level. Please try again.');
+        }
     }
 
     async initializeGame() {
@@ -46,12 +265,8 @@ class PinballGame {
             this.updateUI();
             this.gameStarted = true;
 
-            // Initialize collision grid after level is loaded
-            if (this.useCollisionGrid && this.currentLevel) {
-                console.log('🔍 Creating collision grid...');
-                this.collisionGrid = this.createSimpleCollisionGrid();
-                console.log('✅ Collision grid ready!');
-            }
+            // Играем звук запуска если доступен
+            this.playSound('newGameLaunch');
 
             if (!this.gameLoopRunning) {
                 this.gameLoopRunning = true;
@@ -69,44 +284,447 @@ class PinballGame {
         this.gameState.ballInPlay = true;
     }
 
-    setupEventListeners() {
-        document.getElementById('restartGame').addEventListener('click', () => {
-            this.restartGame();
+    restartGame() {
+        if (this.currentLevel) {
+            this.gameState.reset();
+            this.resetBall();
+            this.updateUI();
+            this.gameOverOverlay.hide();
+            this.playSound('newGameLaunch');
+        }
+    }
+
+    updateUI() {
+        if (this.scorePanel) {
+            this.scorePanel.update({
+                score: this.gameState.score,
+                level: this.gameState.level,
+                lives: this.gameState.lives
+            });
+        }
+    }
+
+    gameLoop() {
+        if (!this.gameStarted || !this.currentLevel) {
+            this.gameLoopRunning = false;
+            return;
+        }
+
+        try {
+            // Update physics
+            if (this.ball && this.gameState.ballInPlay) {
+                this.updatePhysics();
+            }
+
+            // Handle input
+            if (this.inputManager) {
+                this.inputManager.update();
+            }
+
+            // Render
+            if (this.renderer) {
+                this.renderer.render(this.currentLevel, this.ball);
+            }
+
+            // Check game state
+            this.checkGameState();
+        } catch (error) {
+            console.error('Game loop error:', error);
+        }
+
+        if (this.gameLoopRunning) {
+            requestAnimationFrame(() => this.gameLoop());
+        }
+    }
+
+    updatePhysics() {
+        // Simple physics update
+        if (this.ball) {
+            this.ball.update();
+
+            // Check collisions with walls
+            if (this.currentLevel && this.currentLevel.walls) {
+                for (const wall of this.currentLevel.walls) {
+                    if (this.ball.checkCollision && wall.checkCollision) {
+                        if (this.ball.checkCollision(wall)) {
+                            this.ball.resolveCollision(wall);
+                            this.playSound('wallhit');
+                        }
+                    }
+                }
+            }
+
+            // Check if ball is out of bounds
+            if (this.ball.y > CONFIG.VIRTUAL_HEIGHT) {
+                this.gameState.lives--;
+                if (this.gameState.lives > 0) {
+                    this.resetBall();
+                } else {
+                    this.gameOver();
+                }
+            }
+        }
+    }
+
+    checkGameState() {
+        if (this.gameState.lives <= 0) {
+            this.gameOver();
+        }
+    }
+
+    gameOver() {
+        console.log('🎮 Game Over');
+
+        this.gameState.ballInPlay = false;
+        this.gameStarted = false;
+
+        // Show game over screen
+        this.gameOverOverlay.show({
+            finalScore: this.gameState.score,
+            levelReached: this.gameState.level
         });
 
-        document.getElementById('backToMenu').addEventListener('click', () => {
-            this.showLevelSelect();
-        });
+        // Предлагаем поделиться в Farcaster если доступно
+        if (window.sdk && window.farcasterContext) {
+            setTimeout(() => {
+                if (confirm('Share your score on Farcaster?')) {
+                    this.shareScore();
+                }
+            }, 1000);
+        }
+    }
 
-        document.getElementById('startLevel').addEventListener('click', () => {
-            const selectedLevel = this.levelSelector.getCurrentLevel();
-            if (selectedLevel) {
-                this.loadSelectedLevel(selectedLevel);
+    // ✅ Безопасное воспроизведение звуков
+    playSound(soundName) {
+        if (this.soundsLoaded && window.soundManager && window.soundManager.isReady) {
+            try {
+                window.soundManager.playSound(soundName);
+            } catch (error) {
+                console.warn('⚠️ Sound playback failed:', error);
+            }
+        }
+    }
+
+    // Simple Collision Grid System
+    createSimpleCollisionGrid() {
+        const cellSize = 2; // Простой разумный размер
+        const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);  // 40 колонок
+        const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize); // 60 строк
+
+        console.log(`🔍 Creating collision grid: ${cols}×${rows} (${cols * rows} cells)`);
+        const startTime = performance.now();
+
+        // ПРОСТЫЕ ОБЫЧНЫЕ МАССИВЫ (не типизированные!)
+        const grid = [];
+
+        // Initialize grid
+        for (let row = 0; row < rows; row++) {
+            grid[row] = [];
+            for (let col = 0; col < cols; col++) {
+                grid[row][col] = {
+                    solid: false,
+                    dangerLevel: 0,
+                    escapeDirection: null
+                };
+            }
+        }
+
+        // Mark wall cells (ПРОСТОЙ СПОСОБ)
+        if (this.currentLevel && this.currentLevel.walls) {
+            this.currentLevel.walls.forEach(wall => {
+                this.markWallCells(grid, wall, cellSize, cols, rows);
+            });
+        }
+
+        // Compute danger levels (ПРОСТОЙ АЛГОРИТМ)
+        this.computeDangerLevels(grid, cols, rows);
+
+        // Compute escape directions (ПРОСТОЙ АЛГОРИТМ)
+        this.computeEscapeDirections(grid, cols, rows, cellSize);
+
+        const totalTime = (performance.now() - startTime).toFixed(1);
+        console.log(`✅ Collision grid ready in ${totalTime}ms`);
+
+        return {
+            grid: grid,
+            cellSize: cellSize,
+            cols: cols,
+            rows: rows,
+
+            checkPosition: (x, y) => {
+                const col = Math.floor(x / cellSize);
+                const row = Math.floor(y / cellSize);
+
+                if (row >= 0 && row < rows && col >= 0 && col < cols) {
+                    return grid[row][col];
+                }
+                return { solid: false, dangerLevel: 0, escapeDirection: null };
+            }
+        };
+    }
+
+
+
+    checkGridBasedCollisions() {
+        if (!this.collisionGrid) return;
+
+        const ballInfo = this.collisionGrid.checkPosition(
+            this.ball.position.x,
+            this.ball.position.y
+        );
+
+        // If ball is in dangerous zone - ВЫСОКИЙ ПОРОГ!
+        if (ballInfo.dangerLevel > 0.85 && ballInfo.escapeDirection) {
+            // Gently guide ball to safety - СЛАБАЯ СИЛА!
+            const escapeForce = ballInfo.dangerLevel * 0.3;
+
+            this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
+            this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
+
+            console.log(`🚨 Ball in danger zone (${ballInfo.dangerLevel.toFixed(2)}), applying escape force`);
+        }
+    }
+
+    markWallCells(grid, wall, cellSize, cols, rows) {
+        // Простая растеризация стены
+        const steps = Math.max(
+            Math.abs(wall.x2 - wall.x1),
+            Math.abs(wall.y2 - wall.y1)
+        ) / cellSize;
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = wall.x1 + (wall.x2 - wall.x1) * t;
+            const y = wall.y1 + (wall.y2 - wall.y1) * t;
+
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+
+            // Отмечаем клетку и соседей (для толщины стены)
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+
+                    if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                        grid[newRow][newCol].solid = true;
+                    }
+                }
+            }
+        }
+    }
+
+    computeDangerLevels(grid, cols, rows) {
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                let solidNeighbors = 0;
+                let totalNeighbors = 0;
+
+                // Проверяем 3x3 соседей
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+
+                        const newRow = row + dr;
+                        const newCol = col + dc;
+
+                        if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                            totalNeighbors++;
+                            if (grid[newRow][newCol].solid) {
+                                solidNeighbors++;
+                            }
+                        }
+                    }
+                }
+
+                // Danger level = доля твердых соседей
+                grid[row][col].dangerLevel = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
+            }
+        }
+    }
+
+    computeEscapeDirections(grid, cols, rows, cellSize) {
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                if (grid[row][col].dangerLevel > 0.7) {
+                    // Опасная клетка - ищем направление к безопасности
+                    let bestDirection = null;
+                    let bestSafety = -1;
+
+                    // Проверяем направления (небольшой радиус)
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
+                            if (dr === 0 && dc === 0) continue;
+
+                            const newRow = row + dr;
+                            const newCol = col + dc;
+
+                            if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                                const safety = 1 - grid[newRow][newCol].dangerLevel;
+                                if (safety > bestSafety) {
+                                    bestSafety = safety;
+                                    bestDirection = { x: dc, y: dr };
+                                }
+                            }
+                        }
+                    }
+
+                    if (bestDirection) {
+                        const length = Math.sqrt(bestDirection.x * bestDirection.x + bestDirection.y * bestDirection.y);
+                        grid[row][col].escapeDirection = {
+                            x: bestDirection.x / length,
+                            y: bestDirection.y / length
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    drawCollisionGridDebug() {
+        if (!this.collisionGrid) return;
+
+        const ctx = this.renderer.ctx;
+        if (!ctx) return;
+
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+
+        // Draw grid
+        for (let row = 0; row < this.collisionGrid.rows; row++) {
+            for (let col = 0; col < this.collisionGrid.cols; col++) {
+                const cell = this.collisionGrid.grid[row][col];
+                const x = col * this.collisionGrid.cellSize;
+                const y = row * this.collisionGrid.cellSize;
+
+                if (cell.solid) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
+                } else if (cell.dangerLevel > 0.3) {
+                    const intensity = Math.floor(cell.dangerLevel * 255);
+                    ctx.fillStyle = `rgb(${intensity}, ${255 - intensity}, 0)`;
+                    ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+
+    draw() {
+        this.renderer.clear();
+        this.renderer.startVirtualRendering();
+
+        // Draw background image
+        if (this.currentLevel && this.currentLevel.backgroundImage) {
+            this.renderer.drawBackgroundImage(this.currentLevel.backgroundImage, this.currentLevel.backgroundOpacity);
+        }
+
+        this.renderer.renderGameObjects(this.currentLevel);
+        this.renderer.renderBall(this.ball, this.gameState.ballInPlay);
+
+        // Draw overlay image on top of everything
+        if (this.currentLevel && this.currentLevel.overlayImage) {
+            this.renderer.drawOverlayImage(this.currentLevel.overlayImage, 1.0);
+        }
+
+        // Debug collision grid visualization (change false to true to enable)
+        if (this.useCollisionGrid && false) {
+            this.drawCollisionGridDebug();
+        }
+
+        this.renderer.endVirtualRendering();
+    }
+
+    update() {
+        if (this.gameState.isGameOver) return;
+
+        const ballLost = this.ball.update();
+
+        if(this.currentLevel) {
+            this.currentLevel.flippers.forEach(flipper => flipper.update());
+            this.currentLevel.bumpers.forEach(bumper => bumper.update());
+            this.currentLevel.spinners.forEach(spinner => spinner.update());
+            this.currentLevel.dropTargets.forEach(target => target.update());
+            this.currentLevel.tunnels.forEach(tunnel => tunnel.update());
+        }
+
+        this.checkCollisions();
+
+        if (ballLost && this.gameState.ballInPlay) {
+            this.gameState.lives--;
+            this.gameState.ballInPlay = false;
+            this.scorePanel.updateBalls(this.gameState.lives);
+
+            if (this.gameState.lives <= 0) {
+                this.gameOver();
             } else {
-                alert('Please select a level first!');
+                setTimeout(() => {
+                    this.resetBall();
+                }, 1000);
+            }
+        }
+    }
+
+    checkCollisions() {
+        // Check grid-based collisions first if enabled
+        if (this.useCollisionGrid && this.collisionGrid) {
+            this.checkGridBasedCollisions();
+        }
+
+        if (!this.currentLevel) return;
+
+        // Single pass collision detection with improved corner handling
+        this.currentLevel.walls.forEach(wall => {
+            wall.checkCollision(this.ball);
+        });
+
+        this.currentLevel.flippers.forEach(flipper => {
+            flipper.checkCollision(this.ball);
+        });
+
+        // ПРОСТЫЕ вызовы звуков - никаких проверок!
+        this.currentLevel.bumpers.forEach(bumper => {
+            const points = bumper.checkCollision(this.ball);
+            if (points > 0) {
+                this.gameState.updateScore(points);
+                this.scorePanel.updateScore(this.gameState.score);
+                this.scorePanel.updateHighScore(this.gameState.highScore);
+
+                // Просто играем звук
+                this.playSound('bumper');
             }
         });
 
-        // Обработчик для экрана "tap to start"
-        this.tapToStartScreen.addEventListener('click', async () => {
-            console.log('PinballGame: User clicked TAP TO START');
-            this.userHasInteracted = true;
-            
-            // НЕМЕДЛЕННАЯ активация AudioContext
-            await this.activateAudioContext();
-            
-            this.startLoadingProcess();
+        this.currentLevel.spinners.forEach(spinner => {
+            const points = spinner.checkCollision(this.ball);
+            if (points > 0) {
+                this.gameState.updateScore(points);
+                this.scorePanel.updateScore(this.gameState.score);
+                this.scorePanel.updateHighScore(this.gameState.highScore);
+
+                this.playSound('spinner');
+            }
         });
 
-        this.tapToStartScreen.addEventListener('touchstart', async () => {
-            console.log('PinballGame: User touched TAP TO START');
-            this.userHasInteracted = true;
-            
-            // НЕМЕДЛЕННАЯ активация AudioContext
-            await this.activateAudioContext();
-            
-            this.startLoadingProcess();
-        }, { passive: true });
+        this.currentLevel.dropTargets.forEach(target => {
+            const points = target.checkCollision(this.ball);
+            if (points > 0) {
+                this.gameState.updateScore(points);
+                this.scorePanel.updateScore(this.gameState.score);
+                this.scorePanel.updateHighScore(this.gameState.highScore);
+
+                this.playSound('targetHit');
+            }
+        });
+
+        this.currentLevel.ramps.forEach(ramp => {
+            ramp.checkCollision(this.ball);
+        });
+
+        this.currentLevel.tunnels.forEach(tunnel => {
+            tunnel.checkCollision(this.ball);
+        });
     }
 
     setupFarcasterIntegration() {
@@ -254,745 +872,5 @@ class PinballGame {
 
             gameOverContent.appendChild(shareButton);
         }
-    }
-
-    displayUserInfo(user) {
-        // Показываем информацию о пользователе Farcaster
-        const tapToStartContent = document.querySelector('.tap-to-start-content');
-        if (!tapToStartContent) return;
-
-        try {
-            // ИСПРАВЛЕНО: Убираем проверку на функцию - user уже простой объект
-            const userData = user;
-
-            if (!userData) return;
-
-            // ИСПРАВЛЕНО: Данные уже простые свойства, не функции
-            const username = userData.username;
-            const pfpUrl = userData.pfpUrl;
-            const displayName = userData.displayName;
-
-            if (!username) return;
-
-            // Удаляем предыдущий элемент если есть
-            const existingUserInfo = document.getElementById('farcasterUserInfo');
-            if (existingUserInfo) {
-                existingUserInfo.remove();
-            }
-
-            // Создаем элемент с информацией о пользователе
-            const userInfoElement = document.createElement('div');
-            userInfoElement.id = 'farcasterUserInfo';
-            userInfoElement.style.cssText = `
-                margin-top: 15px;
-                padding: 10px;
-                background: rgba(0, 0, 0, 0.7);
-                border-radius: 8px;
-                text-align: center;
-                color: #ffffff;
-                font-size: 14px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-            `;
-
-            let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
-            
-            if (pfpUrl) {
-                userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
-            }
-            
-            userContent += `<div>`;
-            userContent += `<div style="font-weight: bold;">@${username}</div>`;
-            
-            if (displayName && displayName !== username) {
-                userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
-            }
-            
-            userContent += `</div></div>`;
-            
-            userInfoElement.innerHTML = userContent;
-            tapToStartContent.appendChild(userInfoElement);
-
-            console.log('FarcasterManager: User info displayed for', username);
-        } catch (error) {
-            console.error('FarcasterManager: Error displaying user info:', error);
-        }
-    }
-
-    showNotification(message, type) {
-        type = type || 'info';
-
-        // Создаем уведомление
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-size: 14px;
-            font-weight: 500;
-            max-width: 300px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-        `;
-
-        // Цвета в зависимости от типа
-        const colors = {
-            success: { bg: '#4CAF50', text: '#fff' },
-            error: { bg: '#f44336', text: '#fff' },
-            info: { bg: '#2196F3', text: '#fff' },
-            warning: { bg: '#ff9800', text: '#fff' }
-        };
-
-        const color = colors[type] || colors.info;
-        notification.style.backgroundColor = color.bg;
-        notification.style.color = color.text;
-        notification.textContent = message;
-
-        document.body.appendChild(notification);
-
-        // Анимация появления
-        setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 10);
-
-        // Удаление через 3 секунды
-        setTimeout(() => {
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
-    }
-
-    showTapToStartScreen() {
-        this.canvas.style.display = 'none';
-        document.querySelector('.score-panel').style.display = 'none';
-        this.tapToStartScreen.style.display = 'flex';
-        this.loadingScreen.style.display = 'none';
-        this.levelSelectScreen.style.display = 'none';
-    }
-
-    async activateAudioContext() {
-        console.log('PinballGame: Activating AudioContext immediately...');
-        
-        if (!window.soundManager || !window.soundManager.audioContext) {
-            console.warn('PinballGame: SoundManager not ready for activation');
-            return;
-        }
-
-        try {
-            const context = window.soundManager.audioContext;
-            console.log('PinballGame: AudioContext state before activation:', context.state);
-
-            // Агрессивная активация с двумя попытками
-            for (let attempt = 1; attempt <= 2; attempt++) {
-                try {
-                    await context.resume();
-                    console.log(`PinballGame: AudioContext activation attempt ${attempt}, state:`, context.state);
-                    
-                    if (context.state === 'running') {
-                        console.log('PinballGame: AudioContext successfully activated!');
-                        return;
-                    }
-                } catch (error) {
-                    console.warn(`PinballGame: AudioContext activation attempt ${attempt} failed:`, error);
-                }
-                
-                // Небольшая пауза между попытками
-                if (attempt < 2) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-            }
-
-            console.warn('PinballGame: AudioContext activation failed after 2 attempts, state:', context.state);
-        } catch (error) {
-            console.error('PinballGame: Error during AudioContext activation:', error);
-        }
-    }
-
-    async startLoadingProcess() {
-        // ЗАЩИТА ОТ АВТОЗАПУСКА!
-        if (!this.userHasInteracted) {
-            console.log('PinballGame: Blocking auto-start - user must click TAP TO START first');
-            return;
-        }
-
-        console.log('PinballGame: Starting loading process...');
-        // Скрываем экран "tap to start" и показываем загрузку
-        this.tapToStartScreen.style.display = 'none';
-        this.showLoadingScreen();
-
-        // Настраиваем коллбек для отслеживания прогресса
-        if (window.soundManager) {
-            window.soundManager.setLoadingCallback((type, progress, message) => {
-                this.updateLoadingProgress(type, progress, message);
-            });
-        }
-
-        // Ждем готовности звуков
-        window.addEventListener('soundManagerReady', () => {
-            console.log('PinballGame: Sound system ready!');
-            this.loadingState.sounds = true;
-            this.checkLoadingComplete();
-        });
-
-        // AudioContext уже активирован в activateAudioContext(), сразу запускаем unlock
-        setTimeout(async () => {
-            try {
-                console.log('PinballGame: Starting SoundManager unlock...');
-                
-                if (window.soundManager) {
-                    await window.soundManager.unlock();
-                }
-                
-                this.loadingState.audio = true;
-                this.updateLoadingProgress('audio', 100, 'Audio system initialized');
-
-                // SoundManager уже готов, просто помечаем как завершенный
-                if (window.soundManager && window.soundManager.isReady) {
-                    this.loadingState.sounds = true;
-                    this.updateLoadingProgress('sounds', 100, 'Sounds ready');
-                    this.checkLoadingComplete();
-                } else {
-                    console.log('Waiting for SoundManager to be ready...');
-                    // Слушатель уже настроен выше для события 'soundManagerReady'
-                }
-            } catch (error) {
-                console.error('Error initializing audio:', error);
-                this.loadingState.audio = true;
-                this.loadingState.sounds = true;
-                this.checkLoadingComplete();
-            }
-        }, 100); // Минимальная задержка
-
-        // Загружаем уровни
-        setTimeout(async () => {
-            try {
-                await this.levelSelector.getAvailableLevels();
-                this.loadingState.levels = true;
-                this.updateLoadingProgress('levels', 100, 'Levels loaded');
-                this.checkLoadingComplete();
-            } catch (error) {
-                console.error('Error loading levels:', error);
-                this.loadingState.levels = true;
-                this.checkLoadingComplete();
-            }
-        }, 500);
-    }
-
-    updateLoadingProgress(type, progress, message) {
-        const statusElements = {
-            audio: 'audioStatus',
-            sounds: 'soundsStatus',
-            levels: 'levelsStatus'
-        };
-
-        const elementId = statusElements[type];
-        if (elementId) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.textContent = progress >= 100 ? '✅' : '⏳';
-            }
-        }
-
-        // Если это финальный статус, обновляем состояние загрузки
-        if (progress >= 100) {
-            if (type === 'audio') {
-                this.loadingState.audio = true;
-            } else if (type === 'sounds') {
-                this.loadingState.sounds = true;
-            } else if (type === 'levels') {
-                this.loadingState.levels = true;
-            } else {
-                console.warn('Unknown loading type:', type);
-                return '❌';
-            }
-        }
-
-        // Обновляем общий прогресс
-        this.updateOverallProgress();
-
-        // Обновляем текст загрузки
-        const loadingText = document.getElementById('loadingText');
-        if (loadingText) {
-            loadingText.textContent = message;
-        }
-    }
-
-    updateOverallProgress() {
-        const completed = Object.values(this.loadingState).filter(Boolean).length;
-        const total = Object.keys(this.loadingState).length;
-        const percentage = Math.round((completed / total) * 100);
-
-        const progressFill = document.getElementById('loadingBar');
-        const progressPercentage = document.getElementById('loadingPercentage');
-
-        if (progressFill) {
-            progressFill.style.width = percentage + '%';
-        }
-
-        if (progressPercentage) {
-            progressPercentage.textContent = percentage + '%';
-        }
-    }
-
-    checkLoadingComplete() {
-        const allLoaded = Object.values(this.loadingState).every(Boolean);
-
-        if (allLoaded) {
-            setTimeout(() => {
-                // ВСЕГДА показываем экран выбора уровня - как в оригинале
-                this.showLevelSelectScreen();
-            }, 1000); // Небольшая задержка для красоты
-        }
-    }
-
-    showLoadingScreen() {
-        this.canvas.style.display = 'none';
-        document.querySelector('.score-panel').style.display = 'none';
-        this.loadingScreen.style.display = 'flex';
-        this.levelSelectScreen.style.display = 'none';
-    }
-
-    showLevelSelectScreen() {
-        this.loadingScreen.style.display = 'none';
-        this.levelSelectScreen.style.display = 'flex';
-
-        // Запускаем музыку меню
-        if (window.soundManager && window.soundManager.isReady) {
-            window.soundManager.playMusic('menu');
-        }
-
-        // Популяция списка уровней
-        this.levelSelector.getAvailableLevels().then(levels => {
-            this.populateLevelList(levels);
-        });
-    }
-
-    async showStartScreen() {
-        this.showLevelSelectScreen();
-
-        // Простое воспроизведение музыки
-        if (window.soundManager && window.soundManager.isReady) {
-            window.soundManager.playMusic('menu');
-        }
-    }
-
-    hideStartScreen() {
-        this.canvas.style.display = 'block';
-        document.querySelector('.score-panel').style.display = 'flex';
-        this.levelSelectScreen.style.display = 'none';
-
-        // Простое переключение музыки
-        if (window.soundManager && window.soundManager.isReady) {
-            window.soundManager.playMusic('level');
-            window.soundManager.playSound('newGameLaunch');
-        }
-    }
-
-    populateLevelList(levels) {
-        const levelList = document.getElementById('levelList');
-        levelList.innerHTML = '';
-
-        levels.forEach((level, index) => {
-            const levelItem = document.createElement('div');
-            levelItem.className = `level-item ${index === this.levelSelector.currentLevelIndex ? 'selected' : ''}`;
-            levelItem.innerHTML = `
-                <div class="level-info">
-                    <div class="level-name">${level.name}</div>
-                    <div class="level-description">${level.description}</div>
-                </div>
-            `;
-
-            levelItem.addEventListener('click', () => {
-                document.querySelectorAll('.level-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
-
-                levelItem.classList.add('selected');
-                this.levelSelector.selectLevel(index);
-            });
-
-            levelList.appendChild(levelItem);
-        });
-    }
-
-    update() {
-        if (this.gameState.isGameOver) return;
-
-        const ballLost = this.ball.update();
-
-        this.currentLevel.flippers.forEach(flipper => flipper.update());
-        this.currentLevel.bumpers.forEach(bumper => bumper.update());
-        this.currentLevel.spinners.forEach(spinner => spinner.update());
-        this.currentLevel.dropTargets.forEach(target => target.update());
-        this.currentLevel.tunnels.forEach(tunnel => tunnel.update());
-
-        this.checkCollisions();
-
-        if (ballLost && this.gameState.ballInPlay) {
-            this.gameState.balls--;
-            this.gameState.ballInPlay = false;
-            this.scorePanel.updateBalls(this.gameState.balls);
-
-            if (this.gameState.balls <= 0) {
-                this.gameOver();
-            } else {
-                setTimeout(() => {
-                    this.resetBall();
-                }, 1000);
-            }
-        }
-    }
-
-    checkCollisions() {
-        // Check grid-based collisions first if enabled
-        if (this.useCollisionGrid && this.collisionGrid) {
-            this.checkGridBasedCollisions();
-        }
-
-        // Single pass collision detection with improved corner handling
-        this.currentLevel.walls.forEach(wall => {
-            wall.checkCollision(this.ball);
-        });
-
-        this.currentLevel.flippers.forEach(flipper => {
-            flipper.checkCollision(this.ball);
-        });
-
-        // ПРОСТЫЕ вызовы звуков - никаких проверок!
-        this.currentLevel.bumpers.forEach(bumper => {
-            const points = bumper.checkCollision(this.ball);
-            if (points > 0) {
-                this.gameState.updateScore(points);
-                this.scorePanel.updateScore(this.gameState.score);
-                this.scorePanel.updateHighScore(this.gameState.highScore);
-
-                // Просто играем звук
-                window.soundManager?.playSound('bumper');
-            }
-        });
-
-        this.currentLevel.spinners.forEach(spinner => {
-            const points = spinner.checkCollision(this.ball);
-            if (points > 0) {
-                this.gameState.updateScore(points);
-                this.scorePanel.updateScore(this.gameState.score);
-                this.scorePanel.updateHighScore(this.gameState.highScore);
-
-                window.soundManager?.playSound('spinner');
-            }
-        });
-
-        this.currentLevel.dropTargets.forEach(target => {
-            const points = target.checkCollision(this.ball);
-            if (points > 0) {
-                this.gameState.updateScore(points);
-                this.scorePanel.updateScore(this.gameState.score);
-                this.scorePanel.updateHighScore(this.gameState.highScore);
-
-                window.soundManager?.playSound('targetHit');
-            }
-        });
-
-        this.currentLevel.ramps.forEach(ramp => {
-            ramp.checkCollision(this.ball);
-        });
-
-        this.currentLevel.tunnels.forEach(tunnel => {
-            tunnel.checkCollision(this.ball);
-        });
-    }
-
-    draw() {
-        this.renderer.clear();
-        this.renderer.startVirtualRendering();
-
-        // Draw background image
-        if (this.currentLevel.backgroundImage) {
-            this.renderer.drawBackgroundImage(this.currentLevel.backgroundImage, this.currentLevel.backgroundOpacity);
-        }
-
-        this.renderer.renderGameObjects(this.currentLevel);
-        this.renderer.renderBall(this.ball, this.gameState.ballInPlay);
-
-        // Draw overlay image on top of everything
-        if (this.currentLevel.overlayImage) {
-            this.renderer.drawOverlayImage(this.currentLevel.overlayImage, 1.0);
-        }
-
-        // Debug collision grid visualization (change false to true to enable)
-        if (this.useCollisionGrid && false) {
-            this.drawCollisionGridDebug();
-        }
-
-        this.renderer.endVirtualRendering();
-    }
-
-    updateUI() {
-        this.scorePanel.updateAll(this.gameState);
-    }
-
-    gameOver() {
-        this.gameState.isGameOver = true;
-        this.gameOverOverlay.show(this.gameState);
-
-        // В frame окружении предлагаем поделиться результатом
-        if (window.farcasterManager && window.farcasterManager.isInFrame()) {
-            setTimeout(() => {
-                this.showNotification('Share your score! 📱', 'info');
-            }, 1000);
-        }
-    }
-
-    restartGame() {
-        this.gameState.resetGame();
-        this.resetBall();
-        this.levelManager.resetLevel(this.currentLevel);
-        this.gameOverOverlay.hide();
-        this.updateUI();
-    }
-
-    async showLevelSelect() {
-        this.gameStarted = false;
-
-        // Останавливаем игровую музыку и запускаем музыку меню
-        if (window.soundManager && window.soundManager.isReady) {
-            window.soundManager.stopMusic();
-            window.soundManager.playMusic('menu');
-        }
-
-        this.showLevelSelectScreen();
-    }
-
-    async loadSelectedLevel(selectedLevel) {
-        try {
-            this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
-            this.gameState.setCurrentLevel(selectedLevel.name);
-            await this.initializeGame();
-            console.log(`Loaded level: ${selectedLevel.name}`);
-        } catch (error) {
-            console.error('Error loading selected level:', error);
-            this.currentLevel = await this.levelManager.createDefaultLevel();
-            this.gameState.setCurrentLevel('default');
-            await this.initializeGame();
-        }
-    }
-
-    gameLoop() {
-        if (this.gameStarted && this.currentLevel) {
-            this.update();
-            this.draw();
-        }
-        if (this.gameLoopRunning) {
-            requestAnimationFrame(() => this.gameLoop());
-        }
-    }
-
-    // Simple Collision Grid System
-    createSimpleCollisionGrid() {
-        const cellSize = 2; // Простой разумный размер
-        const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);  // 40 колонок  
-        const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize); // 60 строк
-        
-        console.log(`🔍 Creating collision grid: ${cols}×${rows} (${cols * rows} cells)`);
-        const startTime = performance.now();
-        
-        // ПРОСТЫЕ ОБЫЧНЫЕ МАССИВЫ (не типизированные!)
-        const grid = [];
-        
-        // Initialize grid
-        for (let row = 0; row < rows; row++) {
-            grid[row] = [];
-            for (let col = 0; col < cols; col++) {
-                grid[row][col] = {
-                    solid: false,
-                    dangerLevel: 0,
-                    escapeDirection: null
-                };
-            }
-        }
-        
-        // Mark wall cells (ПРОСТОЙ СПОСОБ)
-        this.currentLevel.walls.forEach(wall => {
-            this.markWallCells(grid, wall, cellSize, cols, rows);
-        });
-        
-        // Compute danger levels (ПРОСТОЙ АЛГОРИТМ)
-        this.computeDangerLevels(grid, cols, rows);
-        
-        // Compute escape directions (ПРОСТОЙ АЛГОРИТМ)
-        this.computeEscapeDirections(grid, cols, rows, cellSize);
-        
-        const totalTime = (performance.now() - startTime).toFixed(1);
-        console.log(`✅ Collision grid ready in ${totalTime}ms`);
-        
-        return {
-            grid: grid,
-            cellSize: cellSize,
-            cols: cols,
-            rows: rows,
-            
-            checkPosition: (x, y) => {
-                const col = Math.floor(x / cellSize);
-                const row = Math.floor(y / cellSize);
-                
-                if (row >= 0 && row < rows && col >= 0 && col < cols) {
-                    return grid[row][col];
-                }
-                return { solid: false, dangerLevel: 0, escapeDirection: null };
-            }
-        };
-    }
-    
-    
-    
-    checkGridBasedCollisions() {
-        const ballInfo = this.collisionGrid.checkPosition(
-            this.ball.position.x, 
-            this.ball.position.y
-        );
-        
-        // If ball is in dangerous zone - ВЫСОКИЙ ПОРОГ!
-        if (ballInfo.dangerLevel > 0.85 && ballInfo.escapeDirection) {
-            // Gently guide ball to safety - СЛАБАЯ СИЛА!
-            const escapeForce = ballInfo.dangerLevel * 0.3;
-            
-            this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
-            this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
-            
-            console.log(`🚨 Ball in danger zone (${ballInfo.dangerLevel.toFixed(2)}), applying escape force`);
-        }
-    }
-
-    markWallCells(grid, wall, cellSize, cols, rows) {
-        // Простая растеризация стены
-        const steps = Math.max(
-            Math.abs(wall.x2 - wall.x1), 
-            Math.abs(wall.y2 - wall.y1)
-        ) / cellSize;
-        
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const x = wall.x1 + (wall.x2 - wall.x1) * t;
-            const y = wall.y1 + (wall.y2 - wall.y1) * t;
-            
-            const col = Math.floor(x / cellSize);
-            const row = Math.floor(y / cellSize);
-            
-            // Отмечаем клетку и соседей (для толщины стены)
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    const newRow = row + dr;
-                    const newCol = col + dc;
-                    
-                    if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-                        grid[newRow][newCol].solid = true;
-                    }
-                }
-            }
-        }
-    }
-
-    computeDangerLevels(grid, cols, rows) {
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                let solidNeighbors = 0;
-                let totalNeighbors = 0;
-                
-                // Проверяем 3x3 соседей
-                for (let dr = -1; dr <= 1; dr++) {
-                    for (let dc = -1; dc <= 1; dc++) {
-                        if (dr === 0 && dc === 0) continue;
-                        
-                        const newRow = row + dr;
-                        const newCol = col + dc;
-                        
-                        if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-                            totalNeighbors++;
-                            if (grid[newRow][newCol].solid) {
-                                solidNeighbors++;
-                            }
-                        }
-                    }
-                }
-                
-                // Danger level = доля твердых соседей
-                grid[row][col].dangerLevel = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
-            }
-        }
-    }
-
-    computeEscapeDirections(grid, cols, rows, cellSize) {
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                if (grid[row][col].dangerLevel > 0.7) {
-                    // Опасная клетка - ищем направление к безопасности
-                    let bestDirection = null;
-                    let bestSafety = -1;
-                    
-                    // Проверяем направления (небольшой радиус)
-                    for (let dr = -2; dr <= 2; dr++) {
-                        for (let dc = -2; dc <= 2; dc++) {
-                            if (dr === 0 && dc === 0) continue;
-                            
-                            const newRow = row + dr;
-                            const newCol = col + dc;
-                            
-                            if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
-                                const safety = 1 - grid[newRow][newCol].dangerLevel;
-                                if (safety > bestSafety) {
-                                    bestSafety = safety;
-                                    bestDirection = { x: dc, y: dr };
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (bestDirection) {
-                        const length = Math.sqrt(bestDirection.x * bestDirection.x + bestDirection.y * bestDirection.y);
-                        grid[row][col].escapeDirection = {
-                            x: bestDirection.x / length,
-                            y: bestDirection.y / length
-                        };
-                    }
-                }
-            }
-        }
-    }
-    
-    drawCollisionGridDebug() {
-        if (!this.collisionGrid) return;
-        
-        const ctx = this.renderer.ctx;
-        if (!ctx) return;
-        
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        
-        // Draw grid
-        for (let row = 0; row < this.collisionGrid.rows; row++) {
-            for (let col = 0; col < this.collisionGrid.cols; col++) {
-                const cell = this.collisionGrid.grid[row][col];
-                const x = col * this.collisionGrid.cellSize;
-                const y = row * this.collisionGrid.cellSize;
-                
-                if (cell.solid) {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
-                } else if (cell.dangerLevel > 0.3) {
-                    const intensity = Math.floor(cell.dangerLevel * 255);
-                    ctx.fillStyle = `rgb(${intensity}, ${255 - intensity}, 0)`;
-                    ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
-                }
-            }
-        }
-        
-        ctx.restore();
     }
 }

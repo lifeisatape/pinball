@@ -8,9 +8,6 @@ class SoundManager {
         this.enabled = true;
         this.isReady = false;
         this.currentMusic = null;
-        this.loadingProgress = 0;
-        this.loadingCallback = null;
-        this.isLoading = false; // Флаг для предотвращения повторной загрузки
 
         // Кулдаун только для спиннера
         this.spinnerLastPlayed = 0;
@@ -26,7 +23,8 @@ class SoundManager {
             spinner: 'sounds/spinner.mp3',
             targetHit: 'sounds/Target_hit.mp3',
             targetIn: 'sounds/Target_in.mp3',
-            newGameLaunch: 'sounds/New_game_launch.mp3'
+            newGameLaunch: 'sounds/New_game_launch.mp3',
+            wallhit: 'sounds/wallhit.mp3'
         };
 
         console.log('SoundManager: Created');
@@ -35,11 +33,10 @@ class SoundManager {
 
     async init() {
         try {
-            // Пытаемся создать AudioContext сразу
+            // Создаем AudioContext
             this.tryCreateContext();
 
-            // Аудио будет активировано через tap-to-start screen
-
+            // ✅ НЕ ждем активации - будет активирован через пользовательское взаимодействие
         } catch (error) {
             console.warn('SoundManager: Initialization failed:', error);
         }
@@ -51,7 +48,7 @@ class SoundManager {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 console.log('SoundManager: AudioContext created, state:', this.audioContext.state);
 
-                // Если контекст уже running, загружаем звуки сразу
+                // Если контекст уже running, начинаем загрузку
                 if (this.audioContext.state === 'running') {
                     this.preloadAllSounds();
                 }
@@ -61,190 +58,75 @@ class SoundManager {
         }
     }
 
+    // ✅ Упрощенная активация
     async unlock() {
-        if (this.isLoading) {
-            console.log('SoundManager: Already loading, skipping unlock');
-            return;
-        }
-
-        this.isLoading = true;
         console.log('SoundManager: Starting unlock process...');
 
         try {
-            // Уведомляем о начале инициализации аудио
-            if (this.loadingCallback) {
-                this.loadingCallback('audio', 10, 'Initializing audio context...');
-            }
-
             // Создаем контекст если его нет
             if (!this.audioContext) {
                 this.tryCreateContext();
-                console.log('SoundManager: AudioContext created in unlock, state:', this.audioContext.state);
             }
 
-            if (this.loadingCallback) {
-                this.loadingCallback('audio', 30, 'Audio context created...');
+            // Активируем контекст
+            if (this.audioContext.state === 'suspended') {
+                console.log('SoundManager: Resuming suspended AudioContext...');
+                await this.audioContext.resume();
+                console.log('SoundManager: AudioContext resumed, state:', this.audioContext.state);
             }
 
-            // Специальная обработка для deployed версии
-            const isDeployed = window.location.hostname.includes('replit.app') || 
-                              window.location.hostname.includes('replit.dev') || 
-                              window.location.protocol === 'https:';
-
-            if (isDeployed) {
-                console.log('SoundManager: Deployed environment detected, using enhanced activation');
-
-                // Для deployed версии требуется более агрессивная активация
-                if (this.audioContext.state !== 'running') {
-                    if (this.loadingCallback) {
-                        this.loadingCallback('audio', 50, 'Activating audio for deployment...');
-                    }
-
-                    // Множественные попытки активации для deployed версии
-                    for (let i = 0; i < 3; i++) {
-                        try {
-                            await this.audioContext.resume();
-                            if (this.audioContext.state === 'running') break;
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                        } catch (err) {
-                            console.warn(`SoundManager: Activation attempt ${i + 1} failed:`, err);
-                        }
-                    }
-                }
-            } else {
-                // Стандартная активация для dev-сервера
-                if (this.audioContext.state === 'suspended') {
-                    console.log('SoundManager: Resuming suspended AudioContext...');
-                    if (this.loadingCallback) {
-                        this.loadingCallback('audio', 50, 'Activating audio...');
-                    }
-                    await this.audioContext.resume();
-                    console.log('SoundManager: AudioContext resumed, state:', this.audioContext.state);
-                }
-            }
-
-            if (this.loadingCallback) {
-                this.loadingCallback('audio', 70, 'Audio context activated');
-            }
-
-            // Увеличенная пауза для deployed версии
-            const pauseTime = isDeployed ? 500 : 200;
-            await new Promise(resolve => setTimeout(resolve, pauseTime));
-
-            // Загружаем звуки если контекст готов
+            // Начинаем загрузку звуков если контекст готов
             if (this.audioContext.state === 'running') {
                 console.log('SoundManager: AudioContext running, loading sounds...');
 
-                if (this.loadingCallback) {
-                    this.loadingCallback('audio', 100, 'Audio system ready');
-                }
-
-                await this.preloadAllSounds();
-                console.log('SoundManager: Ready!');
-            } else {
-                console.warn('SoundManager: AudioContext not running, state:', this.audioContext.state);
-
-                // Финальная попытка для любой среды
-                if (this.loadingCallback) {
-                    this.loadingCallback('audio', 90, 'Final audio activation attempt...');
-                }
-
-                // Создаем новый контекст если старый не работает
-                if (this.audioContext.state === 'closed') {
-                    this.tryCreateContext();
-                }
-
-                await this.audioContext.resume();
-
-                if (this.audioContext.state === 'running') {
-                    if (this.loadingCallback) {
-                        this.loadingCallback('audio', 100, 'Audio system ready');
-                    }
-                    await this.preloadAllSounds();
-                } else {
-                    throw new Error(`AudioContext state: ${this.audioContext.state}`);
+                // ✅ НЕ блокируем - загружаем в фоне
+                if (!this.isReady && this.buffers.size === 0) {
+                    this.preloadAllSounds();
                 }
             }
 
         } catch (error) {
             console.error('SoundManager: Failed to unlock audio:', error);
-            if (this.loadingCallback) {
-                this.loadingCallback('audio', 0, 'Audio initialization failed');
-            }
-
-            // Для deployed версии - более мягкая деградация
-            this.isReady = false;
+            // ✅ НЕ блокируем игру - просто отключаем звук
             this.enabled = false;
-
-            // Помечаем аудио как "готовое" чтобы не блокировать игру
-            setTimeout(() => {
-                if (this.loadingCallback) {
-                    this.loadingCallback('audio', 100, 'Audio disabled, continuing...');
-                }
-            }, 1000);
-
-        } finally {
-            this.isLoading = false;
         }
     }
 
-
-
+    // ✅ Простая загрузка звуков (БЕЗ колбэков загрузки)
     async preloadAllSounds() {
         // Проверяем, не загружены ли уже звуки
         if (this.buffers.size > 0) {
-            console.log('SoundManager: Sounds already loaded, skipping preload');
-            if (this.loadingCallback) {
-                this.loadingCallback('sounds', 100, 'Sounds already loaded');
-            }
+            console.log('SoundManager: Sounds already loaded');
             return;
         }
 
         console.log('SoundManager: Preloading sounds...');
 
         const soundEntries = Object.entries(this.soundFiles);
-        const totalSounds = soundEntries.length;
         let loadedSounds = 0;
 
-        for (const [name, url] of soundEntries) {
+        // Загружаем все звуки параллельно
+        const loadPromises = soundEntries.map(async ([name, url]) => {
             try {
                 const buffer = await this.loadSound(url);
                 this.buffers.set(name, buffer);
                 loadedSounds++;
-
-                this.loadingProgress = Math.round((loadedSounds / totalSounds) * 100);
-
-                // Уведомляем о прогрессе
-                if (this.loadingCallback) {
-                    this.loadingCallback('sounds', this.loadingProgress, `Loading ${name}...`);
-                }
-
-                console.log(`SoundManager: Loaded ${name} (${loadedSounds}/${totalSounds})`);
+                console.log(`SoundManager: Loaded ${name} (${loadedSounds}/${soundEntries.length})`);
+                return true;
             } catch (error) {
                 console.warn(`SoundManager: Failed to load ${name}:`, error);
-                loadedSounds++;
-                this.loadingProgress = Math.round((loadedSounds / totalSounds) * 100);
-
-                if (this.loadingCallback) {
-                    this.loadingCallback('sounds', this.loadingProgress, `Failed to load ${name}`);
-                }
+                return false;
             }
-        }
+        });
 
-        console.log('SoundManager: All sounds preloaded');
+        // Ждем загрузки всех звуков (или их неудачи)
+        await Promise.allSettled(loadPromises);
 
-        // Устанавливаем готовность и отправляем событие
+        console.log('SoundManager: Sound loading complete');
         this.isReady = true;
+
+        // Уведомляем систему о готовности
         window.dispatchEvent(new CustomEvent('soundManagerReady'));
-
-        // Финальное уведомление о завершении
-        if (this.loadingCallback) {
-            this.loadingCallback('sounds', 100, 'All sounds loaded');
-        }
-    }
-
-    setLoadingCallback(callback) {
-        this.loadingCallback = callback;
     }
 
     async loadSound(url) {
@@ -263,7 +145,7 @@ class SoundManager {
         if (name === 'spinner') {
             const now = Date.now();
             if (now - this.spinnerLastPlayed < this.spinnerCooldown) {
-                return null; // Спиннер на кулдауне
+                return null;
             }
             this.spinnerLastPlayed = now;
         }
@@ -346,7 +228,6 @@ class SoundManager {
         }
     }
 
-    // Простая проверка готовности
     getStatus() {
         return {
             isReady: this.isReady,

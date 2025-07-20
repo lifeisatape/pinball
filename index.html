@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Pinball: all stars</title>
-    
+
     <!-- Farcaster Frame Embed Meta Tags -->
     <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball Game","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
 
@@ -20,7 +20,7 @@
     <meta name="twitter:title" content="Pinball Game - Classic Arcade Experience" />
     <meta name="twitter:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta name="twitter:image" content="https://pinballll.space/gm.png" />
-    
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -74,31 +74,6 @@
             </div>
         </div>
 
-        <!-- loading screen -->
-        <div class="loading-overlay" id="loadingScreen" style="display: none;">
-            <div class="loading-content">
-                <h1>LOADING</h1>
-                <div class="loading-bar-container">
-                    <div class="loading-bar" id="loadingBar"></div>
-                    <div class="loading-percentage" id="loadingPercentage">0%</div>
-                </div>
-                <div class="loading-details" id="loadingDetails">
-                    <div class="loading-item">
-                        <span class="loading-item-name">audio system</span>
-                        <span class="loading-item-status" id="audioStatus">⏳</span>
-                    </div>
-                    <div class="loading-item">
-                        <span class="loading-item-name">sounds</span>
-                        <span class="loading-item-status" id="soundsStatus">⏳</span>
-                    </div>
-                    <div class="loading-item">
-                        <span class="loading-item-name">rooms</span>
-                        <span class="loading-item-status" id="levelsStatus">⏳</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Game Over Overlay -->
         <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
             <div class="game-over-content">
@@ -116,7 +91,9 @@
                 <div class="game-over-buttons">
                     <button id="restartGame" class="restart-btn">🔄 Play Again</button>
                     <button id="backToMenu" class="restart-btn">🏠 Back to Menu</button>
+                    <button id="shareScoreBtn" class="restart-btn" style="display: none;">📤 Share Score</button>
                 </div>
+                <div id="farcasterUserInfo" style="display: none;"></div>
             </div>
         </div>
 
@@ -130,83 +107,99 @@
                 </div>
                 <div class="level-select-controls">
                     <button class="level-btn primary" id="startLevel">START GAME</button>
+                    <button id="addToAppsBtn" class="level-btn" style="display: none;">⭐ Add to Apps</button>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
+
+    <!-- ✅ ПРОСТОЕ определение Mini App окружения -->
     <script>
-        // ✅ ОБНОВЛЕНО: Более надежная логика определения Mini App
         window.isMiniApp = window.parent !== window || 
                           window.location.search.includes('miniApp=true') ||
                           navigator.userAgent.includes('Warpcast') ||
                           navigator.userAgent.includes('Farcaster');
-        
+
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>
 
-    <!-- ИСПРАВЛЕНО: Правильная загрузка SDK -->
+    <!-- ✅ КРИТИЧНО: Быстрая инициализация SDK и НЕМЕДЛЕННЫЙ ready() -->
     <script type="module">
         if (window.isMiniApp) {
             try {
-                console.log('Loading Farcaster SDK...');
+                console.log('📦 Loading Farcaster SDK...');
+
                 const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
-                
-                // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
                 window.sdk = sdk;
-                console.log('✅ Farcaster SDK loaded successfully:', sdk);
+                console.log('✅ Farcaster SDK loaded successfully');
+
+                // ✅ КРИТИЧНО: Вызываем ready() НЕМЕДЛЕННО - НЕ ЖДЕМ НИЧЕГО!
+                await sdk.actions.ready({
+                    disableNativeGestures: false
+                });
+                console.log('🎉 Splash screen dismissed IMMEDIATELY');
+
+                // Получаем контекст для использования в игре (в фоне)
+                try {
+                    window.farcasterContext = await sdk.context;
+                    console.log('📋 Context received');
+                } catch (error) {
+                    console.log('⚠️ Could not get context:', error);
+                }
+
+                window.farcasterSDKReady = true;
+
             } catch (error) {
                 console.error('❌ Failed to load Farcaster SDK:', error);
+                window.farcasterSDKReady = false;
             }
         } else {
-            console.log('⏭️ Skipping SDK load - not in Mini App environment');
+            console.log('⏭️ Not in Mini App environment');
+            window.farcasterSDKReady = false;
         }
     </script>
-    
+
     <!-- 1. SoundManager -->
     <script src="core/SoundManager.js"></script>
-    
+
     <!-- 2. Core modules -->
     <script src="core/GameConfig.js"></script>
-    <script src="core/FarcasterManager.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
-    
+
     <!-- 3. Physics modules -->
     <script src="physics/FlipperShape.js"></script>
     <script src="physics/Ball.js"></script>
     <script src="physics/Wall.js"></script>
     <script src="physics/Flipper.js"></script>
-    
+
     <!-- 4. Game objects -->
     <script src="gameObjects/Bumper.js"></script>
     <script src="gameObjects/Spinner.js"></script>
     <script src="gameObjects/DropTarget.js"></script>
     <script src="gameObjects/Tunnel.js"></script>
     <script src="gameObjects/Ramp.js"></script>
-    
+
     <!-- 5. UI components -->
     <script src="ui/ScorePanel.js"></script>
     <script src="ui/GameOverOverlay.js"></script>
     <script src="ui/LevelSelectOverlay.js"></script>
-    
+
     <!-- 6. Game engine -->
     <script src="game/GameRenderer.js"></script>
     <script src="game/InputManager.js"></script>
     <script src="game/LevelManager.js"></script>
     <script src="game/LevelSelector.js"></script>
     <script src="game/PinballGame.js"></script>
-    
-    <!-- 7. Initialize game -->
+
+    <!-- ✅ Простая инициализация игры -->
     <script>
         window.addEventListener('load', async () => {
-            console.log('Page loaded, initializing game...');
-            
+            console.log('🎮 Page loaded, initializing game...');
+
+            // Создаем игру БЕЗ ожидания звуков или сложной логики
             const game = new PinballGame();
-            
-            // ready() теперь вызывается автоматически в FarcasterManager.init()
         });
 
         // Prevent mobile scrolling and context menu
@@ -217,60 +210,37 @@
         document.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
-
-        // Debug info for mobile
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                if (window.soundManager) {
-                    console.log('Sound Manager Status:', window.soundManager.getStatus());
-                }
-            }, 3000);
-        });
     </script>
 
     <style>
-        /* Дополнительные стили для индикатора загрузки */
-        .level-btn.loading {
-            background: #444 !important;
-            color: #888 !important;
-            cursor: not-allowed !important;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-
-        .level-btn:disabled {
-            pointer-events: none;
-        }
-
-        /* Стили для индикатора загрузки звуков */
-        #sound-loading-indicator {
-            backdrop-filter: blur(10px);
-        }
-
-        #sound-loading-progress {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #00ff00;
-        }
-
-        /* Дополнительные стили для Farcaster элементов */
+        /* Стили для Farcaster элементов */
         #farcasterUserInfo {
             margin: 15px 0;
             text-align: center;
+            color: #00ff00;
+            font-size: 14px;
         }
 
         #farcasterUserInfo img {
             display: block;
             margin: 0 auto 10px;
+            border-radius: 50%;
         }
 
         #addToAppsBtn,
         #shareScoreBtn {
             margin-top: 10px;
+            background: #7C3AED;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #addToAppsBtn:hover,
+        #shareScoreBtn:hover {
+            background: #5B21B6;
         }
     </style>
 </body>
