@@ -1,0 +1,333 @@
+// ✅ ИСПРАВЛЕННЫЙ PinballGame.js - правильная логика для мобильного
+class PinballGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.levelManager = new LevelManager();
+        this.levelSelector = new LevelSelector();
+        this.renderer = new GameRenderer(this.canvas);
+        this.inputManager = null;
+        this.gameState = new GameState();
+        this.scorePanel = new ScorePanel();
+        this.gameOverOverlay = new GameOverOverlay();
+        this.tapToStartScreen = document.getElementById('tapToStartScreen');
+        this.loadingScreen = document.getElementById('loadingScreen');
+        this.levelSelectScreen = document.getElementById('levelSelectScreen');
+
+        this.ball = null;
+        this.gameStarted = false;
+        this.currentLevel = null;
+        this.userHasInteracted = false;
+
+        // ✅ Простое состояние - без сложной логики загрузки
+        this.soundsLoaded = false;
+
+        this.setupEventListeners();
+        this.showTapToStartScreen();
+        
+        // ✅ Загружаем звуки в фоне НЕЗАВИСИМО от ready()
+        this.loadSoundsInBackground();
+    }
+
+    setupEventListeners() {
+        // Обработчик для экрана "tap to start"
+        this.tapToStartScreen.addEventListener('click', async () => {
+            console.log('🎮 User clicked TAP TO START');
+            this.userHasInteracted = true;
+            
+            // ✅ Простая активация аудио без блокировки
+            this.activateAudioContext();
+            this.startGame();
+        });
+
+        this.tapToStartScreen.addEventListener('touchstart', async () => {
+            console.log('🎮 User touched TAP TO START');
+            this.userHasInteracted = true;
+            
+            this.activateAudioContext();
+            this.startGame();
+        }, { passive: true });
+
+        // Остальные обработчики...
+        document.getElementById('restartGame').addEventListener('click', () => {
+            this.restartGame();
+        });
+
+        document.getElementById('backToMenu').addEventListener('click', () => {
+            this.showLevelSelect();
+        });
+
+        document.getElementById('startLevel').addEventListener('click', () => {
+            const selectedLevel = this.levelSelector.getCurrentLevel();
+            if (selectedLevel) {
+                this.loadSelectedLevel(selectedLevel);
+            } else {
+                alert('Please select a level first!');
+            }
+        });
+    }
+
+    // ✅ КРИТИЧНО: НЕ ЖДЕМ ЗВУКИ, загружаем в фоне
+    async loadSoundsInBackground() {
+        if (window.soundManager) {
+            try {
+                console.log('🔊 Loading sounds in background (non-blocking)...');
+                // НЕ await - не блокируем ready()!
+                window.soundManager.preloadAllSounds().then(() => {
+                    this.soundsLoaded = true;
+                    console.log('✅ Sounds loaded in background');
+                }).catch(error => {
+                    console.warn('⚠️ Sound loading failed, continuing without audio:', error);
+                    this.soundsLoaded = false;
+                });
+            } catch (error) {
+                console.warn('⚠️ Sound manager not available:', error);
+            }
+        }
+    }
+
+    // ✅ Простая активация аудио (не async, не блокирующая)
+    activateAudioContext() {
+        if (window.soundManager && window.soundManager.audioContext) {
+            try {
+                console.log('🔊 Activating audio context...');
+                // Не await - не блокируем игру
+                window.soundManager.unlock().catch(error => {
+                    console.warn('⚠️ Audio activation failed:', error);
+                });
+            } catch (error) {
+                console.warn('⚠️ Audio activation error:', error);
+            }
+        }
+    }
+
+    // ✅ Простая настройка Farcaster (без сложного менеджера)
+    setupSimpleFarcasterIntegration() {
+        console.log('🔄 Setting up simple Farcaster integration...');
+        
+        if (window.sdk && window.farcasterContext) {
+            console.log('✅ Farcaster SDK ready');
+            
+            // Показываем информацию о пользователе
+            const user = window.farcasterContext.user;
+            if (user) {
+                console.log('👤 Farcaster user:', user);
+                this.displayUserInfo(user);
+            }
+            
+            // Адаптируем UI для Mini App
+            this.adaptUIForMiniApp();
+        }
+    }
+
+    displayUserInfo(user) {
+        console.log('👤 Displaying user info:', user);
+        
+        // Простое отображение информации о пользователе
+        const userInfo = document.getElementById('farcasterUserInfo');
+        if (userInfo) {
+            userInfo.innerHTML = `
+                <div>Welcome, ${user.displayName || user.username || 'Player'}!</div>
+                ${user.pfpUrl ? `<img src="${user.pfpUrl}" width="32" height="32" style="border-radius: 50%;">` : ''}
+            `;
+            userInfo.style.display = 'block';
+        }
+    }
+
+    adaptUIForMiniApp() {
+        console.log('🎨 Adapting UI for Mini App');
+        
+        // Добавляем кнопки для Mini App
+        const shareButton = document.getElementById('shareScoreBtn');
+        if (shareButton) {
+            shareButton.style.display = 'block';
+            shareButton.addEventListener('click', () => {
+                this.shareScore();
+            });
+        }
+
+        const addToAppsButton = document.getElementById('addToAppsBtn');
+        if (addToAppsButton) {
+            addToAppsButton.style.display = 'block';
+            addToAppsButton.addEventListener('click', () => {
+                this.addToFavorites();
+            });
+        }
+    }
+
+    // ✅ Простое шарение (без сложной логики)
+    async shareScore() {
+        if (window.sdk && window.sdk.actions && window.sdk.actions.composeCast) {
+            try {
+                const text = `🎮 I just scored ${this.gameState.score || 0} points and reached level ${this.gameState.level || 1} in Pinball All Stars! Can you beat that? 🚀`;
+                const url = window.location.origin;
+
+                await window.sdk.actions.composeCast({
+                    text: text,
+                    embeds: [url]
+                });
+                
+                console.log('✅ Score shared successfully');
+            } catch (error) {
+                console.error('❌ Error sharing score:', error);
+            }
+        } else {
+            console.log('⚠️ Cannot share - Farcaster not available');
+        }
+    }
+
+    // ✅ Простое добавление в избранное
+    async addToFavorites() {
+        if (window.sdk && window.sdk.actions && window.sdk.actions.addMiniApp) {
+            try {
+                await window.sdk.actions.addMiniApp();
+                console.log('✅ Add to favorites prompted');
+            } catch (error) {
+                console.error('❌ Error adding to favorites:', error);
+            }
+        } else {
+            console.log('⚠️ Cannot add to favorites - Farcaster not available');
+        }
+    }
+
+    // ✅ Простой запуск игры (НЕ ЖДЕМ звуки)
+    startGame() {
+        console.log('🎮 Starting game immediately...');
+
+        // Скрываем экран "tap to start"
+        this.tapToStartScreen.style.display = 'none';
+        
+        // Показываем экран выбора уровня СРАЗУ
+        this.showLevelSelect();
+    }
+
+    showTapToStartScreen() {
+        this.tapToStartScreen.style.display = 'flex';
+        this.loadingScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'none';
+    }
+
+    showLevelSelect() {
+        this.tapToStartScreen.style.display = 'none';
+        this.loadingScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'flex';
+        
+        if (this.levelSelector) {
+            this.levelSelector.render();
+        }
+    }
+
+    hideStartScreen() {
+        this.tapToStartScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'none';
+    }
+
+    async loadSelectedLevel(levelName) {
+        try {
+            console.log(`🎮 Loading level: ${levelName}`);
+            
+            const levelData = await this.levelManager.loadLevel(levelName);
+            if (levelData) {
+                this.currentLevel = levelData;
+                await this.initializeGame();
+            } else {
+                console.error('Failed to load level:', levelName);
+                alert('Failed to load level. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error loading level:', error);
+            alert('Error loading level. Please try again.');
+        }
+    }
+
+    async initializeGame() {
+        try {
+            if (!this.currentLevel) return;
+
+            this.hideStartScreen();
+            this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
+            this.resetBall();
+            this.updateUI();
+            this.gameStarted = true;
+
+            if (!this.gameLoopRunning) {
+                this.gameLoopRunning = true;
+                this.gameLoop();
+            }
+        } catch (error) {
+            console.error('Failed to initialize game:', error);
+        }
+    }
+
+    resetBall() {
+        this.ball = new Ball(CONFIG.VIRTUAL_WIDTH * 0.51, 50);
+        this.ball.velocity.x = 0;
+        this.ball.velocity.y = 0;
+        this.gameState.ballInPlay = true;
+    }
+
+    restartGame() {
+        if (this.currentLevel) {
+            this.gameState.reset();
+            this.resetBall();
+            this.updateUI();
+            this.gameOverOverlay.hide();
+        }
+    }
+
+    updateUI() {
+        if (this.scorePanel) {
+            this.scorePanel.update({
+                score: this.gameState.score,
+                level: this.gameState.level,
+                lives: this.gameState.lives
+            });
+        }
+    }
+
+    gameLoop() {
+        if (!this.gameStarted || !this.currentLevel) {
+            this.gameLoopRunning = false;
+            return;
+        }
+
+        // Обновление физики, рендеринг и т.д.
+        // (ваша существующая логика игрового цикла)
+        
+        if (this.gameLoopRunning) {
+            requestAnimationFrame(() => this.gameLoop());
+        }
+    }
+
+    // Метод для окончания игры
+    gameOver() {
+        console.log('🎮 Game Over');
+        
+        // Показываем экран game over
+        this.gameOverOverlay.show({
+            finalScore: this.gameState.score,
+            levelReached: this.gameState.level
+        });
+
+        // Предлагаем поделиться результатом в Farcaster
+        if (window.sdk && window.farcasterContext) {
+            setTimeout(() => {
+                if (confirm('Share your score on Farcaster?')) {
+                    this.shareScore();
+                }
+            }, 1000);
+        }
+    }
+
+    // ✅ Безопасное воспроизведение звуков (проверяем готовность)
+    playSound(soundName) {
+        if (this.soundsLoaded && window.soundManager) {
+            try {
+                window.soundManager.playSound(soundName);
+            } catch (error) {
+                console.warn('⚠️ Sound playback failed:', error);
+            }
+        }
+    }
+}
