@@ -137,12 +137,17 @@
     
     <!-- Установка флага окружения -->
     <script type="module">
-        // Устанавливаем флаг окружения
+        // Устанавливаем флаг окружения с более точной проверкой
         window.isMiniApp = window.parent !== window || 
                           document.referrer.includes('warpcast.com') ||
-                          document.referrer.includes('farcaster');
+                          document.referrer.includes('farcaster') ||
+                          navigator.userAgent.includes('Warpcast') ||
+                          !!window.sdk;
         
         console.log('Mini App environment detected:', window.isMiniApp);
+        console.log('Window SDK available:', !!window.sdk);
+        console.log('Referrer:', document.referrer);
+        console.log('User agent:', navigator.userAgent);
     </script>
     
     <!-- 1. Core modules -->
@@ -182,10 +187,17 @@
     
     <!-- 7. Initialize game -->
     <script>
+        // Инициализируем Farcaster Manager сразу после загрузки скриптов
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.farcasterIntegration) {
+                window.farcasterIntegration.initialize();
+            }
+        });
+
         window.addEventListener('load', async () => {
             console.log('Page loaded, initializing game...');
             
-            // Инициализируем Farcaster Manager первым делом
+            // Ждем готовности Farcaster Manager
             if (window.farcasterIntegration && !window.farcasterIntegration.isReady) {
                 await new Promise(resolve => {
                     window.farcasterIntegration.onReady(resolve);

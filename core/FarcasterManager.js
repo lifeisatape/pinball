@@ -18,7 +18,14 @@ class FarcasterManager {
     async initialize() {
         console.log('FarcasterManager: Initializing...');
         
-        if (!window.isMiniApp) {
+        // Проверяем наличие window.sdk (Farcaster SDK)
+        const hasFarcasterSDK = typeof window !== 'undefined' && 
+                               (window.sdk || 
+                                window.parent !== window || 
+                                document.referrer.includes('warpcast.com') ||
+                                navigator.userAgent.includes('Warpcast'));
+
+        if (!hasFarcasterSDK) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
             this.simulateReady();
             return;
@@ -26,6 +33,17 @@ class FarcasterManager {
 
         try {
             console.log('🔄 Loading Farcaster SDK...');
+            
+            // Сначала вызываем ready() чтобы убрать splash screen
+            if (window.sdk && window.sdk.actions && window.sdk.actions.ready) {
+                console.log('🚀 Calling ready() immediately to dismiss splash screen...');
+                await window.sdk.actions.ready({
+                    disableNativeGestures: false
+                });
+                console.log('✅ Splash screen dismissed');
+            }
+            
+            // Затем загружаем полный SDK
             const { default: sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
             this.sdk = sdk;
             this.isFrameEnvironment = true;
@@ -57,9 +75,7 @@ class FarcasterManager {
 
     async setupMiniAppFeatures() {
         try {
-            // ВАЖНО: Вызовите ready() сразу после получения SDK!
-            await this.notifyAppReady();
-            
+            // ready() уже вызван в initialize(), настраиваем остальное
             this.setupEventListeners();
 
             // Получаем контекст
@@ -512,7 +528,6 @@ class FarcasterManager {
     }
 }
 
-// Создаем глобальный экземпляр и сразу инициализируем
+// Создаем глобальный экземпляр (инициализация будет вызвана отдельно)
 console.log('Creating global FarcasterIntegration instance...');
 window.farcasterIntegration = new FarcasterManager();
-window.farcasterIntegration.initialize(); // Инициализируем сразу!
