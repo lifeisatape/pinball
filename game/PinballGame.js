@@ -26,10 +26,7 @@ class PinballGame {
         console.log('PinballGame: Constructor complete');
 
         this.setupEventListeners();
-        this.setupFarcasterIntegration();
         this.showTapToStartScreen();
-
-        console.log('PinballGame: Constructor complete');
 
         // ✅ Загружаем звуки в фоне НЕЗАВИСИМО от готовности игры
         this.loadSoundsInBackground();
@@ -226,43 +223,13 @@ class PinballGame {
         this.levelSelectScreen.style.display = 'none';
     }
 
-    async showLevelSelect() {
-        this.gameStarted = false;
+    showLevelSelect() {
+        this.tapToStartScreen.style.display = 'none';
+        this.levelSelectScreen.style.display = 'flex';
 
-        // Останавливаем игровую музыку и запускаем музыку меню
-        if (window.soundManager && window.soundManager.isReady) {
-            window.soundManager.stopMusic();
-            window.soundManager.playMusic('menu');
+        if (this.levelSelector) {
+            this.levelSelector.render();
         }
-
-        this.showLevelSelectScreen();
-    }
-
-    populateLevelList(levels) {
-        const levelList = document.getElementById('levelList');
-        levelList.innerHTML = '';
-
-        levels.forEach((level, index) => {
-            const levelItem = document.createElement('div');
-            levelItem.className = `level-item ${index === this.levelSelector.currentLevelIndex ? 'selected' : ''}`;
-            levelItem.innerHTML = `
-                <div class="level-info">
-                    <div class="level-name">${level.name}</div>
-                    <div class="level-description">${level.description}</div>
-                </div>
-            `;
-
-            levelItem.addEventListener('click', () => {
-                document.querySelectorAll('.level-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
-
-                levelItem.classList.add('selected');
-                this.levelSelector.selectLevel(index);
-            });
-
-            levelList.appendChild(levelItem);
-        });
     }
 
     hideStartScreen() {
