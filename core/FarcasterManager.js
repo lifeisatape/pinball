@@ -44,49 +44,36 @@ class FarcasterManager {
                 console.error('❌ Failed to dismiss splash screen (will continue anyway):', error);
             }
 
-            // Проверяем окружение через SDK для дополнительных настроек
-            let isInMiniAppEnv = true;
+            // ИСПРАВЛЕНО: Полностью убираем проверку sdk.isInMiniApp() 
+            // так как она неправильно работает на мобильных устройствах
+            // Полагаемся только на наше определение window.isMiniApp
+            
+            this.isFrameEnvironment = true;
+            console.log('✅ Farcaster SDK initialized successfully');
+
+            // ИСПРАВЛЕНО: Получаем контекст правильно - await sdk.context
             try {
-                if (typeof sdk.isInMiniApp === 'function') {
-                    isInMiniAppEnv = await sdk.isInMiniApp();
-                    console.log('🔍 SDK environment check:', isInMiniAppEnv);
+                this.context = await sdk.context;
+                console.log('📋 Farcaster context received');
+
+                // ИСПРАВЛЕНО: Безопасное получение пользователя
+                try {
+                    const user = this.context.user;
+                    this.user = user;
+                    console.log('👤 User info:', {
+                        fid: user?.fid,
+                        username: user?.username,
+                        displayName: user?.displayName
+                    });
+                } catch (userError) {
+                    console.log('ℹ️ User data not immediately available');
+                    this.user = null;
                 }
             } catch (error) {
-                console.log('⚠️ Could not verify environment with SDK:', error);
+                console.log('⚠️ Could not get context:', error.message);
             }
 
-            // Настраиваем Mini App функции независимо от результата isInMiniApp()
-            if (window.isMiniApp) {
-                this.isFrameEnvironment = true;
-                console.log('✅ Farcaster SDK initialized successfully');
-
-                // ИСПРАВЛЕНО: Получаем контекст правильно - await sdk.context
-                try {
-                    this.context = await sdk.context;
-                    console.log('📋 Farcaster context received');
-
-                    // ИСПРАВЛЕНО: Безопасное получение пользователя
-                    try {
-                        const user = this.context.user;
-                        this.user = user;
-                        console.log('👤 User info:', {
-                            fid: user?.fid,
-                            username: user?.username,
-                            displayName: user?.displayName
-                        });
-                    } catch (userError) {
-                        console.log('ℹ️ User data not immediately available');
-                        this.user = null;
-                    }
-                } catch (error) {
-                    console.log('⚠️ Could not get context:', error.message);
-                }
-
-                await this.setupMiniAppFeatures();
-            } else {
-                console.log('⚠️ SDK reports not in Mini App environment');
-                this.simulateReady();
-            }
+            await this.setupMiniAppFeatures();
         } catch (error) {
             console.error('❌ Error initializing Farcaster SDK:', error);
             this.isFrameEnvironment = false;
