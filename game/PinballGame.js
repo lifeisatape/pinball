@@ -23,6 +23,10 @@ class PinballGame {
         // ✅ Простое состояние звуков
         this.soundsLoaded = false;
 
+        // Collision grid system for improved corner handling
+        this.useCollisionGrid = true;
+        this.collisionGrid = null;
+
         console.log('PinballGame: Constructor complete');
 
         this.setupEventListeners();
@@ -289,6 +293,13 @@ class PinballGame {
             this.updateUI();
             this.gameStarted = true;
 
+            // Initialize collision grid after level is loaded
+            if (this.useCollisionGrid && this.currentLevel) {
+                console.log('🔍 Creating collision grid...');
+                this.collisionGrid = this.createSimpleCollisionGrid();
+                console.log('✅ Collision grid ready!');
+            }
+
             // Играем звук запуска если доступен
             this.playSound('newGameLaunch');
 
@@ -325,91 +336,25 @@ class PinballGame {
     }
 
     gameLoop() {
-        if (!this.gameStarted || !this.currentLevel) {
-            this.gameLoopRunning = false;
-            return;
+        if (this.gameStarted && this.currentLevel) {
+            this.update();
+            this.draw();
         }
-
-        try {
-            // Update physics
-            if (this.ball && this.gameState.ballInPlay) {
-                this.updatePhysics();
-            }
-
-            // Handle input
-            if (this.inputManager) {
-                this.inputManager.update();
-            }
-
-            // Render
-            if (this.renderer) {
-                this.renderer.render(this.currentLevel, this.ball);
-            }
-
-            // Check game state
-            this.checkGameState();
-        } catch (error) {
-            console.error('Game loop error:', error);
-        }
-
         if (this.gameLoopRunning) {
             requestAnimationFrame(() => this.gameLoop());
         }
     }
 
-    updatePhysics() {
-        // Simple physics update
-        if (this.ball) {
-            this.ball.update();
-
-            // Check collisions with walls
-            if (this.currentLevel && this.currentLevel.walls) {
-                for (const wall of this.currentLevel.walls) {
-                    if (this.ball.checkCollision && wall.checkCollision) {
-                        if (this.ball.checkCollision(wall)) {
-                            this.ball.resolveCollision(wall);
-                            this.playSound('wallhit');
-                        }
-                    }
-                }
-            }
-
-            // Check if ball is out of bounds
-            if (this.ball.y > CONFIG.VIRTUAL_HEIGHT) {
-                this.gameState.balls--;
-                if (this.gameState.balls > 0) {
-                    this.resetBall();
-                } else {
-                    this.gameOver();
-                }
-            }
-        }
-    }
-
-    checkGameState() {
-        if (this.gameState.balls <= 0) {
-            this.gameOver();
-        }
-    }
+    
 
     gameOver() {
-        console.log('🎮 Game Over');
+        this.gameState.isGameOver = true;
+        this.gameOverOverlay.show(this.gameState);
 
-        this.gameState.ballInPlay = false;
-        this.gameStarted = false;
-
-        // Show game over screen
-        this.gameOverOverlay.show({
-            finalScore: this.gameState.score,
-            levelReached: 1
-        });
-
-        // Предлагаем поделиться в Farcaster если доступно
+        // В Farcaster окружении предлагаем поделиться результатом
         if (window.sdk && window.farcasterContext) {
             setTimeout(() => {
-                if (confirm('Share your score on Farcaster?')) {
-                    this.shareScore();
-                }
+                this.showNotification('Share your score! 📱', 'info');
             }, 1000);
         }
     }
@@ -747,150 +692,5 @@ class PinballGame {
         });
     }
 
-    setupFarcasterIntegration() {
-        console.log('PinballGame: Setting up Farcaster integration...');
-
-        // Ждем готовности Farcaster SDK
-        if (window.farcasterManager) {
-            window.farcasterManager.onReady((context) => {
-                console.log('PinballGame: Farcaster SDK ready', context);
-
-                // ТОЛЬКО если действительно в frame окружении
-                if (window.farcasterManager.isInFrame() && context) {
-                    // В frame окружении - скрываем некоторые UI элементы
-                    this.adaptUIForFrame(context);
-
-                    // Показываем информацию о пользователе если доступна
-                    const user = window.farcasterManager.getUser();
-                    if (user) {
-                        console.log('PinballGame: Farcaster user:', user);
-                        this.displayUserInfo(user);
-                    }
-                }
-            });
-
-            // Слушаем обновления контекста
-            window.farcasterManager.onContextUpdate((context) => {
-                console.log('PinballGame: Farcaster context updated', context);
-            });
-
-            // Слушаем события frame
-            window.farcasterManager.onFrameAdded(() => {
-                console.log('PinballGame: App was added to favorites');
-                this.showNotification('Game added to your apps! 🎉', 'success');
-            });
-
-            window.farcasterManager.onFrameRemoved(() => {
-                console.log('PinballGame: App was removed from favorites');
-                this.showNotification('Game removed from apps', 'info');
-            });
-        } else {
-            console.warn('PinballGame: FarcasterManager not available');
-        }
-    }
-
-    adaptUIForFrame(context) {
-        // Адаптируем UI для frame окружения
-        console.log('PinballGame: Adapting UI for Farcaster frame');
-
-        // Применяем безопасные отступы если доступны
-        try {
-            // ИСПРАВЛЕНО: Убираем проверку на функции - в исправленной версии это простые объекты
-            const client = context?.client;
-            const safeAreaInsets = client?.safeAreaInsets;
-
-            if (safeAreaInsets) {
-                console.log('PinballGame: Got safe area insets:', safeAreaInsets);
-
-                // ИСПРАВЛЕНО: Извлекаем простые значения
-                const top = safeAreaInsets.top || 0;
-                const bottom = safeAreaInsets.bottom || 0;
-                const left = safeAreaInsets.left || 0;
-                const right = safeAreaInsets.right || 0;
-
-                // Применяем безопасные отступы
-                const gameContainer = document.querySelector('.game-container');
-                if (gameContainer) {
-                    gameContainer.style.paddingTop = `${top}px`;
-                    gameContainer.style.paddingBottom = `${bottom}px`;
-                    gameContainer.style.paddingLeft = `${left}px`;
-                    gameContainer.style.paddingRight = `${right}px`;
-                }
-
-                console.log('PinballGame: Applied safe area insets:', { top, bottom, left, right });
-            }
-
-            // Скрываем веб-специфичные элементы в frame окружении
-            const webOnlyElements = document.querySelectorAll('.web-only');
-            webOnlyElements.forEach(element => {
-                element.style.display = 'none';
-            });
-
-            // Показываем frame-специфичные элементы
-            const frameOnlyElements = document.querySelectorAll('.frame-only');
-            frameOnlyElements.forEach(element => {
-                element.style.display = 'block';
-            });
-
-        } catch (error) {
-            console.error('PinballGame: Error adapting UI for frame:', error);
-        }
-
-        // Добавляем кнопку "Add to Apps" если еще не добавлена
-        const tapToStartContent = document.querySelector('.tap-to-start-content');
-        if (tapToStartContent && !document.getElementById('addToAppsBtn')) {
-            const addButton = document.createElement('button');
-            addButton.id = 'addToAppsBtn';
-            addButton.className = 'restart-btn';
-            addButton.textContent = '⭐ Add to Apps';
-            addButton.style.marginTop = '10px';
-            addButton.style.background = 'var(--accent-color, #4CAF50)';
-
-            addButton.addEventListener('click', async () => {
-                try {
-                    const success = await window.farcasterManager.addToFavorites();
-                    if (success) {
-                        this.showNotification('Added to your apps! 🎮', 'success');
-                    } else {
-                        this.showNotification('Already in your apps! ⭐', 'info');
-                    }
-                } catch (error) {
-                    console.error('Failed to add to apps:', error);
-                    this.showNotification('Failed to add to apps', 'error');
-                }
-            });
-
-            tapToStartContent.appendChild(addButton);
-        }
-
-        // Добавляем кнопку "Share Score" в game over overlay
-        const gameOverContent = document.querySelector('.game-over-content');
-        if (gameOverContent && !document.getElementById('shareScoreBtn')) {
-            const shareButton = document.createElement('button');
-            shareButton.id = 'shareScoreBtn';
-            shareButton.className = 'restart-btn';
-            shareButton.textContent = '📱 Share Score';
-            shareButton.style.marginTop = '10px';
-            shareButton.style.background = 'var(--accent-color, #ff6b35)';
-
-            shareButton.addEventListener('click', async () => {
-                const currentScore = this.gameState ? this.gameState.score : 0;
-                const level = this.currentLevel ? this.currentLevel.name : 'Pinball';
-
-                try {
-                    await window.farcasterManager.composeCast({
-                        text: `Just scored ${currentScore} points in ${level}! 🎮⚡\n\nPlay the game yourself:`,
-                        embeds: [window.location.href]
-                    });
-
-                    this.showNotification('Cast created! 📝', 'success');
-                } catch (error) {
-                    console.error('Failed to share score:', error);
-                    this.showNotification('Failed to share score', 'error');
-                }
-            });
-
-            gameOverContent.appendChild(shareButton);
-        }
-    }
+    
 }
