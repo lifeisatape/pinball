@@ -197,6 +197,35 @@ class PinballGame {
             } catch (error) {
                 console.error('❌ Error adding to favorites:', error);
                 this.showNotification('Failed to add to favorites');
+
+
+    populateLevelList(levels) {
+        const levelList = document.getElementById('levelList');
+        levelList.innerHTML = '';
+
+        levels.forEach((level, index) => {
+            const levelItem = document.createElement('div');
+            levelItem.className = `level-item ${index === this.levelSelector.currentLevelIndex ? 'selected' : ''}`;
+            levelItem.innerHTML = `
+                <div class="level-info">
+                    <div class="level-name">${level.name}</div>
+                    <div class="level-description">${level.description}</div>
+                </div>
+            `;
+
+            levelItem.addEventListener('click', () => {
+                document.querySelectorAll('.level-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                levelItem.classList.add('selected');
+                this.levelSelector.selectLevel(index);
+            });
+
+            levelList.appendChild(levelItem);
+        });
+    }
+
             }
         } else {
             console.log('⚠️ Cannot add to favorites - Farcaster not available');
@@ -227,9 +256,10 @@ class PinballGame {
         this.tapToStartScreen.style.display = 'none';
         this.levelSelectScreen.style.display = 'flex';
 
-        if (this.levelSelector) {
-            this.levelSelector.render();
-        }
+        // Загружаем и отображаем уровни
+        this.levelSelector.getAvailableLevels().then(levels => {
+            this.populateLevelList(levels);
+        });
     }
 
     hideStartScreen() {
@@ -237,21 +267,17 @@ class PinballGame {
         this.levelSelectScreen.style.display = 'none';
     }
 
-    async loadSelectedLevel(levelName) {
+    async loadSelectedLevel(selectedLevel) {
         try {
-            console.log(`🎮 Loading level: ${levelName}`);
-
-            const levelData = await this.levelManager.loadLevel(levelName);
-            if (levelData) {
-                this.currentLevel = levelData;
-                await this.initializeGame();
-            } else {
-                console.error('Failed to load level:', levelName);
-                alert('Failed to load level. Please try again.');
-            }
+            this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
+            this.gameState.setCurrentLevel(selectedLevel.name);
+            await this.initializeGame();
+            console.log(`Loaded level: ${selectedLevel.name}`);
         } catch (error) {
-            console.error('Error loading level:', error);
-            alert('Error loading level. Please try again.');
+            console.error('Error loading selected level:', error);
+            this.currentLevel = await this.levelManager.createDefaultLevel();
+            this.gameState.setCurrentLevel('default');
+            await this.initializeGame();
         }
     }
 
