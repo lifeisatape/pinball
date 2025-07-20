@@ -207,11 +207,7 @@
             
             const game = new PinballGame();
             
-            // Когда UI готов к показу - вызываем ready() для Farcaster
-            if (window.farcasterManager && window.farcasterManager.isFrameEnvironment) {
-                console.log('🎮 Game UI ready, calling notifyAppReady()...');
-                await window.farcasterManager.notifyAppReady();
-            }
+            // ready() теперь вызывается автоматически в FarcasterManager.init()
         });
 
         // Prevent mobile scrolling and context menu

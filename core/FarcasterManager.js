@@ -88,6 +88,15 @@ class FarcasterManager {
                 this.isFrameEnvironment = true;
                 console.log('✅ Farcaster SDK initialized successfully');
 
+                // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() СРАЗУ после подтверждения окружения
+                try {
+                    console.log('🚀 Calling ready() immediately after SDK initialization...');
+                    await this.sdk.actions.ready();
+                    console.log('🎉 Farcaster splash screen dismissed successfully');
+                } catch (error) {
+                    console.error('❌ Failed to dismiss splash screen:', error);
+                }
+
                 // ИСПРАВЛЕНО: Получаем контекст правильно - await sdk.context
                 try {
                     this.context = await sdk.context;
