@@ -34,7 +34,44 @@ class FarcasterManager {
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
 
-            
+            if (isInMiniAppEnv) {
+            this.isFrameEnvironment = true;
+            console.log('✅ Farcaster SDK initialized successfully');
+
+            // Вызываем ready() БЕЗ ОЖИДАНИЯ - чтобы не блокировать
+            if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+                console.log('🚀 Calling ready() to hide splash...');
+                this.sdk.actions.ready().then(() => {
+                    console.log('✅ Splash screen hidden');
+                }).catch(error => {
+                    console.error('❌ Ready error:', error);
+                });
+            }
+
+            // Получаем контекст параллельно
+            try {
+                this.context = await sdk.context;
+                console.log('📋 Farcaster context received');
+
+                // ИСПРАВЛЕНО: Безопасное получение пользователя
+                try {
+                    const user = this.context.user;
+                    this.user = user;
+                    console.log('👤 User info:', {
+                        fid: user?.fid,
+                        username: user?.username,
+                        displayName: user?.displayName
+                    });
+                } catch (userError) {
+                    console.log('ℹ️ User data not immediately available');
+                    this.user = null;
+                }
+            } catch (error) {
+                console.log('⚠️ Could not get context:', error.message);
+            }
+
+            await this.setupMiniAppFeatures();
+        } else {
 
             // ИСПРАВЛЕНО: Проверяем окружение через SDK
             let isInMiniAppEnv = true;
