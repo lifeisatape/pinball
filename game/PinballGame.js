@@ -212,16 +212,6 @@ class PinballGame {
         if (window.sdk && window.sdk.actions && window.sdk.actions.composeCast) {
             try {
                 const text = `🎮 I just scored ${this.gameState.score || 0} points and reached level ${this.gameState.level || 1} in Pinball All Stars! Can you beat that? 🚀`;
-
-
-    showFarcasterButtons() {
-        const shareButton = document.getElementById('shareScoreBtn');
-        if (window.isMiniApp && window.sdk && shareButton) {
-            shareButton.style.display = 'block';
-            console.log('✅ Farcaster share button shown');
-        }
-    }
-
                 const url = window.location.origin;
 
                 await window.sdk.actions.composeCast({
