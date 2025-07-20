@@ -34,20 +34,18 @@ class FarcasterManager {
         try {
             console.log('🔄 Loading Farcaster SDK...');
             
-            // Сначала вызываем ready() чтобы убрать splash screen
-            if (window.sdk && window.sdk.actions && window.sdk.actions.ready) {
-                console.log('🚀 Calling ready() immediately to dismiss splash screen...');
-                await window.sdk.actions.ready({
-                    disableNativeGestures: false
-                });
-                console.log('✅ Splash screen dismissed');
-            }
-            
-            // Затем загружаем полный SDK
+            // Загружаем SDK
             const { default: sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
             this.sdk = sdk;
             this.isFrameEnvironment = true;
             console.log('✅ Farcaster SDK initialized successfully');
+            
+            // ВАЖНО: Сразу вызываем ready() чтобы убрать splash screen
+            console.log('🚀 Calling ready() immediately to dismiss splash screen...');
+            await this.sdk.actions.ready({
+                disableNativeGestures: false
+            });
+            console.log('✅ Splash screen dismissed');
             
             await this.setupMiniAppFeatures();
         } catch (error) {
