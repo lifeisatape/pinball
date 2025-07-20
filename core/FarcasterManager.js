@@ -20,35 +20,27 @@ class FarcasterManager {
     async init() {
         console.log('FarcasterManager: Initializing...');
 
-        // ИСПРАВЛЕНО: Проверяем window.isMiniApp как в рабочем примере
+        // Если не в Mini App окружении, просто не инициализируемся
         if (!window.isMiniApp) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
-            this.simulateReady();
             return;
         }
 
         try {
             console.log('🔄 Initializing Farcaster integration...');
 
-            // ИСПРАВЛЕНО: Ждем правильный SDK - window.sdk, а не window.miniAppSDK
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
-
-            // КРИТИЧЕСКИ ВАЖНО: Больше не вызываем ready() сразу после загрузки SDK
-
-            // ИСПРАВЛЕНО: Полностью убираем проверку sdk.isInMiniApp() 
-            // так как она неправильно работает на мобильных устройствах
-            // Полагаемся только на наше определение window.isMiniApp
 
             this.isFrameEnvironment = true;
             console.log('✅ Farcaster SDK initialized successfully');
 
-            // ИСПРАВЛЕНО: Получаем контекст правильно - await sdk.context
+            // Получаем контекст
             try {
                 this.context = await sdk.context;
                 console.log('📋 Farcaster context received');
 
-                // ИСПРАВЛЕНО: Безопасное получение пользователя
+                // Безопасное получение пользователя
                 try {
                     const user = this.context.user;
                     this.user = user;
@@ -69,7 +61,7 @@ class FarcasterManager {
         } catch (error) {
             console.error('❌ Error initializing Farcaster SDK:', error);
             this.isFrameEnvironment = false;
-            this.simulateReady();
+            // НЕ СИМУЛИРУЕМ! Просто падаем честно
         }
     }
 
@@ -237,25 +229,10 @@ class FarcasterManager {
         }
     }
 
-    simulateReady() {
-        // Для обычного веб-окружения
-        setTimeout(() => {
-            this.isReady = true;
-            console.log('FarcasterManager: Simulated ready state for web environment');
-            this.callbacks.ready.forEach(callback => {
-                try {
-                    callback(null);
-                } catch (error) {
-                    console.error('FarcasterManager: Error in simulated ready callback:', error);
-                }
-            });
-        }, 100);
-    }
-
     handleInitError(error) {
-        console.error('FarcasterManager: Initialization failed, falling back to web mode:', error);
+        console.error('FarcasterManager: Initialization failed:', error);
         this.isFrameEnvironment = false;
-        this.simulateReady();
+        // НЕ СИМУЛИРУЕМ! Просто падаем
     }
 
     // === CALLBACK REGISTRATION ===

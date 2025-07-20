@@ -117,7 +117,8 @@ class PinballGame {
             window.farcasterManager.onReady((context) => {
                 console.log('PinballGame: Farcaster SDK ready', context);
 
-                if (window.farcasterManager.isInFrame()) {
+                // ТОЛЬКО если действительно в frame окружении
+                if (window.farcasterManager.isInFrame() && context) {
                     // В frame окружении - скрываем некоторые UI элементы
                     this.adaptUIForFrame(context);
 
