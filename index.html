@@ -6,10 +6,10 @@
     <title>Pinball: all stars</title>
     
     <!-- Farcaster Frame Embed Meta Tags -->
-    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball: all stars","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball Game","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Pinball: all stars" />
+    <meta property="og:title" content="Pinball Game - Classic Arcade Experience" />
     <meta property="og:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta property="og:image" content="https://pinballll.space/gm.png" />
     <meta property="og:url" content="https://pinballll.space/" />
@@ -17,7 +17,7 @@
 
     <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Pinball: all stars" />
+    <meta name="twitter:title" content="Pinball Game - Classic Arcade Experience" />
     <meta name="twitter:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta name="twitter:image" content="https://pinballll.space/gm.png" />
     
@@ -135,27 +135,42 @@
         </div>
     </div>
     
-    <!-- Установка флага окружения -->
-    <script type="module">
-        // Устанавливаем флаг окружения с более точной проверкой
+    <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
+    <script>
+        // Устанавливаем флаг окружения Mini App
         window.isMiniApp = window.parent !== window || 
+                          window.location.search.includes('frame=true') ||
+                          window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
-                          document.referrer.includes('farcaster') ||
-                          navigator.userAgent.includes('Warpcast') ||
-                          !!window.sdk;
+                          document.referrer.includes('farcaster');
         
         console.log('Mini App environment detected:', window.isMiniApp);
-        console.log('Window SDK available:', !!window.sdk);
-        console.log('Referrer:', document.referrer);
-        console.log('User agent:', navigator.userAgent);
+    </script>
+
+    <!-- ИСПРАВЛЕНО: Правильная загрузка SDK -->
+    <script type="module">
+        if (window.isMiniApp) {
+            try {
+                console.log('Loading Farcaster SDK...');
+                const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
+                
+                // КРИТИЧЕСКИ ВАЖНО: Делаем SDK доступным как window.sdk, а не window.miniAppSDK
+                window.sdk = sdk;
+                console.log('✅ Farcaster SDK loaded successfully:', sdk);
+            } catch (error) {
+                console.error('❌ Failed to load Farcaster SDK:', error);
+            }
+        } else {
+            console.log('⏭️ Skipping SDK load - not in Mini App environment');
+        }
     </script>
     
-    <!-- 1. Core modules -->
+    <!-- 1. SoundManager -->
+    <script src="core/SoundManager.js"></script>
+    
+    <!-- 2. Core modules -->
     <script src="core/GameConfig.js"></script>
     <script src="core/FarcasterManager.js"></script>
-    
-    <!-- 2. SoundManager -->
-    <script src="core/SoundManager.js"></script>
     <script src="core/Vector2D.js"></script>
     <script src="core/utils.js"></script>
     <script src="core/GameState.js"></script>
@@ -187,24 +202,12 @@
     
     <!-- 7. Initialize game -->
     <script>
-        // Инициализируем Farcaster Manager сразу после загрузки скриптов
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.farcasterIntegration) {
-                window.farcasterIntegration.initialize();
-            }
-        });
-
-        window.addEventListener('load', async () => {
+        window.addEventListener('load', () => {
             console.log('Page loaded, initializing game...');
             
-            // Ждем готовности Farcaster Manager
-            if (window.farcasterIntegration && !window.farcasterIntegration.isReady) {
-                await new Promise(resolve => {
-                    window.farcasterIntegration.onReady(resolve);
-                });
-            }
-            
             const game = new PinballGame();
+            
+            // Убрали автозапуск - теперь всегда показывается TAP TO START
         });
 
         // Prevent mobile scrolling and context menu

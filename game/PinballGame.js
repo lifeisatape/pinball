@@ -91,20 +91,20 @@ class PinballGame {
         this.tapToStartScreen.addEventListener('click', async () => {
             console.log('PinballGame: User clicked TAP TO START');
             this.userHasInteracted = true;
-
+            
             // НЕМЕДЛЕННАЯ активация AudioContext
             await this.activateAudioContext();
-
+            
             this.startLoadingProcess();
         });
 
         this.tapToStartScreen.addEventListener('touchstart', async () => {
             console.log('PinballGame: User touched TAP TO START');
             this.userHasInteracted = true;
-
+            
             // НЕМЕДЛЕННАЯ активация AudioContext
             await this.activateAudioContext();
-
+            
             this.startLoadingProcess();
         }, { passive: true });
     }
@@ -113,17 +113,16 @@ class PinballGame {
         console.log('PinballGame: Setting up Farcaster integration...');
 
         // Ждем готовности Farcaster SDK
-        if (window.farcasterIntegration) {
-            // Call ready() immediately after receiving context
-            window.farcasterIntegration.onReady((context) => {
+        if (window.farcasterManager) {
+            window.farcasterManager.onReady((context) => {
                 console.log('PinballGame: Farcaster SDK ready', context);
 
-                if (window.farcasterIntegration.isInFrame()) {
+                if (window.farcasterManager.isInFrame()) {
                     // В frame окружении - скрываем некоторые UI элементы
                     this.adaptUIForFrame(context);
 
                     // Показываем информацию о пользователе если доступна
-                    const user = window.farcasterIntegration.getUser();
+                    const user = window.farcasterManager.getUser();
                     if (user) {
                         console.log('PinballGame: Farcaster user:', user);
                         this.displayUserInfo(user);
@@ -132,105 +131,187 @@ class PinballGame {
             });
 
             // Слушаем обновления контекста
-            window.farcasterIntegration.onContextUpdate((context) => {
+            window.farcasterManager.onContextUpdate((context) => {
                 console.log('PinballGame: Farcaster context updated', context);
             });
 
             // Слушаем события frame
-            window.farcasterIntegration.onFrameAdded(() => {
+            window.farcasterManager.onFrameAdded(() => {
                 console.log('PinballGame: App was added to favorites');
                 this.showNotification('Game added to your apps! 🎉', 'success');
             });
 
-            window.farcasterIntegration.onFrameRemoved(() => {
+            window.farcasterManager.onFrameRemoved(() => {
                 console.log('PinballGame: App was removed from favorites');
                 this.showNotification('Game removed from apps', 'info');
             });
         } else {
-            console.warn('PinballGame: FarcasterIntegration not available');
+            console.warn('PinballGame: FarcasterManager not available');
         }
     }
 
-    async adaptUIForFrame(context) {
+    adaptUIForFrame(context) {
+        // Адаптируем UI для frame окружения
+        console.log('PinballGame: Adapting UI for Farcaster frame');
+
+        // Применяем безопасные отступы если доступны
         try {
-            console.log('PinballGame: Adapting UI for Farcaster frame');
+            // ИСПРАВЛЕНО: Убираем проверку на функции - в исправленной версии это простые объекты
+            const client = context?.client;
+            const safeAreaInsets = client?.safeAreaInsets;
 
-            // Получаем safe area insets
-            const insets = await window.farcasterIntegration.getSafeAreaInsets();
-            console.log('PinballGame: Got safe area insets:', insets);
+            if (safeAreaInsets) {
+                console.log('PinballGame: Got safe area insets:', safeAreaInsets);
 
-            // Применяем отступы к основному контейнеру
-            const gameContainer = document.querySelector('.game-container');
-            if (gameContainer && insets) {
-                gameContainer.style.paddingTop = `${insets.top}px`;
-                gameContainer.style.paddingBottom = `${insets.bottom}px`;
-                gameContainer.style.paddingLeft = `${insets.left}px`;
-                gameContainer.style.paddingRight = `${insets.right}px`;
+                // ИСПРАВЛЕНО: Извлекаем простые значения
+                const top = safeAreaInsets.top || 0;
+                const bottom = safeAreaInsets.bottom || 0;
+                const left = safeAreaInsets.left || 0;
+                const right = safeAreaInsets.right || 0;
 
-                console.log('PinballGame: Applied safe area insets to game container');
+                // Применяем безопасные отступы
+                const gameContainer = document.querySelector('.game-container');
+                if (gameContainer) {
+                    gameContainer.style.paddingTop = `${top}px`;
+                    gameContainer.style.paddingBottom = `${bottom}px`;
+                    gameContainer.style.paddingLeft = `${left}px`;
+                    gameContainer.style.paddingRight = `${right}px`;
+                }
+
+                console.log('PinballGame: Applied safe area insets:', { top, bottom, left, right });
             }
 
-            // Скрываем некоторые элементы в frame
-            const elementsToHide = [
-                '.level-select-controls'
-            ];
+            // Скрываем веб-специфичные элементы в frame окружении
+            const webOnlyElements = document.querySelectorAll('.web-only');
+            webOnlyElements.forEach(element => {
+                element.style.display = 'none';
+            });
 
-            elementsToHide.forEach(selector => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    element.style.display = 'none';
-                    console.log(`PinballGame: Hidden element: ${selector}`);
-                }
+            // Показываем frame-специфичные элементы
+            const frameOnlyElements = document.querySelectorAll('.frame-only');
+            frameOnlyElements.forEach(element => {
+                element.style.display = 'block';
             });
 
         } catch (error) {
             console.error('PinballGame: Error adapting UI for frame:', error);
         }
+
+        // Добавляем кнопку "Add to Apps" если еще не добавлена
+        const tapToStartContent = document.querySelector('.tap-to-start-content');
+        if (tapToStartContent && !document.getElementById('addToAppsBtn')) {
+            const addButton = document.createElement('button');
+            addButton.id = 'addToAppsBtn';
+            addButton.className = 'restart-btn';
+            addButton.textContent = '⭐ Add to Apps';
+            addButton.style.marginTop = '10px';
+            addButton.style.background = 'var(--accent-color, #4CAF50)';
+
+            addButton.addEventListener('click', async () => {
+                try {
+                    const success = await window.farcasterManager.addToFavorites();
+                    if (success) {
+                        this.showNotification('Added to your apps! 🎮', 'success');
+                    } else {
+                        this.showNotification('Already in your apps! ⭐', 'info');
+                    }
+                } catch (error) {
+                    console.error('Failed to add to apps:', error);
+                    this.showNotification('Failed to add to apps', 'error');
+                }
+            });
+
+            tapToStartContent.appendChild(addButton);
+        }
+
+        // Добавляем кнопку "Share Score" в game over overlay
+        const gameOverContent = document.querySelector('.game-over-content');
+        if (gameOverContent && !document.getElementById('shareScoreBtn')) {
+            const shareButton = document.createElement('button');
+            shareButton.id = 'shareScoreBtn';
+            shareButton.className = 'restart-btn';
+            shareButton.textContent = '📱 Share Score';
+            shareButton.style.marginTop = '10px';
+            shareButton.style.background = 'var(--accent-color, #ff6b35)';
+
+            shareButton.addEventListener('click', async () => {
+                const currentScore = this.gameState ? this.gameState.score : 0;
+                const level = this.currentLevel ? this.currentLevel.name : 'Pinball';
+
+                try {
+                    await window.farcasterManager.composeCast({
+                        text: `Just scored ${currentScore} points in ${level}! 🎮⚡\n\nPlay the game yourself:`,
+                        embeds: [window.location.href]
+                    });
+
+                    this.showNotification('Cast created! 📝', 'success');
+                } catch (error) {
+                    console.error('Failed to share score:', error);
+                    this.showNotification('Failed to share score', 'error');
+                }
+            });
+
+            gameOverContent.appendChild(shareButton);
+        }
     }
 
-    async displayUserInfo(user) {
+    displayUserInfo(user) {
+        // Показываем информацию о пользователе Farcaster
+        const tapToStartContent = document.querySelector('.tap-to-start-content');
+        if (!tapToStartContent) return;
+
         try {
-            const gameContainer = document.querySelector('.game-container');
-            if (!gameContainer) return;
+            // ИСПРАВЛЕНО: Убираем проверку на функцию - user уже простой объект
+            const userData = user;
 
-            // Получаем актуальную информацию о пользователе
-            const userInfo = await window.farcasterIntegration.getUserInfo();
-            if (!userInfo) return;
+            if (!userData) return;
 
-            // Удаляем существующий блок пользователя
+            // ИСПРАВЛЕНО: Данные уже простые свойства, не функции
+            const username = userData.username;
+            const pfpUrl = userData.pfpUrl;
+            const displayName = userData.displayName;
+
+            if (!username) return;
+
+            // Удаляем предыдущий элемент если есть
             const existingUserInfo = document.getElementById('farcasterUserInfo');
             if (existingUserInfo) {
                 existingUserInfo.remove();
             }
 
-            // Создаем новый блок
-            const userInfoDiv = document.createElement('div');
-            userInfoDiv.id = 'farcasterUserInfo';
-            userInfoDiv.innerHTML = `
-                <div class="farcaster-user-info">
-                    ${userInfo.pfpUrl ? `<img src="${userInfo.pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%;">` : ''}
-                    <span>${userInfo.displayName || userInfo.username || `User #${userInfo.fid}`}</span>
-                </div>
-            `;
-
-            // Добавляем стили
-            userInfoDiv.style.cssText = `
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: rgba(0, 0, 0, 0.8);
-                color: white;
-                padding: 8px;
+            // Создаем элемент с информацией о пользователе
+            const userInfoElement = document.createElement('div');
+            userInfoElement.id = 'farcasterUserInfo';
+            userInfoElement.style.cssText = `
+                margin-top: 15px;
+                padding: 10px;
+                background: rgba(0, 0, 0, 0.7);
                 border-radius: 8px;
-                font-size: 12px;
-                z-index: 1000;
-                display: flex;
-                align-items: center;
-                gap: 8px;
+                text-align: center;
+                color: #ffffff;
+                font-size: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
             `;
 
-            gameContainer.appendChild(userInfoDiv);
-            console.log('PinballGame: User info displayed');
+            let userContent = `<div style="display: flex; align-items: center; justify-content: center; gap: 10px;">`;
+            
+            if (pfpUrl) {
+                userContent += `<img src="${pfpUrl}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff;">`;
+            }
+            
+            userContent += `<div>`;
+            userContent += `<div style="font-weight: bold;">@${username}</div>`;
+            
+            if (displayName && displayName !== username) {
+                userContent += `<div style="font-size: 12px; opacity: 0.8;">${displayName}</div>`;
+            }
+            
+            userContent += `</div></div>`;
+            
+            userInfoElement.innerHTML = userContent;
+            tapToStartContent.appendChild(userInfoElement);
+
+            console.log('FarcasterManager: User info displayed for', username);
         } catch (error) {
             console.error('FarcasterManager: Error displaying user info:', error);
         }
@@ -297,7 +378,7 @@ class PinballGame {
 
     async activateAudioContext() {
         console.log('PinballGame: Activating AudioContext immediately...');
-
+        
         if (!window.soundManager || !window.soundManager.audioContext) {
             console.warn('PinballGame: SoundManager not ready for activation');
             return;
@@ -312,7 +393,7 @@ class PinballGame {
                 try {
                     await context.resume();
                     console.log(`PinballGame: AudioContext activation attempt ${attempt}, state:`, context.state);
-
+                    
                     if (context.state === 'running') {
                         console.log('PinballGame: AudioContext successfully activated!');
                         return;
@@ -320,7 +401,7 @@ class PinballGame {
                 } catch (error) {
                     console.warn(`PinballGame: AudioContext activation attempt ${attempt} failed:`, error);
                 }
-
+                
                 // Небольшая пауза между попытками
                 if (attempt < 2) {
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -363,11 +444,11 @@ class PinballGame {
         setTimeout(async () => {
             try {
                 console.log('PinballGame: Starting SoundManager unlock...');
-
+                
                 if (window.soundManager) {
                     await window.soundManager.unlock();
                 }
-
+                
                 this.loadingState.audio = true;
                 this.updateLoadingProgress('audio', 100, 'Audio system initialized');
 
@@ -661,7 +742,7 @@ class PinballGame {
         this.gameOverOverlay.show(this.gameState);
 
         // В frame окружении предлагаем поделиться результатом
-        if (window.farcasterIntegration && window.farcasterIntegration.isInFrame()) {
+        if (window.farcasterManager && window.farcasterManager.isInFrame()) {
             setTimeout(() => {
                 this.showNotification('Share your score! 📱', 'info');
             }, 1000);
@@ -717,13 +798,13 @@ class PinballGame {
         const cellSize = 2; // Простой разумный размер
         const cols = Math.ceil(CONFIG.VIRTUAL_WIDTH / cellSize);  // 40 колонок  
         const rows = Math.ceil(CONFIG.VIRTUAL_HEIGHT / cellSize); // 60 строк
-
+        
         console.log(`🔍 Creating collision grid: ${cols}×${rows} (${cols * rows} cells)`);
         const startTime = performance.now();
-
+        
         // ПРОСТЫЕ ОБЫЧНЫЕ МАССИВЫ (не типизированные!)
         const grid = [];
-
+        
         // Initialize grid
         for (let row = 0; row < rows; row++) {
             grid[row] = [];
@@ -735,31 +816,31 @@ class PinballGame {
                 };
             }
         }
-
+        
         // Mark wall cells (ПРОСТОЙ СПОСОБ)
         this.currentLevel.walls.forEach(wall => {
             this.markWallCells(grid, wall, cellSize, cols, rows);
         });
-
+        
         // Compute danger levels (ПРОСТОЙ АЛГОРИТМ)
         this.computeDangerLevels(grid, cols, rows);
-
+        
         // Compute escape directions (ПРОСТОЙ АЛГОРИТМ)
         this.computeEscapeDirections(grid, cols, rows, cellSize);
-
+        
         const totalTime = (performance.now() - startTime).toFixed(1);
         console.log(`✅ Collision grid ready in ${totalTime}ms`);
-
+        
         return {
             grid: grid,
             cellSize: cellSize,
             cols: cols,
             rows: rows,
-
+            
             checkPosition: (x, y) => {
                 const col = Math.floor(x / cellSize);
                 const row = Math.floor(y / cellSize);
-
+                
                 if (row >= 0 && row < rows && col >= 0 && col < cols) {
                     return grid[row][col];
                 }
@@ -767,23 +848,23 @@ class PinballGame {
             }
         };
     }
-
-
-
+    
+    
+    
     checkGridBasedCollisions() {
         const ballInfo = this.collisionGrid.checkPosition(
             this.ball.position.x, 
             this.ball.position.y
         );
-
+        
         // If ball is in dangerous zone - ВЫСОКИЙ ПОРОГ!
         if (ballInfo.dangerLevel > 0.85 && ballInfo.escapeDirection) {
             // Gently guide ball to safety - СЛАБАЯ СИЛА!
             const escapeForce = ballInfo.dangerLevel * 0.3;
-
+            
             this.ball.velocity.x += ballInfo.escapeDirection.x * escapeForce;
             this.ball.velocity.y += ballInfo.escapeDirection.y * escapeForce;
-
+            
             console.log(`🚨 Ball in danger zone (${ballInfo.dangerLevel.toFixed(2)}), applying escape force`);
         }
     }
@@ -794,21 +875,21 @@ class PinballGame {
             Math.abs(wall.x2 - wall.x1), 
             Math.abs(wall.y2 - wall.y1)
         ) / cellSize;
-
+        
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
             const x = wall.x1 + (wall.x2 - wall.x1) * t;
             const y = wall.y1 + (wall.y2 - wall.y1) * t;
-
+            
             const col = Math.floor(x / cellSize);
             const row = Math.floor(y / cellSize);
-
+            
             // Отмечаем клетку и соседей (для толщины стены)
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     const newRow = row + dr;
                     const newCol = col + dc;
-
+                    
                     if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
                         grid[newRow][newCol].solid = true;
                     }
@@ -822,15 +903,15 @@ class PinballGame {
             for (let col = 0; col < cols; col++) {
                 let solidNeighbors = 0;
                 let totalNeighbors = 0;
-
+                
                 // Проверяем 3x3 соседей
                 for (let dr = -1; dr <= 1; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {
                         if (dr === 0 && dc === 0) continue;
-
+                        
                         const newRow = row + dr;
                         const newCol = col + dc;
-
+                        
                         if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
                             totalNeighbors++;
                             if (grid[newRow][newCol].solid) {
@@ -839,7 +920,7 @@ class PinballGame {
                         }
                     }
                 }
-
+                
                 // Danger level = доля твердых соседей
                 grid[row][col].dangerLevel = totalNeighbors > 0 ? solidNeighbors / totalNeighbors : 0;
             }
@@ -853,15 +934,15 @@ class PinballGame {
                     // Опасная клетка - ищем направление к безопасности
                     let bestDirection = null;
                     let bestSafety = -1;
-
+                    
                     // Проверяем направления (небольшой радиус)
                     for (let dr = -2; dr <= 2; dr++) {
                         for (let dc = -2; dc <= 2; dc++) {
                             if (dr === 0 && dc === 0) continue;
-
+                            
                             const newRow = row + dr;
                             const newCol = col + dc;
-
+                            
                             if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
                                 const safety = 1 - grid[newRow][newCol].dangerLevel;
                                 if (safety > bestSafety) {
@@ -871,7 +952,7 @@ class PinballGame {
                             }
                         }
                     }
-
+                    
                     if (bestDirection) {
                         const length = Math.sqrt(bestDirection.x * bestDirection.x + bestDirection.y * bestDirection.y);
                         grid[row][col].escapeDirection = {
@@ -883,23 +964,23 @@ class PinballGame {
             }
         }
     }
-
+    
     drawCollisionGridDebug() {
         if (!this.collisionGrid) return;
-
+        
         const ctx = this.renderer.ctx;
         if (!ctx) return;
-
+        
         ctx.save();
         ctx.globalAlpha = 0.3;
-
+        
         // Draw grid
         for (let row = 0; row < this.collisionGrid.rows; row++) {
             for (let col = 0; col < this.collisionGrid.cols; col++) {
                 const cell = this.collisionGrid.grid[row][col];
                 const x = col * this.collisionGrid.cellSize;
                 const y = row * this.collisionGrid.cellSize;
-
+                
                 if (cell.solid) {
                     ctx.fillStyle = '#ff0000';
                     ctx.fillRect(x, y, this.collisionGrid.cellSize, this.collisionGrid.cellSize);
@@ -910,7 +991,7 @@ class PinballGame {
                 }
             }
         }
-
+        
         ctx.restore();
     }
 }
