@@ -24,8 +24,7 @@ class FarcasterManager {
                                 window.parent !== window || 
                                 document.referrer.includes('warpcast.com') ||
                                 document.referrer.includes('farcaster') ||
-                                navigator.userAgent.includes('Warpcast') ||
-                                navigator.userAgent.includes('Mobile'));
+                                navigator.userAgent.includes('Warpcast'));
 
         if (!hasFarcasterSDK) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
