@@ -5,6 +5,7 @@ class FarcasterManager {
         this.context = null;
         this.user = null;
         this.sdk = null;
+        this.readyCalled = false; // Флаг чтобы избежать двойного вызова
         this.callbacks = {
             ready: [],
             contextUpdate: [],
@@ -13,33 +14,44 @@ class FarcasterManager {
             notificationsEnabled: [],
             notificationsDisabled: []
         };
+
+        // НЕ вызываем init() в конструкторе - будем вызывать явно
     }
 
     async initialize() {
         console.log('FarcasterManager: Initializing...');
-        
-        // Используем уже определенную переменную window.isMiniApp
-        const hasFarcasterSDK = window.isMiniApp || window.sdk;
 
-        if (!hasFarcasterSDK) {
+        // Проверяем окружение Mini App
+        const isMiniAppEnvironment = this.detectMiniAppEnvironment();
+
+        if (!isMiniAppEnvironment) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
             this.simulateReady();
             return;
         }
 
         try {
-            console.log('🔄 Loading Farcaster SDK...');
-            
-            // Загружаем SDK
-            const { default: sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
-            this.sdk = sdk;
-            this.isFrameEnvironment = true;
-            console.log('✅ Farcaster SDK initialized successfully');
-            
-            // ВАЖНО: Вызываем ready() с повторными попытками для мобильных устройств
-            await this.callReadyWithRetry();
-            
+            // Сначала проверяем предзагруженный SDK (для web)
+            if (window.sdk) {
+                console.log('🔄 Using pre-loaded window.sdk...');
+                this.sdk = window.sdk;
+                this.isFrameEnvironment = true;
+                console.log('✅ Pre-loaded SDK found');
+            } else {
+                // Загружаем SDK через import (для случаев без предзагрузки)
+                console.log('🔄 Loading Farcaster SDK via import...');
+                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
+                this.sdk = sdk;
+                this.isFrameEnvironment = true;
+                console.log('✅ Farcaster SDK loaded via import');
+            }
+
+            // КРИТИЧЕСКИ ВАЖНО: ВСЕГДА вызываем ready() независимо от платформы
+            await this.callReadyEarly();
+
+            // Затем настраиваем остальные функции
             await this.setupMiniAppFeatures();
+
         } catch (error) {
             console.error('❌ Error loading Farcaster SDK:', error);
             this.isFrameEnvironment = false;
@@ -47,57 +59,90 @@ class FarcasterManager {
         }
     }
 
-    async waitForSDK() {
-        let attempts = 0;
-        const maxAttempts = 50; // 5 секунд
+    detectMiniAppEnvironment() {
+        // Улучшенное определение окружения Mini App
+        const hasParent = window.parent !== window;
+        const hasFrameReferrer = document.referrer.includes('warpcast.com') || 
+                                document.referrer.includes('farcaster');
+        const hasWindowSdk = typeof window.sdk !== 'undefined';
+        const userAgent = navigator.userAgent || '';
+        const isMobileApp = userAgent.includes('Warpcast') || userAgent.includes('Farcaster');
 
-        while (attempts < maxAttempts) {
-            // ИСПРАВЛЕНО: Ищем window.sdk, а не window.miniAppSDK
-            if (window.sdk && typeof window.sdk.actions === 'object') {
-                console.log(`FarcasterManager: SDK loaded after ${attempts * 100}ms`);
-                return window.sdk;
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        throw new Error('SDK not loaded within timeout');
+        const isMiniApp = hasParent || hasFrameReferrer || hasWindowSdk || isMobileApp;
+
+        console.log('🔍 Environment detection:', {
+            hasParent,
+            hasFrameReferrer,
+            hasWindowSdk,
+            isMobileApp,
+            isMiniApp,
+            userAgent: userAgent.substring(0, 100),
+            windowSdkType: typeof window.sdk,
+            windowSdkExists: !!window.sdk
+        });
+
+        return isMiniApp;
     }
 
-    async callReadyWithRetry() {
+    async callReadyEarly() {
+        if (this.readyCalled) {
+            console.log('⚠️ Ready already called, skipping');
+            return;
+        }
+
         let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (attempts < maxAttempts) {
+        const maxAttempts = 10; // Увеличиваем количество попыток для мобильных
+
+        console.log('🚀 Starting ready() call process...');
+
+        while (attempts < maxAttempts && !this.readyCalled) {
             try {
-                console.log(`🚀 Calling ready() (attempt ${attempts + 1}/${maxAttempts}) to dismiss splash screen...`);
-                
-                // Дополнительная проверка на готовность SDK
-                if (!this.sdk || !this.sdk.actions || typeof this.sdk.actions.ready !== 'function') {
-                    console.log('⚠️ SDK not fully ready, waiting...');
+                console.log(`🚀 Calling ready() (attempt ${attempts + 1}/${maxAttempts})...`);
+
+                // Проверяем готовность SDK более тщательно
+                if (!this.sdk) {
+                    console.log('⚠️ SDK not available, waiting...');
                     await new Promise(resolve => setTimeout(resolve, 200));
                     attempts++;
                     continue;
                 }
-                
+
+                if (!this.sdk.actions) {
+                    console.log('⚠️ SDK actions not available, waiting...');
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    attempts++;
+                    continue;
+                }
+
+                if (typeof this.sdk.actions.ready !== 'function') {
+                    console.log('⚠️ SDK ready function not available, waiting...');
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    attempts++;
+                    continue;
+                }
+
+                // Вызываем ready() с дополнительными опциями для мобильных
                 await this.sdk.actions.ready({
                     disableNativeGestures: false
                 });
-                
-                console.log('✅ Splash screen dismissed successfully');
+
+                this.readyCalled = true;
+                console.log('✅ Ready() call successful - splash screen should be dismissed');
                 return;
-                
+
             } catch (error) {
                 console.warn(`⚠️ Ready() attempt ${attempts + 1} failed:`, error.message);
+                console.warn('Error details:', error);
                 attempts++;
-                
+
                 if (attempts < maxAttempts) {
-                    // Увеличиваем задержку с каждой попыткой
-                    const delay = 300 + (attempts * 200);
+                    // Прогрессивное увеличение задержки
+                    const delay = 200 + (attempts * 300);
                     console.log(`⏳ Retrying ready() in ${delay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
-                    console.error('❌ Failed to dismiss splash screen after all attempts');
-                    throw error;
+                    console.error('❌ Failed to call ready() after all attempts');
+                    console.error('This may cause issues on mobile devices with splash screens');
                 }
             }
         }
@@ -105,37 +150,37 @@ class FarcasterManager {
 
     async setupMiniAppFeatures() {
         try {
-            // ready() уже вызван в initialize(), настраиваем остальное
             this.setupEventListeners();
 
-            // Получаем контекст
+            // Получаем контекст - с обработкой Proxy объектов
             try {
                 this.context = await this.sdk.context;
                 console.log('📋 Farcaster context received');
 
-                // Получаем пользователя
+                // Безопасная работа с пользователем
                 if (this.context && this.context.user) {
                     this.user = this.context.user;
-                    console.log('👤 User info:', {
-                        fid: await this.user.fid,
-                        username: await this.user.username,
-                        displayName: await this.user.displayName
-                    });
+
+                    // Правильное обращение к Proxy объектам
+                    try {
+                        const userInfo = {
+                            fid: await this.resolveValue(this.user.fid),
+                            username: await this.resolveValue(this.user.username),
+                            displayName: await this.resolveValue(this.user.displayName)
+                        };
+                        console.log('👤 User info:', userInfo);
+                    } catch (userError) {
+                        console.log('⚠️ Could not resolve user details:', userError.message);
+                    }
                 }
-            } catch (error) {
-                console.log('⚠️ Could not get context:', error.message);
+            } catch (contextError) {
+                console.log('⚠️ Could not get context:', contextError.message);
             }
 
             this.isReady = true;
 
-            // Уведомляем колбэки
-            this.callbacks.ready.forEach(callback => {
-                try {
-                    callback(this.context);
-                } catch (error) {
-                    console.error('FarcasterManager: Error in ready callback:', error);
-                }
-            });
+            // Уведомляем колбэки о готовности
+            this.notifyReadyCallbacks();
 
             console.log('🎉 Mini App features setup complete');
         } catch (error) {
@@ -144,19 +189,23 @@ class FarcasterManager {
         }
     }
 
-    async notifyAppReady() {
-        if (this.isFrameEnvironment && this.sdk?.actions?.ready) {
-            try {
-                await this.sdk.actions.ready({
-                    disableNativeGestures: false
-                });
-                console.log('🎉 Farcaster splash screen dismissed');
-                return true;
-            } catch (error) {
-                console.error('❌ Failed to dismiss splash screen:', error);
-            }
+    // Безопасная работа с Proxy объектами от Farcaster SDK
+    async resolveValue(value) {
+        if (value === null || value === undefined) {
+            return value;
         }
-        return false;
+
+        // Если это Proxy функция, вызываем её
+        if (typeof value === 'function') {
+            return await value();
+        }
+
+        // Если это Promise, ждём результата
+        if (value && typeof value.then === 'function') {
+            return await value;
+        }
+
+        return value;
     }
 
     setupEventListeners() {
@@ -207,357 +256,159 @@ class FarcasterManager {
                 });
             });
 
+            console.log('📡 Farcaster event listeners setup complete');
         } catch (error) {
-            console.error('FarcasterManager: Failed to setup event listeners:', error);
+            console.error('FarcasterManager: Error setting up event listeners:', error);
         }
+    }
+
+    notifyReadyCallbacks() {
+        this.callbacks.ready.forEach(callback => {
+            try {
+                callback(this.context);
+            } catch (error) {
+                console.error('FarcasterManager: Error in ready callback:', error);
+            }
+        });
     }
 
     simulateReady() {
-        // Для обычного веб-окружения
-        setTimeout(() => {
-            this.isReady = true;
-            console.log('FarcasterManager: Simulated ready state for web environment');
-            this.callbacks.ready.forEach(callback => {
-                try {
-                    callback(null);
-                } catch (error) {
-                    console.error('FarcasterManager: Error in simulated ready callback:', error);
-                }
-            });
-        }, 100);
+        console.log('🔄 Simulating ready state for non-frame environment');
+        this.isReady = true;
+        this.notifyReadyCallbacks();
     }
 
-    handleInitError(error) {
-        console.error('FarcasterManager: Initialization failed, falling back to web mode:', error);
-        this.isFrameEnvironment = false;
-        this.simulateReady();
-    }
-
-    // === CALLBACK REGISTRATION ===
-
-    onReady(callback) {
-        if (typeof callback !== 'function') {
-            console.error('FarcasterManager: onReady callback must be a function');
-            return;
-        }
-
-        if (this.isReady) {
-            // Если уже готов, вызываем сразу
-            setTimeout(() => callback(this.context), 0);
-        } else {
-            this.callbacks.ready.push(callback);
-        }
-    }
-
-    onContextUpdate(callback) {
-        if (typeof callback !== 'function') {
-            console.error('FarcasterManager: onContextUpdate callback must be a function');
-            return;
-        }
-        this.callbacks.contextUpdate.push(callback);
-    }
-
-    onFrameAdded(callback) {
-        if (typeof callback !== 'function') {
-            console.error('FarcasterManager: onFrameAdded callback must be a function');
-            return;
-        }
-        this.callbacks.frameAdded.push(callback);
-    }
-
-    onFrameRemoved(callback) {
-        if (typeof callback !== 'function') {
-            console.error('FarcasterManager: onFrameRemoved callback must be a function');
-            return;
-        }
-        this.callbacks.frameRemoved.push(callback);
-    }
-
-    onNotificationsEnabled(callback) {
-        if (typeof callback !== 'function') {
-            console.error('FarcasterManager: onNotificationsEnabled callback must be a function');
-            return;
-        }
-        this.callbacks.notificationsEnabled.push(callback);
-    }
-
-    onNotificationsDisabled(callback) {
-        if (typeof callback !== 'function') {
-            console.error('FarcasterManager: onNotificationsDisabled callback must be a function');
-            return;
-        }
-        this.callbacks.notificationsDisabled.push(callback);
-    }
-
-    // === FRAME ACTIONS ===
-
-    async addToFavorites() {
-        if (!this.isFrameEnvironment) {
-            console.log('FarcasterManager: addToFavorites called outside frame environment');
-            return false;
-        }
-
-        if (!this.sdk || !this.sdk.actions) {
-            console.error('FarcasterManager: SDK actions not available for addToFavorites');
-            return false;
-        }
-
+    // Безопасные методы для получения информации о контексте
+    async getSafeAreaInsets() {
         try {
-            await this.sdk.actions.addFrame();
-            console.log('FarcasterManager: Add frame action triggered successfully');
-            return true;
-        } catch (error) {
-            console.error('FarcasterManager: Failed to add frame:', error);
-            return false;
-        }
-    }
-
-    async openUrl(url) {
-        if (!url) {
-            console.error('FarcasterManager: openUrl called without URL');
-            return;
-        }
-
-        if (this.isFrameEnvironment && this.sdk && this.sdk.actions) {
-            try {
-                await this.sdk.actions.openUrl(url);
-                console.log('FarcasterManager: URL opened via MiniApp SDK:', url);
-            } catch (error) {
-                console.error('FarcasterManager: Failed to open URL via SDK:', error);
-                // Fallback to regular window.open
-                window.open(url, '_blank');
+            if (!this.context?.client?.safeAreaInsets) {
+                return { top: 0, bottom: 0, left: 0, right: 0 };
             }
-        } else {
-            window.open(url, '_blank');
-        }
-    }
 
-    async close() {
-        if (!this.isFrameEnvironment) {
-            console.log('FarcasterManager: close called outside frame environment');
-            return;
-        }
-
-        if (!this.sdk || !this.sdk.actions) {
-            console.error('FarcasterManager: SDK actions not available for close');
-            return;
-        }
-
-        try {
-            await this.sdk.actions.close();
-            console.log('FarcasterManager: Frame closed successfully');
+            const insets = this.context.client.safeAreaInsets;
+            return {
+                top: await this.resolveValue(insets.top) || 0,
+                bottom: await this.resolveValue(insets.bottom) || 0,
+                left: await this.resolveValue(insets.left) || 0,
+                right: await this.resolveValue(insets.right) || 0
+            };
         } catch (error) {
-            console.error('FarcasterManager: Failed to close frame:', error);
+            console.error('Error getting safe area insets:', error);
+            return { top: 0, bottom: 0, left: 0, right: 0 };
         }
     }
 
-    // ИСПРАВЛЕНО: Добавляем методы из рабочего примера
-    async shareScore(score, level) {
-        if (!this.isFrameEnvironment || !this.sdk || !this.sdk.actions || !this.sdk.actions.composeCast) return;
-
-        try {
-            const text = `🚀 I just scored ${score || 0} points and reached level ${level || 1} in Pinball All Stars! Can you beat that? 🎮💥`;
-            const url = window.location.origin;
-
-            await this.sdk.actions.composeCast({
-                text: text,
-                embeds: [url]
-            });
-        } catch (error) {
-            console.error('Error sharing score:', error);
-        }
-    }
-
-    async composeCast(options = {}) {
-        if (!this.isFrameEnvironment) {
-            console.log('FarcasterManager: composeCast called outside frame environment');
-            return null;
-        }
-
-        if (!this.sdk || !this.sdk.actions) {
-            console.error('FarcasterManager: SDK actions not available for composeCast');
-            return null;
-        }
-
-        try {
-            const result = await this.sdk.actions.composeCast(options);
-            console.log('FarcasterManager: Cast composed successfully:', result);
-            return result;
-        } catch (error) {
-            console.error('FarcasterManager: Failed to compose cast:', error);
-            return null;
-        }
-    }
-
-    async signIn(nonce) {
-        if (!this.isFrameEnvironment) {
-            console.log('FarcasterManager: signIn called outside frame environment');
-            return null;
-        }
-
-        if (!this.sdk || !this.sdk.actions) {
-            console.error('FarcasterManager: SDK actions not available for signIn');
-            return null;
-        }
-
-        if (!nonce) {
-            console.error('FarcasterManager: signIn called without nonce');
-            return null;
-        }
-
-        try {
-            const result = await this.sdk.actions.signIn({ nonce });
-            console.log('FarcasterManager: Sign in successful');
-            return result;
-        } catch (error) {
-            console.error('FarcasterManager: Failed to sign in:', error);
-            return null;
-        }
-    }
-
-    // ИСПРАВЛЕНО: Добавляем метод для доната через sendToken
-    async sendDonation(amount = '1000000') { // По умолчанию 1 USDC
-        if (!this.isFrameEnvironment || !this.sdk || !this.sdk.actions || !this.sdk.actions.sendToken) {
-            console.log('Farcaster SDK недоступен для доната');
-            return { success: false, reason: 'sdk_unavailable' };
-        }
-
-        try {
-            const result = await this.sdk.actions.sendToken({
-                token: 'eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
-                amount: amount, // 1 USDC = 1000000 (6 decimals)
-                recipientAddress: '0x7Ea45b01EECaE066f37500c92B10421937571f75'
-            });
-
-            if (result.success) {
-                console.log('Донат успешно отправлен:', result.send.transaction);
-                return result;
-            } else {
-                console.log('Ошибка при донате:', result.error);
-                return result;
-            }
-        } catch (error) {
-            console.error('Ошибка при отправке доната:', error);
-            return { success: false, reason: 'send_failed', error: error.message };
-        }
-    }
-
-    // === GETTERS ===
-
-    getUser() {
-        return this.user;
-    }
-
-    // ИСПРАВЛЕНО: Добавляем метод getUserInfo как в рабочем примере
     async getUserInfo() {
-        if (this.isFrameEnvironment && this.context && this.context.user) {
-            const user = this.context.user;
-            try {
-                return {
-                    fid: await user.fid || null,
-                    username: await user.username || null,
-                    displayName: await user.displayName || null,
-                    pfpUrl: await user.pfpUrl || null
-                };
-            } catch (error) {
-                console.log('⚠️ Error getting user info:', error);
+        try {
+            if (!this.user) {
                 return null;
             }
+
+            return {
+                fid: await this.resolveValue(this.user.fid),
+                username: await this.resolveValue(this.user.username),
+                displayName: await this.resolveValue(this.user.displayName),
+                pfpUrl: await this.resolveValue(this.user.pfpUrl)
+            };
+        } catch (error) {
+            console.error('Error getting user info:', error);
+            return null;
         }
-        return null;
+    }
+
+    // Публичные методы API (без изменений)
+    isInFrame() {
+        return this.isFrameEnvironment;
     }
 
     getContext() {
         return this.context;
     }
 
-    isInFrame() {
-        return this.isFrameEnvironment;
+    getUser() {
+        return this.user;
     }
 
-    getStatus() {
-        return {
-            isReady: this.isReady,
-            isInFrame: this.isFrameEnvironment,
-            hasUser: !!this.user,
-            contextLoaded: !!this.context,
-            sdkAvailable: !!this.sdk,
-            userFid: this.user?.fid,
-            username: this.user?.username,
-            clientFid: this.context?.client?.clientFid,
-            isAppAdded: this.context?.client?.added
-        };
-    }
-
-    // === УТИЛИТЫ ===
-
-    async getSafeAreaInsets() {
-        if (this.context?.client?.safeAreaInsets) {
+    onReady(callback) {
+        if (this.isReady) {
             try {
-                const insets = this.context.client.safeAreaInsets;
-                return {
-                    top: await insets.top || 0,
-                    bottom: await insets.bottom || 0,
-                    left: await insets.left || 0,
-                    right: await insets.right || 0
-                };
+                callback(this.context);
             } catch (error) {
-                console.log('⚠️ Error getting safe area insets:', error);
-                return { top: 0, bottom: 0, left: 0, right: 0 };
+                console.error('FarcasterManager: Error in immediate ready callback:', error);
             }
+        } else {
+            this.callbacks.ready.push(callback);
         }
-        return { top: 0, bottom: 0, left: 0, right: 0 };
     }
 
-    getNotificationDetails() {
-        return this.context?.client?.notificationDetails;
+    onFrameAdded(callback) {
+        this.callbacks.frameAdded.push(callback);
     }
 
-    canSendNotifications() {
-        return !!(this.context?.client?.notificationDetails?.token);
+    onFrameRemoved(callback) {
+        this.callbacks.frameRemoved.push(callback);
     }
 
-    getLocationContext() {
-        return this.context?.location;
+    onNotificationsEnabled(callback) {
+        this.callbacks.notificationsEnabled.push(callback);
     }
 
-    isLaunchedFromCast() {
-        return this.context?.location?.type === 'cast_embed';
+    onNotificationsDisabled(callback) {
+        this.callbacks.notificationsDisabled.push(callback);
     }
 
-    isLaunchedFromNotification() {
-        return this.context?.location?.type === 'notification';
-    }
-
-    isLaunchedFromLauncher() {
-        return this.context?.location?.type === 'launcher';
-    }
-
-    // === DEBUG ===
-
-    debug() {
-        const debugInfo = {
-            status: this.getStatus(),
-            context: this.context,
-            callbacks: Object.keys(this.callbacks).reduce((acc, key) => {
-                acc[key] = this.callbacks[key].length;
-                return acc;
-            }, {}),
-            environment: {
-                userAgent: navigator.userAgent,
-                referrer: document.referrer,
-                search: window.location.search,
-                isIframe: window.parent !== window,
-                isMiniApp: !!window.isMiniApp,
-                sdkLoaded: !!window.sdk
+    async addFrame() {
+        if (this.sdk && this.sdk.actions && this.sdk.actions.addFrame) {
+            try {
+                await this.sdk.actions.addFrame();
+                console.log('✅ Add frame action completed');
+            } catch (error) {
+                console.error('❌ Add frame action failed:', error);
+                throw error;
             }
-        };
+        } else {
+            console.warn('⚠️ Add frame action not available');
+        }
+    }
 
-        console.log('FarcasterManager Debug Info:', debugInfo);
-        return debugInfo;
+    async close() {
+        if (this.sdk && this.sdk.actions && this.sdk.actions.close) {
+            try {
+                await this.sdk.actions.close();
+                console.log('✅ Close action completed');
+            } catch (error) {
+                console.error('❌ Close action failed:', error);
+                throw error;
+            }
+        } else {
+            console.warn('⚠️ Close action not available');
+        }
+    }
+
+    async openUrl(url) {
+        if (this.sdk && this.sdk.actions && this.sdk.actions.openUrl) {
+            try {
+                await this.sdk.actions.openUrl(url);
+                console.log('✅ Open URL action completed:', url);
+            } catch (error) {
+                console.error('❌ Open URL action failed:', error);
+                throw error;
+            }
+        } else {
+            console.warn('⚠️ Open URL action not available');
+            // Fallback для обычного браузера
+            window.open(url, '_blank');
+        }
     }
 }
 
-// Создаем глобальный экземпляр (инициализация будет вызвана отдельно)
-console.log('Creating global FarcasterIntegration instance...');
+// Создаем глобальный экземпляр
+console.log('🚀 Creating FarcasterManager instance...');
 window.farcasterIntegration = new FarcasterManager();
+
+// Инициализируем сразу
+window.farcasterIntegration.initialize().then(() => {
+    console.log('🎉 FarcasterManager initialization complete');
+}).catch(error => {
+    console.error('❌ FarcasterManager initialization failed:', error);
+});
