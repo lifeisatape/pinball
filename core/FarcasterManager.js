@@ -23,7 +23,9 @@ class FarcasterManager {
                                (window.sdk || 
                                 window.parent !== window || 
                                 document.referrer.includes('warpcast.com') ||
-                                navigator.userAgent.includes('Warpcast'));
+                                document.referrer.includes('farcaster') ||
+                                navigator.userAgent.includes('Warpcast') ||
+                                navigator.userAgent.includes('Mobile'));
 
         if (!hasFarcasterSDK) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
@@ -40,12 +42,8 @@ class FarcasterManager {
             this.isFrameEnvironment = true;
             console.log('✅ Farcaster SDK initialized successfully');
             
-            // ВАЖНО: Сразу вызываем ready() чтобы убрать splash screen
-            console.log('🚀 Calling ready() immediately to dismiss splash screen...');
-            await this.sdk.actions.ready({
-                disableNativeGestures: false
-            });
-            console.log('✅ Splash screen dismissed');
+            // ВАЖНО: Вызываем ready() с повторными попытками для мобильных устройств
+            await this.callReadyWithRetry();
             
             await this.setupMiniAppFeatures();
         } catch (error) {
@@ -69,6 +67,46 @@ class FarcasterManager {
             attempts++;
         }
         throw new Error('SDK not loaded within timeout');
+    }
+
+    async callReadyWithRetry() {
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts) {
+            try {
+                console.log(`🚀 Calling ready() (attempt ${attempts + 1}/${maxAttempts}) to dismiss splash screen...`);
+                
+                // Дополнительная проверка на готовность SDK
+                if (!this.sdk || !this.sdk.actions || typeof this.sdk.actions.ready !== 'function') {
+                    console.log('⚠️ SDK not fully ready, waiting...');
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    attempts++;
+                    continue;
+                }
+                
+                await this.sdk.actions.ready({
+                    disableNativeGestures: false
+                });
+                
+                console.log('✅ Splash screen dismissed successfully');
+                return;
+                
+            } catch (error) {
+                console.warn(`⚠️ Ready() attempt ${attempts + 1} failed:`, error.message);
+                attempts++;
+                
+                if (attempts < maxAttempts) {
+                    // Увеличиваем задержку с каждой попыткой
+                    const delay = 300 + (attempts * 200);
+                    console.log(`⏳ Retrying ready() in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    console.error('❌ Failed to dismiss splash screen after all attempts');
+                    throw error;
+                }
+            }
+        }
     }
 
     async setupMiniAppFeatures() {
