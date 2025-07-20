@@ -67,33 +67,37 @@ class FarcasterManager {
 
     async waitForSDK() {
         let attempts = 0;
-        const maxAttempts = 50; // 5 секунд
+        const maxAttempts = 100; // Увеличиваем время ожидания для мобильного
 
         while (attempts < maxAttempts) {
-            // ИСПРАВЛЕНО: Ищем window.sdk, а не window.miniAppSDK
             if (window.sdk && typeof window.sdk.actions === 'object') {
-                console.log(`FarcasterManager: SDK loaded after ${attempts * 100}ms`);
+                console.log(`FarcasterManager: SDK loaded after ${attempts * 50}ms`);
                 return window.sdk;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             attempts++;
         }
         throw new Error('SDK not loaded within timeout');
     }
 
     async callReadyWithRetry() {
-        const maxAttempts = 3;
+        const maxAttempts = 5; // Увеличиваем количество попыток для мобильного
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 console.log(`🚀 Ready() attempt ${attempt}/${maxAttempts}...`);
 
-                // Для мобильных добавляем дополнительные параметры
-                const readyOptions = {
-                    disableNativeGestures: false
-                };
+                // Для мобильного добавляем проверку готовности контекста
+                if (this.sdk.context) {
+                    try {
+                        await this.sdk.context; // Ждем готовности контекста
+                        console.log('📋 Context is ready for ready() call');
+                    } catch (contextError) {
+                        console.log('⚠️ Context not available, proceeding anyway:', contextError.message);
+                    }
+                }
 
-                await this.sdk.actions.ready(readyOptions);
+                await this.sdk.actions.ready();
                 console.log(`✅ Ready() successful on attempt ${attempt}`);
                 return;
 
@@ -101,8 +105,7 @@ class FarcasterManager {
                 console.warn(`⚠️ Ready() attempt ${attempt} failed:`, error.message);
 
                 if (attempt < maxAttempts) {
-                    // Увеличиваем задержку с каждой попыткой
-                    const delay = attempt * 500;
+                    const delay = attempt * 1000; // Увеличиваем задержку для мобильного
                     console.log(`⏳ Waiting ${delay}ms before retry...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {

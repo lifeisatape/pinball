@@ -113,50 +113,62 @@
         </div>
     </div>
 
-    <!-- ✅ ПРОСТОЕ определение Mini App окружения -->
-    <script>
-        window.isMiniApp = window.parent !== window || 
-                          window.location.search.includes('miniApp=true') ||
-                          navigator.userAgent.includes('Warpcast') ||
-                          navigator.userAgent.includes('Farcaster');
-
-        console.log('Mini App environment detected:', window.isMiniApp);
-    </script>
-
-    <!-- ✅ КРИТИЧНО: Быстрая инициализация SDK и НЕМЕДЛЕННЫЙ ready() -->
+    <!-- ✅ УЛУЧШЕННОЕ определение Mini App окружения для мобильного -->
     <script type="module">
-        if (window.isMiniApp) {
+        async function detectMiniApp() {
             try {
-                console.log('📦 Loading Farcaster SDK...');
-
+                console.log('🔍 Detecting Mini App environment...');
+                
+                // Загружаем SDK
                 const { sdk } = await import('https://esm.sh/@farcaster/miniapp-sdk');
                 window.sdk = sdk;
-                console.log('✅ Farcaster SDK loaded successfully');
-
-                // ✅ КРИТИЧНО: Вызываем ready() НЕМЕДЛЕННО - НЕ ЖДЕМ НИЧЕГО!
-                await sdk.actions.ready({
-                    disableNativeGestures: false
-                });
-                console.log('🎉 Splash screen dismissed IMMEDIATELY');
-
-                // Получаем контекст для использования в игре (в фоне)
-                try {
-                    window.farcasterContext = await sdk.context;
-                    console.log('📋 Context received');
-                } catch (error) {
-                    console.log('⚠️ Could not get context:', error);
+                console.log('📦 Farcaster SDK loaded');
+                
+                // Используем официальный метод определения
+                const isMiniApp = await sdk.isInMiniApp();
+                window.isMiniApp = isMiniApp;
+                
+                console.log('✅ Mini App environment detected:', isMiniApp);
+                
+                if (isMiniApp) {
+                    // ✅ КРИТИЧНО: Вызываем ready() НЕМЕДЛЕННО для мобильного
+                    console.log('🚀 Calling ready() immediately...');
+                    
+                    // Для мобильного добавляем проверку готовности контекста
+                    if (sdk.context) {
+                        try {
+                            await sdk.context; // Ждем готовности контекста
+                            console.log('📋 Context is ready');
+                        } catch (error) {
+                            console.log('⚠️ Context not available:', error);
+                        }
+                    }
+                    
+                    await sdk.actions.ready({
+                        disableNativeGestures: false
+                    });
+                    console.log('🎉 Ready() called successfully');
+                    
+                    // Получаем контекст для использования в игре (в фоне)
+                    try {
+                        window.farcasterContext = await sdk.context;
+                        console.log('📋 Context received');
+                    } catch (error) {
+                        console.log('⚠️ Could not get context:', error);
+                    }
                 }
-
+                
                 window.farcasterSDKReady = true;
-
+                
             } catch (error) {
-                console.error('❌ Failed to load Farcaster SDK:', error);
+                console.error('❌ Failed to detect Mini App environment:', error);
+                window.isMiniApp = false;
                 window.farcasterSDKReady = false;
             }
-        } else {
-            console.log('⏭️ Not in Mini App environment');
-            window.farcasterSDKReady = false;
         }
+        
+        // Запускаем определение среды
+        detectMiniApp();
     </script>
 
     <!-- 1. SoundManager -->
@@ -193,13 +205,33 @@
     <script src="game/LevelSelector.js"></script>
     <script src="game/PinballGame.js"></script>
 
-    <!-- ✅ Простая инициализация игры -->
+    <!-- ✅ Улучшенная синхронизация инициализации для мобильного -->
     <script>
         window.addEventListener('load', async () => {
-            console.log('🎮 Page loaded, initializing game...');
-
-            // Создаем игру БЕЗ ожидания звуков или сложной логики
-            const game = new PinballGame();
+            console.log('🎮 Page loaded, waiting for SDK...');
+            
+            // Ждем загрузки SDK с увеличенным таймаутом для мобильного
+            let attempts = 0;
+            const maxAttempts = 200; // 10 секунд для мобильного
+            
+            while (!window.sdk && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+                attempts++;
+            }
+            
+            if (window.sdk && window.isMiniApp) {
+                console.log('✅ SDK ready, initializing Mini App game...');
+                
+                // Инициализируем FarcasterManager только после готовности SDK
+                if (window.FarcasterManager) {
+                    window.farcasterManager = new FarcasterManager();
+                }
+                
+                const game = new PinballGame();
+            } else {
+                console.log('🎮 Initializing regular game...');
+                const game = new PinballGame();
+            }
         });
 
         // Prevent mobile scrolling and context menu
