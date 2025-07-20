@@ -24,6 +24,13 @@ class PinballGame {
         // ✅ Простое состояние звуков
         this.soundsLoaded = false;
 
+        // Состояние загрузки
+        this.loadingState = {
+            audio: false,
+            sounds: false,
+            levels: false
+        };
+
         // Collision grid system for improved corner handling
         this.useCollisionGrid = true;
         this.collisionGrid = null;
@@ -42,18 +49,24 @@ class PinballGame {
 
     setupEventListeners() {
         // Обработчик для экрана "tap to start"
-        this.tapToStartScreen.addEventListener('click', () => {
-            console.log('🎮 User clicked TAP TO START');
+        this.tapToStartScreen.addEventListener('click', async () => {
+            console.log('PinballGame: User clicked TAP TO START');
             this.userHasInteracted = true;
-            this.activateAudioContext();
-            this.startGame();
+            
+            // НЕМЕДЛЕННАЯ активация AudioContext
+            await this.activateAudioContext();
+            
+            this.startLoadingProcess();
         });
 
-        this.tapToStartScreen.addEventListener('touchstart', () => {
-            console.log('🎮 User touched TAP TO START');
+        this.tapToStartScreen.addEventListener('touchstart', async () => {
+            console.log('PinballGame: User touched TAP TO START');
             this.userHasInteracted = true;
-            this.activateAudioContext();
-            this.startGame();
+            
+            // НЕМЕДЛЕННАЯ активация AudioContext
+            await this.activateAudioContext();
+            
+            this.startLoadingProcess();
         }, { passive: true });
 
         // Game over controls
@@ -106,18 +119,41 @@ class PinballGame {
         }
     }
 
-    // ✅ Простая активация аудио (НЕ блокирующая)
-    activateAudioContext() {
-        if (window.soundManager && window.soundManager.audioContext) {
-            try {
-                console.log('🔊 Activating audio context...');
-                // НЕ await - не блокируем игру
-                window.soundManager.unlock().catch(error => {
-                    console.warn('⚠️ Audio activation failed:', error);
-                });
-            } catch (error) {
-                console.warn('⚠️ Audio activation error:', error);
+    async activateAudioContext() {
+        console.log('PinballGame: Activating AudioContext immediately...');
+        
+        if (!window.soundManager || !window.soundManager.audioContext) {
+            console.warn('PinballGame: SoundManager not ready for activation');
+            return;
+        }
+
+        try {
+            const context = window.soundManager.audioContext;
+            console.log('PinballGame: AudioContext state before activation:', context.state);
+
+            // Агрессивная активация с двумя попытками
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    await context.resume();
+                    console.log(`PinballGame: AudioContext activation attempt ${attempt}, state:`, context.state);
+                    
+                    if (context.state === 'running') {
+                        console.log('PinballGame: AudioContext successfully activated!');
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`PinballGame: AudioContext activation attempt ${attempt} failed:`, error);
+                }
+                
+                // Небольшая пауза между попытками
+                if (attempt < 2) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
+
+            console.warn('PinballGame: AudioContext activation failed after 2 attempts, state:', context.state);
+        } catch (error) {
+            console.error('PinballGame: Error during AudioContext activation:', error);
         }
     }
 
@@ -250,6 +286,19 @@ class PinballGame {
         this.showLevelSelect();
     }
 
+    async startLoadingProcess() {
+        // ЗАЩИТА ОТ АВТОЗАПУСКА!
+        if (!this.userHasInteracted) {
+            console.log('PinballGame: Blocking auto-start - user must click TAP TO START first');
+            return;
+        }
+
+        console.log('PinballGame: Starting loading process...');
+        // Скрываем экран "tap to start" и показываем загрузку
+        this.tapToStartScreen.style.display = 'none';
+        this.showLevelSelectScreen();
+    }
+
     showTapToStartScreen() {
         this.tapToStartScreen.style.display = 'flex';
         this.levelSelectScreen.style.display = 'none';
@@ -319,9 +368,6 @@ class PinballGame {
                 this.collisionGrid = this.createSimpleCollisionGrid();
                 console.log('✅ Collision grid ready!');
             }
-
-            // Играем звук запуска если доступен
-            this.playSound('newGameLaunch');
 
             if (!this.gameLoopRunning) {
                 this.gameLoopRunning = true;
