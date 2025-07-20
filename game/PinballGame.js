@@ -254,7 +254,19 @@ class PinballGame {
         this.levelSelectScreen.style.display = 'none';
     }
 
-    showLevelSelect() {
+    async showLevelSelect() {
+        this.gameStarted = false;
+
+        // Останавливаем игровую музыку и запускаем музыку меню
+        if (window.soundManager && window.soundManager.isReady) {
+            window.soundManager.stopMusic();
+            window.soundManager.playMusic('menu');
+        }
+
+        this.showLevelSelectScreen();
+    }
+
+    showLevelSelectScreen() {
         this.tapToStartScreen.style.display = 'none';
         this.levelSelectScreen.style.display = 'flex';
 
@@ -265,8 +277,15 @@ class PinballGame {
     }
 
     hideStartScreen() {
-        this.tapToStartScreen.style.display = 'none';
+        this.canvas.style.display = 'block';
+        document.querySelector('.score-panel').style.display = 'flex';
         this.levelSelectScreen.style.display = 'none';
+
+        // Простое переключение музыки
+        if (window.soundManager && window.soundManager.isReady) {
+            window.soundManager.playMusic('level');
+            window.soundManager.playSound('newGameLaunch');
+        }
     }
 
     async loadSelectedLevel(selectedLevel) {
@@ -320,13 +339,11 @@ class PinballGame {
     }
 
     restartGame() {
-        if (this.currentLevel) {
-            this.gameState.reset();
-            this.resetBall();
-            this.updateUI();
-            this.gameOverOverlay.hide();
-            this.playSound('newGameLaunch');
-        }
+        this.gameState.reset();
+        this.resetBall();
+        this.levelManager.resetLevel(this.currentLevel);
+        this.gameOverOverlay.hide();
+        this.updateUI();
     }
 
     updateUI() {
@@ -344,8 +361,6 @@ class PinballGame {
             requestAnimationFrame(() => this.gameLoop());
         }
     }
-
-    
 
     gameOver() {
         this.gameState.isGameOver = true;
@@ -628,6 +643,15 @@ class PinballGame {
                     this.resetBall();
                 }, 1000);
             }
+        }
+
+        // Check game state
+        this.checkGameState();
+    }
+
+    checkGameState() {
+        if (this.gameState.balls <= 0) {
+            this.gameOver();
         }
     }
 
