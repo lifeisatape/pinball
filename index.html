@@ -137,13 +137,10 @@
     
     <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
     <script>
-        // Устанавливаем флаг окружения Mini App
+        // ✅ УПРОЩЕНО: Более простая логика
         window.isMiniApp = window.parent !== window || 
-                          window.location.search.includes('frame=true') ||
-                          window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
-                          document.referrer.includes('farcaster') ||
-                          new URLSearchParams(window.location.search).get('miniApp') === 'true';
+                          window.location.search.includes('miniApp=true');
         
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>

@@ -34,20 +34,12 @@ class FarcasterManager {
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
 
-            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после загрузки SDK с retry логикой
-            // Не зависим от isInMiniApp() - если SDK загружен, значит мы в Farcaster окружении
-            try {
-                console.log('🚀 Calling ready() immediately after SDK loads...');
-                await this.callReadyWithRetry();
-                console.log('🎉 Farcaster splash screen dismissed successfully');
-            } catch (error) {
-                console.error('❌ Failed to dismiss splash screen (will continue anyway):', error);
-            }
+            // КРИТИЧЕСКИ ВАЖНО: Больше не вызываем ready() сразу после загрузки SDK
 
             // ИСПРАВЛЕНО: Полностью убираем проверку sdk.isInMiniApp() 
             // так как она неправильно работает на мобильных устройствах
             // Полагаемся только на наше определение window.isMiniApp
-            
+
             this.isFrameEnvironment = true;
             console.log('✅ Farcaster SDK initialized successfully');
 
@@ -99,11 +91,11 @@ class FarcasterManager {
 
     async callReadyWithRetry() {
         const maxAttempts = 3;
-        
+
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 console.log(`🚀 Ready() attempt ${attempt}/${maxAttempts}...`);
-                
+
                 // Для мобильных добавляем дополнительные параметры
                 const readyOptions = {
                     disableNativeGestures: false
@@ -112,10 +104,10 @@ class FarcasterManager {
                 await this.sdk.actions.ready(readyOptions);
                 console.log(`✅ Ready() successful on attempt ${attempt}`);
                 return;
-                
+
             } catch (error) {
                 console.warn(`⚠️ Ready() attempt ${attempt} failed:`, error.message);
-                
+
                 if (attempt < maxAttempts) {
                     // Увеличиваем задержку с каждой попыткой
                     const delay = attempt * 500;
@@ -130,24 +122,26 @@ class FarcasterManager {
 
     async setupMiniAppFeatures() {
         try {
-            // Устанавливаем слушатели событий
             this.setupEventListeners();
 
-            // Ждем готовности UI и DOM
+            // Ждем полной готовности DOM
             await new Promise(resolve => {
                 if (document.readyState !== 'complete') {
                     window.addEventListener('load', resolve);
                 } else {
-                    requestAnimationFrame(() => {
-                        setTimeout(resolve, 500); // Даем время на рендеринг
-                    });
+                    resolve();
                 }
             });
 
-            // Дополнительная задержка для мобильных устройств
+            // Ждем готовности звуков на мобильных устройствах
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            if (isMobile) {
-                await new Promise(resolve => setTimeout(resolve, 300));
+            if (isMobile && window.soundManager) {
+                let attempts = 0;
+                while (!window.soundManager.isReady && attempts < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                console.log('🔊 Sound manager ready for mobile');
             }
 
             this.isReady = true;
@@ -161,7 +155,16 @@ class FarcasterManager {
                 }
             });
 
-            // ready() уже вызван ранее, здесь больше ничего не нужно
+            // ✅ ВЫЗЫВАЕМ ready() ТОЛЬКО КОГДА ВСЕ ГОТОВО
+            if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+                try {
+                    console.log('🚀 Calling ready() - app fully loaded');
+                    await this.callReadyWithRetry();
+                    console.log('🎉 Splash screen dismissed');
+                } catch (error) {
+                    console.error('❌ Failed to dismiss splash screen:', error);
+                }
+            }
 
             console.log('🎉 Mini App features setup complete');
         } catch (error) {
