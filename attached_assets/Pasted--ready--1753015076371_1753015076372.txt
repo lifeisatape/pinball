@@ -1,0 +1,74 @@
+Посмотрев на ваш код, я вижу проблему. Вызов ready() происходит слишком рано - сразу после инициализации SDK, но ДО загрузки контекста и других ресурсов.
+Попробуйте добавить небольшую задержку или дождаться загрузки DOM:
+javascriptif (isInMiniAppEnv) {
+    this.isFrameEnvironment = true;
+    console.log('✅ Farcaster SDK initialized successfully');
+
+    // Добавьте проверку готовности DOM и задержку для мобилки
+    const waitForReady = async () => {
+        // Ждем загрузки DOM
+        if (document.readyState !== 'complete') {
+            await new Promise(resolve => {
+                window.addEventListener('load', resolve);
+            });
+        }
+        
+        // Дополнительная задержка для мобилки
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        // Теперь вызываем ready()
+        try {
+            console.log('🚀 Calling ready() after DOM ready...');
+            await this.sdk.actions.ready();
+            console.log('🎉 Farcaster splash screen dismissed successfully');
+        } catch (error) {
+            console.error('❌ Failed to dismiss splash screen:', error);
+        }
+    };
+    
+    // Запускаем асинхронно, не блокируя остальную инициализацию
+    waitForReady();
+
+    // Продолжаем с остальной инициализацией...
+    try {
+        this.context = await sdk.context;
+        // ...
+    }
+}
+Или попробуйте переместить вызов ready() в конец метода setupMiniAppFeatures():
+javascriptasync setupMiniAppFeatures() {
+    try {
+        // Устанавливаем слушатели событий
+        this.setupEventListeners();
+
+        this.isReady = true;
+
+        // Уведомляем колбэки
+        this.callbacks.ready.forEach(callback => {
+            try {
+                callback(this.context);
+            } catch (error) {
+                console.error('FarcasterManager: Error in ready callback:', error);
+            }
+        });
+
+        // ВЫЗЫВАЕМ ready() В САМОМ КОНЦЕ
+        if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+            try {
+                console.log('🚀 Calling ready() from setupMiniAppFeatures...');
+                await this.sdk.actions.ready();
+                console.log('🎉 Splash screen dismissed');
+            } catch (error) {
+                console.error('❌ Failed to dismiss splash screen:', error);
+            }
+        }
+
+        console.log('🎉 Mini App features setup complete');
+    } catch (error) {
+        console.error('Error setting up Mini App features:', error);
+    }
+}
+И удалите вызов ready() из строки 54.
