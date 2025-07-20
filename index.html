@@ -6,10 +6,10 @@
     <title>Pinball: all stars</title>
 
     <!-- Farcaster Frame Embed Meta Tags -->
-    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"🎮 Play Pinball","action":{"type":"launch_frame","name":"Pinball Game","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pinballll.space/gm.png","button":{"title":"⭐PRESS START⭐","action":{"type":"launch_frame","name":"Pinball: all stars","url":"https://pinballll.space/","splashImageUrl":"https://pinballll.space/gm.png","splashBackgroundColor":"#951212"}}}' />
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Pinball Game - Classic Arcade Experience" />
+    <meta property="og:title" content="Pinball: all stars - Classic Arcade Experience" />
     <meta property="og:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta property="og:image" content="https://pinballll.space/gm.png" />
     <meta property="og:url" content="https://pinballll.space/" />
@@ -17,7 +17,7 @@
 
     <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Pinball Game - Classic Arcade Experience" />
+    <meta name="twitter:title" content="Pinball: all stars - Classic Arcade Experience" />
     <meta name="twitter:description" content="Classic pinball game with original soundtrack and multiple themed rooms" />
     <meta name="twitter:image" content="https://pinballll.space/gm.png" />
 
@@ -48,33 +48,33 @@
         <!-- tap to start screen -->
         <div class="tap-to-start-overlay" id="tapToStartScreen">
             <div class="tap-to-start-content">
-                <h1>PINBALL: ALL STARS</h1>
-                <p class="tap-instruction">tap to start</p>
+                <h1>⭐ALL STARS⭐</h1>
+                <p class="tap-instruction">press start</p>
             </div>
         </div>
 
         <!-- Game Over Overlay -->
         <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
             <div class="game-over-content">
-                <h1>GAME OVER</h1>
+                <h1>FINAL SCORE</h1>
                 <div class="final-stats">
                     <div class="stat">
-                        <span class="stat-label">final score</span>
+                        <span class="stat-label">⭐final score</span>
                         <span class="stat-value" id="finalScore">0</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">level reached</span>
+                        <span class="stat-label">⭐level reached</span>
                         <span class="stat-value" id="levelReached">1</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">high score</span>
+                        <span class="stat-label">⭐high score</span>
                         <span class="stat-value" id="finalHighScore">0</span>
                     </div>
                 </div>
                 <div class="game-over-controls">
-                    <button class="restart-btn" id="restartGame">🔄 RESTART</button>
-                    <button class="menu-btn" id="backToMenu">🏠 CHANGE ROOM</button>
-                    <button id="shareScoreBtn" class="restart-btn farcaster-btn" style="display: none;">📤 Share Score</button>
+                    <button class="restart-btn" id="restartGame">ONE MORE TIME</button>
+                    <button class="menu-btn" id="backToMenu">SELECT ROOM</button>
+                    <button id="shareScoreBtn" class="restart-btn farcaster-btn" style="display: none;">⭐SHARE⭐</button>
                 </div>
                 <div id="farcasterUserInfo" style="display: none;"></div>
             </div>
@@ -83,14 +83,14 @@
         <!-- select room screen -->
         <div class="level-select-overlay" id="levelSelectScreen" style="display: none;">
             <div class="level-select-content">
-                <h1>PINBALL: ALL STARS</h1>
+                <h1>⭐ALL STARS⭐</h1>
                 <h2>select room</h2>
                 <div class="level-list" id="levelList">
                     <!-- rooms -->
                 </div>
                 <div class="level-select-controls">
-                    <button class="level-btn primary" id="startLevel">START GAME</button>
-                    <button id="addToAppsBtn" class="level-btn" style="display: none;">⭐ Add to Apps</button>
+                    <button class="level-btn primary" id="startLevel">START</button>
+                    <button id="addToAppsBtn" class="level-btn" style="display: none;">⭐ILY </button>
                 </div>
             </div>
         </div>
