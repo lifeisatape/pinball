@@ -1,0 +1,48 @@
+Mini App environment detected: true
+SoundManager.js:32 SoundManager: Created
+SoundManager.js:52 SoundManager: AudioContext created, state: suspended
+FarcasterManager.js:555 Creating global FarcasterManager instance...
+FarcasterManager.js:21 FarcasterManager: Initializing...
+FarcasterManager.js:31 🔄 Initializing Farcaster integration...
+FarcasterManager.js:557 ✅ Global FarcasterManager instance created successfully
+pinballll.space/:154 Loading Farcaster SDK...
+pinballll.space/:206 Page loaded, initializing game...
+PinballGame.js:113 PinballGame: Setting up Farcaster integration...
+pinballll.space/:159 ✅ Farcaster SDK loaded successfully: {eventNames: ƒ, listenerCount: ƒ, listeners: ƒ, addListener: ƒ, emit: ƒ, …}
+FarcasterManager.js:104 FarcasterManager: SDK loaded after 1000ms
+FarcasterManager.js:40 🚀 Calling ready() immediately after SDK loads...
+FarcasterManager.js:42 🎉 Farcaster splash screen dismissed successfully
+FarcasterManager.js:52 🔍 SDK environment check: true
+FarcasterManager.js:61 ✅ Farcaster SDK initialized successfully
+FarcasterManager.js:66 📋 Farcaster context received
+FarcasterManager.js:72 👤 User info: {fid: 1022212, username: 'lifeisatape.eth', displayName: 'lifeisatape'}
+PinballGame.js:118 PinballGame: Farcaster SDK ready {user: {…}, location: undefined, client: {…}, features: {…}}
+PinballGame.js:155 PinballGame: Adapting UI for Farcaster frame
+PinballGame.js:127 PinballGame: Farcaster user: {fid: 1022212, username: 'lifeisatape.eth', displayName: 'lifeisatape', pfpUrl: 'https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/605a9487-f80d-4d7c-9e86-6bc884435000/original', location: {…}}
+PinballGame.js:314 FarcasterManager: User info displayed for lifeisatape.eth
+FarcasterManager.js:148 🎉 Mini App features setup complete
+pinballll.space/:226 Sound Manager Status: {isReady: false, enabled: true, contextState: 'suspended', buffersLoaded: 0, totalSounds: 9}
+(index):147 Mini App environment detected: true
+SoundManager.js:32 SoundManager: Created
+SoundManager.js:52 SoundManager: AudioContext created, state: suspended
+FarcasterManager.js:555 Creating global FarcasterManager instance...
+FarcasterManager.js:21 FarcasterManager: Initializing...
+FarcasterManager.js:31 🔄 Initializing Farcaster integration...
+FarcasterManager.js:557 ✅ Global FarcasterManager instance created successfully
+(index):154 Loading Farcaster SDK...
+(index):206 Page loaded, initializing game...
+PinballGame.js:113 PinballGame: Setting up Farcaster integration...
+(index):159 ✅ Farcaster SDK loaded successfully: {eventNames: ƒ, listenerCount: ƒ, listeners: ƒ, addListener: ƒ, emit: ƒ, …}
+FarcasterManager.js:104 FarcasterManager: SDK loaded after 900ms
+FarcasterManager.js:40 🚀 Calling ready() immediately after SDK loads...
+FarcasterManager.js:42 🎉 Farcaster splash screen dismissed successfully
+FarcasterManager.js:52 🔍 SDK environment check: true
+FarcasterManager.js:61 ✅ Farcaster SDK initialized successfully
+FarcasterManager.js:66 📋 Farcaster context received
+FarcasterManager.js:72 👤 User info: {fid: 1022212, username: 'lifeisatape.eth', displayName: 'lifeisatape'}
+PinballGame.js:118 PinballGame: Farcaster SDK ready {user: {…}, location: undefined, client: {…}, features: {…}}
+PinballGame.js:155 PinballGame: Adapting UI for Farcaster frame
+PinballGame.js:127 PinballGame: Farcaster user: {fid: 1022212, username: 'lifeisatape.eth', displayName: 'lifeisatape', pfpUrl: 'https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/605a9487-f80d-4d7c-9e86-6bc884435000/original', location: {…}}
+PinballGame.js:314 FarcasterManager: User info displayed for lifeisatape.eth
+FarcasterManager.js:148 🎉 Mini App features setup complete
+(index):226 Sound Manager Status: {isReady: false, enabled: true, contextState: 'suspended', buffersLoaded: 0, totalSounds: 9}
