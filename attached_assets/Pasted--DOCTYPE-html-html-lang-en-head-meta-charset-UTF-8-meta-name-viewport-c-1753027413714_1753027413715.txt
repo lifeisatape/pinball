@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flowers on Mars</title>
+    
+    <meta property="fc:frame" content='{
+      "version":"next",
+      "imageUrl":"https://flowersonmars.space/generated-icon.png",
+      "button":{
+        "title":"🚀 Play Game",
+        "action":{
+          "type":"launch_frame",
+          "name":"Flowers on Mars",
+          "url":"https://flowersonmars.space/?miniApp=true",
+          "splashImageUrl":"https://flowersonmars.space/generated-icon.png",
+          "splashBackgroundColor":"#951212"
+        }
+      }
+    }' />
+    <meta property="og:title" content="Flowers on Mars" />
+    <meta property="og:description" content="An epic space shooter where you battle hordes of wobbling aliens on Mars with incredible particle effects and original soundtrack." />
+    <meta property="og:image" content="hhttps://flowersonmars.space/generated-icon.png" />
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/landing.css">
+    <link rel="stylesheet" href="leaderboard.css">
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Mars...</div>
+        </div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+      
+        <section class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">FLOWERS ON MARS</h1>
+                <p class="hero-subtitle">Epic space shooter adventure</p>
+                
+                <!-- Action Buttons in Hero -->
+                <div class="buttons-container">
+                    <button id="play-demo" class="action-button demo-button">
+                        <span class="button-text">PLAY DEMO</span>
+                        <span class="button-icon">🎮</span>
+                    </button>
+                    <button id="share-game" class="action-button share-button">
+                        <span class="button-text">SHARE</span>
+                        <span class="button-icon">📤</span>
+                    </button>
+                    <button id="donate-button" class="action-button donate-button">
+                        <span class="button-text">DONATE</span>
+                        <span class="button-icon">💰</span>
+                    </button>
+                </div>
+                <div id="skin-selection" style="display: none;"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Leaderboard Button -->
+    <button id="show-leaderboard" onclick="showLeaderboard()" style="display: none;">🏆 leaderboard</button>
+
+    <!-- Leaderboard Panel -->
+    <div id="leaderboard-panel" style="display: none;">
+        <div id="leaderboard"></div>
+        <div id="player-stats"></div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="hideLeaderboard()">close</button>
+            <button id="change-name-btn" onclick="changePlayerName()">change name</button>
+        </div>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-overlay">
+            <div id="game-message"></div>
+        </div>
+        <div id="mobile-controls">
+            <div id="joystick-area"></div>
+            <button id="shootButton">pew</button>
+            <div id="shoot-joystick-area"></div>
+        </div>
+    </div>
+
+    <audio id="alfatapes0" loop>
+        <source src="sounds/alfatapes0.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script src="scripts/ShooterConfig.js"></script>
+    <script src="scripts/Camera.js"></script>
+    <script src="scripts/MarsTerrainRenderer.js"></script>
+    <script src="scripts/GameObject.js"></script>
+    <script src="scripts/CollisionDetection.js"></script>
+    <script src="scripts/ObjectPool.js"></script>
+    <script src="scripts/SoundManager.js"></script>
+    <script src="scripts/CollisionManager.js"></script>
+    <script src="scripts/Obstacle.js"></script>
+    <script src="scripts/RoomWall.js"></script>
+    <script src="scripts/CorridorWall.js"></script>
+    <script src="scripts/DoorObstacle.js"></script>
+    <script src="scripts/InteractiveTree.js"></script>
+    <script src="scripts/Player.js"></script>
+    <script src="scripts/Enemy.js"></script>
+    <script src="scripts/ShootingEnemy.js"></script>
+    <script src="scripts/ChargingEnemy.js"></script>
+    <script src="scripts/ExplosiveEnemy.js"></script>
+    <script src="scripts/ShieldEnemy.js"></script>
+    <script src="scripts/SniperEnemy.js"></script>
+    <script src="scripts/TeleporterEnemy.js"></script>
+    <script src="scripts/Boss.js"></script>
+    <script src="scripts/Bullet.js"></script>
+    <script src="scripts/EnemyBullet.js"></script>
+    <script src="scripts/DroneHelper.js"></script>
+    <script src="scripts/DroneBullet.js"></script>
+    <script src="scripts/Particle.js"></script>
+    <script src="scripts/ParticleManager.js"></script>
+    <script src="scripts/GameLoopManager.js"></script>
+    <script src="scripts/GameStateManager.js"></script>
+    <script src="scripts/UIManager.js"></script>
+    <script src="scripts/LevelGenerator.js"></script>
+    <script src="scripts/LevelManager.js"></script>
+    <script src="scripts/SpawnManager.js"></script>
+    <script src="scripts/ShooterGame.js"></script>
+    <script>
+        window.isMiniApp = window.parent !== window || 
+                          window.location.search.includes('miniApp=true') ||
+                          navigator.userAgent.includes('Warpcast') ||
+                          navigator.userAgent.includes('Farcaster');
+
+        console.log(window.isMiniApp ? '🚀 Running in Farcaster Mini App mode' : '🌐 Running in regular web mode');
+    </script>
+    <script type="module">
+        if (window.isMiniApp) {
+            console.log('📦 Loading Farcaster SDK...');
+            try {
+                const { sdk } = await import('https://esm.sh/@farcaster/frame-sdk');
+                window.sdk = sdk;
+                console.log('✅ Farcaster SDK loaded successfully');
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        if (window.farcasterIntegration) {
+                            window.farcasterIntegration.sdk = sdk;
+                            window.farcasterIntegration.init();
+                        }
+                    });
+                } else {
+                    if (window.farcasterIntegration) {
+                        window.farcasterIntegration.sdk = sdk;
+                        window.farcasterIntegration.init();
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Failed to load Farcaster SDK:', error);
+            }
+        }
+    </script>
+
+    <script src="scripts/FarcasterIntegration.js"></script>
+    <script src="leaderboard.js"></script>
+    <script src="scripts/main.js"></script>
+</body>
+</html>
