@@ -45,6 +45,15 @@ class FarcasterManager {
                 console.log('⚠️ Could not verify environment with SDK:', error);
             }
 
+            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после загрузки SDK
+            try {
+                console.log('🚀 Calling ready() immediately after SDK loads...');
+                await this.sdk.actions.ready();
+                console.log('🎉 Farcaster splash screen dismissed successfully');
+            } catch (error) {
+                console.error('❌ Failed to dismiss splash screen (will continue anyway):', error);
+            }
+
             if (isInMiniAppEnv) {
                 this.isFrameEnvironment = true;
                 console.log('✅ Farcaster SDK initialized successfully');
@@ -132,16 +141,7 @@ class FarcasterManager {
                 }
             });
 
-            // ВЫЗЫВАЕМ ready() В САМОМ КОНЦЕ, когда всё готово
-            if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
-                try {
-                    console.log('🚀 Calling ready() from setupMiniAppFeatures after full initialization...');
-                    await this.sdk.actions.ready();
-                    console.log('🎉 Farcaster splash screen dismissed successfully');
-                } catch (error) {
-                    console.error('❌ Failed to dismiss splash screen:', error);
-                }
-            }
+            // ready() уже вызван ранее, здесь больше ничего не нужно
 
             console.log('🎉 Mini App features setup complete');
         } catch (error) {
