@@ -323,7 +323,7 @@ class PinballGame {
             this.scorePanel.update({
                 score: this.gameState.score,
                 level: this.gameState.level,
-                lives: this.gameState.lives
+                lives: this.gameState.lives || this.gameState.balls
             });
         }
     }
@@ -380,8 +380,8 @@ class PinballGame {
 
             // Check if ball is out of bounds
             if (this.ball.y > CONFIG.VIRTUAL_HEIGHT) {
-                this.gameState.lives--;
-                if (this.gameState.lives > 0) {
+                this.gameState.balls--;
+                if (this.gameState.balls > 0) {
                     this.resetBall();
                 } else {
                     this.gameOver();
@@ -391,7 +391,7 @@ class PinballGame {
     }
 
     checkGameState() {
-        if (this.gameState.lives <= 0) {
+        if ((this.gameState.lives || this.gameState.balls) <= 0) {
             this.gameOver();
         }
     }
@@ -405,7 +405,7 @@ class PinballGame {
         // Show game over screen
         this.gameOverOverlay.show({
             finalScore: this.gameState.score,
-            levelReached: this.gameState.level
+            levelReached: this.gameState.level || 1
         });
 
         // Предлагаем поделиться в Farcaster если доступно
