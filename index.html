@@ -202,12 +202,16 @@
     
     <!-- 7. Initialize game -->
     <script>
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             console.log('Page loaded, initializing game...');
             
             const game = new PinballGame();
             
-            // Убрали автозапуск - теперь всегда показывается TAP TO START
+            // Когда UI готов к показу - вызываем ready() для Farcaster
+            if (window.farcasterManager && window.farcasterManager.isFrameEnvironment) {
+                console.log('🎮 Game UI ready, calling notifyAppReady()...');
+                await window.farcasterManager.notifyAppReady();
+            }
         });
 
         // Prevent mobile scrolling and context menu
