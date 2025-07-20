@@ -34,6 +34,19 @@ class FarcasterManager {
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
 
+            // НОВОЕ: Вызываем ready() сразу после загрузки SDK
+            if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+                try {
+                    console.log('🚀 Calling ready() immediately after SDK load...');
+                    await this.sdk.actions.ready({
+                        disableNativeGestures: false
+                    });
+                    console.log('✅ Ready() called successfully after SDK load');
+                } catch (error) {
+                    console.error('❌ Ready() error after SDK load:', error);
+                }
+            }
+
             // ИСПРАВЛЕНО: Проверяем окружение через SDK
             let isInMiniAppEnv = true;
             try {
@@ -112,9 +125,6 @@ class FarcasterManager {
             });
 
             this.isReady = true;
-
-            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() для скрытия splash screen
-            await this.notifyAppReady();
 
             // Уведомляем колбэки
             this.callbacks.ready.forEach(callback => {
