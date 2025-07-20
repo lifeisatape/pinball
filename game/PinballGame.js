@@ -413,8 +413,8 @@ class PinballGame {
         this.gameState.isGameOver = true;
         this.gameOverOverlay.show(this.gameState);
 
-        // В Farcaster окружении предлагаем поделиться результатом
-        if (window.sdk && window.farcasterContext) {
+        // В frame окружении предлагаем поделиться результатом
+        if (window.farcasterManager && window.farcasterManager.isInFrame()) {
             setTimeout(() => {
                 this.showNotification('Share your score! 📱', 'info');
             }, 1000);
