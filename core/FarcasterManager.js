@@ -49,15 +49,6 @@ class FarcasterManager {
                 this.isFrameEnvironment = true;
                 console.log('✅ Farcaster SDK initialized successfully');
 
-                // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() СРАЗУ после подтверждения окружения
-                try {
-                    console.log('🚀 Calling ready() immediately after SDK initialization...');
-                    await this.sdk.actions.ready();
-                    console.log('🎉 Farcaster splash screen dismissed successfully');
-                } catch (error) {
-                    console.error('❌ Failed to dismiss splash screen:', error);
-                }
-
                 // ИСПРАВЛЕНО: Получаем контекст правильно - await sdk.context
                 try {
                     this.context = await sdk.context;
@@ -113,12 +104,22 @@ class FarcasterManager {
             // Устанавливаем слушатели событий
             this.setupEventListeners();
 
-            // Ждем готовности UI перед вызовом ready()
+            // Ждем готовности UI и DOM
             await new Promise(resolve => {
-                requestAnimationFrame(() => {
-                    setTimeout(resolve, 500); // Даем время на рендеринг
-                });
+                if (document.readyState !== 'complete') {
+                    window.addEventListener('load', resolve);
+                } else {
+                    requestAnimationFrame(() => {
+                        setTimeout(resolve, 500); // Даем время на рендеринг
+                    });
+                }
             });
+
+            // Дополнительная задержка для мобильных устройств
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
 
             this.isReady = true;
 
@@ -130,6 +131,17 @@ class FarcasterManager {
                     console.error('FarcasterManager: Error in ready callback:', error);
                 }
             });
+
+            // ВЫЗЫВАЕМ ready() В САМОМ КОНЦЕ, когда всё готово
+            if (this.sdk && this.sdk.actions && this.sdk.actions.ready) {
+                try {
+                    console.log('🚀 Calling ready() from setupMiniAppFeatures after full initialization...');
+                    await this.sdk.actions.ready();
+                    console.log('🎉 Farcaster splash screen dismissed successfully');
+                } catch (error) {
+                    console.error('❌ Failed to dismiss splash screen:', error);
+                }
+            }
 
             console.log('🎉 Mini App features setup complete');
         } catch (error) {
