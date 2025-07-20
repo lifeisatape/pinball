@@ -18,13 +18,8 @@ class FarcasterManager {
     async initialize() {
         console.log('FarcasterManager: Initializing...');
         
-        // Проверяем наличие window.sdk (Farcaster SDK)
-        const hasFarcasterSDK = typeof window !== 'undefined' && 
-                               (window.sdk || 
-                                window.parent !== window || 
-                                document.referrer.includes('warpcast.com') ||
-                                document.referrer.includes('farcaster') ||
-                                navigator.userAgent.includes('Warpcast'));
+        // Используем уже определенную переменную window.isMiniApp
+        const hasFarcasterSDK = window.isMiniApp || window.sdk;
 
         if (!hasFarcasterSDK) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
