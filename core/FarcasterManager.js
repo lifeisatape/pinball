@@ -34,11 +34,11 @@ class FarcasterManager {
             const sdk = await this.waitForSDK();
             this.sdk = sdk;
 
-            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после загрузки SDK
+            // КРИТИЧЕСКИ ВАЖНО: Вызываем ready() НЕМЕДЛЕННО после загрузки SDK с retry логикой
             // Не зависим от isInMiniApp() - если SDK загружен, значит мы в Farcaster окружении
             try {
                 console.log('🚀 Calling ready() immediately after SDK loads...');
-                await this.sdk.actions.ready();
+                await this.callReadyWithRetry();
                 console.log('🎉 Farcaster splash screen dismissed successfully');
             } catch (error) {
                 console.error('❌ Failed to dismiss splash screen (will continue anyway):', error);
@@ -97,6 +97,37 @@ class FarcasterManager {
         throw new Error('SDK not loaded within timeout');
     }
 
+    async callReadyWithRetry() {
+        const maxAttempts = 3;
+        
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                console.log(`🚀 Ready() attempt ${attempt}/${maxAttempts}...`);
+                
+                // Для мобильных добавляем дополнительные параметры
+                const readyOptions = {
+                    disableNativeGestures: false
+                };
+
+                await this.sdk.actions.ready(readyOptions);
+                console.log(`✅ Ready() successful on attempt ${attempt}`);
+                return;
+                
+            } catch (error) {
+                console.warn(`⚠️ Ready() attempt ${attempt} failed:`, error.message);
+                
+                if (attempt < maxAttempts) {
+                    // Увеличиваем задержку с каждой попыткой
+                    const delay = attempt * 500;
+                    console.log(`⏳ Waiting ${delay}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    throw error;
+                }
+            }
+        }
+    }
+
     async setupMiniAppFeatures() {
         try {
             // Устанавливаем слушатели событий
@@ -142,9 +173,7 @@ class FarcasterManager {
     async notifyAppReady() {
         if (this.isFrameEnvironment && this.sdk && this.sdk.actions && this.sdk.actions.ready) {
             try {
-                await this.sdk.actions.ready({
-                    disableNativeGestures: false
-                });
+                await this.callReadyWithRetry();
                 console.log('🎉 Farcaster splash screen dismissed');
             } catch (error) {
                 console.error('❌ Failed to dismiss splash screen:', error);
