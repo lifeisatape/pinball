@@ -367,21 +367,7 @@ class SoundManager {
         this.buffers.clear();
         this.sounds.clear();
     }
-    async loadSounds() {
-        console.log('SoundManager: Loading sounds...');
-
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        if (isMobile) {
-            // На мобильных устройствах загружаем звуки только после взаимодействия
-            console.log('📱 Mobile detected - deferring sound loading');
-            this.isReady = true; // Помечаем как готовый для ready()
-            return;
-        }
-
-        // Обычная загрузка для десктопа
-        await this.preloadAllSounds();
-    }
+}
 
 // Создаем глобальный экземпляр
 if (!window.soundManager) {
