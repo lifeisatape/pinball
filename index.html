@@ -142,7 +142,8 @@
                           window.location.search.includes('frame=true') ||
                           window.location.search.includes('miniApp=true') ||
                           document.referrer.includes('warpcast.com') ||
-                          document.referrer.includes('farcaster');
+                          document.referrer.includes('farcaster') ||
+                          new URLSearchParams(window.location.search).get('miniApp') === 'true';
         
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>

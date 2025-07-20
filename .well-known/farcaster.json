@@ -8,7 +8,7 @@
     "version": "next",
     "name": "Pinball: all stars",
     "iconUrl": "https://pinballll.space/gm.png",
-    "homeUrl": "https://pinballll.space/",
+    "homeUrl": "https://pinballll.space/?miniApp=true",
     "splashImageUrl": "https://pinballll.space/gm.png",
     "splashBackgroundColor": "#951212",
     "subtitle": "pinball game",
