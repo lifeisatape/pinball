@@ -137,10 +137,11 @@
     
     <!-- ИСПРАВЛЕНО: Правильная инициализация Farcaster SDK -->
     <script>
-        // ✅ УПРОЩЕНО: Более простая логика
+        // ✅ ОБНОВЛЕНО: Более надежная логика определения Mini App
         window.isMiniApp = window.parent !== window || 
-                          document.referrer.includes('warpcast.com') ||
-                          window.location.search.includes('miniApp=true');
+                          window.location.search.includes('miniApp=true') ||
+                          navigator.userAgent.includes('Warpcast') ||
+                          navigator.userAgent.includes('Farcaster');
         
         console.log('Mini App environment detected:', window.isMiniApp);
     </script>
