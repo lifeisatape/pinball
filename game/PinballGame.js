@@ -231,13 +231,6 @@ class PinballGame {
         });
     }
 
-            }
-        } else {
-            console.log('⚠️ Cannot add to favorites - Farcaster not available');
-            this.showNotification('Add to favorites not available');
-        }
-    }
-
     // ✅ Простое уведомление
     showNotification(message, type = 'info') {
         console.log(`📢 ${message}`);
