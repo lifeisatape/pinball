@@ -78,20 +78,24 @@
         <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
             <div class="game-over-content">
                 <h1>GAME OVER</h1>
-                <div class="final-scores">
-                    <div class="score-line">
-                        <span>Your Score:</span>
-                        <span id="finalScore">0</span>
+                <div class="final-stats">
+                    <div class="stat">
+                        <span class="stat-label">final score</span>
+                        <span class="stat-value" id="finalScore">0</span>
                     </div>
-                    <div class="score-line">
-                        <span>High Score:</span>
-                        <span id="finalHighScore">0</span>
+                    <div class="stat">
+                        <span class="stat-label">level reached</span>
+                        <span class="stat-value" id="levelReached">1</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">high score</span>
+                        <span class="stat-value" id="finalHighScore">0</span>
                     </div>
                 </div>
-                <div class="game-over-buttons">
-                    <button id="restartGame" class="restart-btn">🔄 Play Again</button>
-                    <button id="backToMenu" class="restart-btn">🏠 Back to Menu</button>
-                    <button id="shareScoreBtn" class="restart-btn" style="display: none;">📤 Share Score</button>
+                <div class="game-over-controls">
+                    <button class="restart-btn" id="restartGame">🔄 RESTART</button>
+                    <button class="menu-btn" id="backToMenu">🏠 CHANGE ROOM</button>
+                    <button id="shareScoreBtn" class="restart-btn farcaster-btn" style="display: none;">📤 Share Score</button>
                 </div>
                 <div id="farcasterUserInfo" style="display: none;"></div>
             </div>

@@ -89,9 +89,12 @@ class PinballGame {
         });
 
         // Farcaster buttons
-        document.getElementById('shareScoreBtn')?.addEventListener('click', () => {
-            this.shareScore();
-        });
+        const shareBtn = document.getElementById('shareScoreBtn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => {
+                this.shareScore();
+            });
+        }
 
         document.getElementById('addToAppsBtn')?.addEventListener('click', () => {
             this.addToFavorites();
@@ -209,6 +212,16 @@ class PinballGame {
         if (window.sdk && window.sdk.actions && window.sdk.actions.composeCast) {
             try {
                 const text = `🎮 I just scored ${this.gameState.score || 0} points and reached level ${this.gameState.level || 1} in Pinball All Stars! Can you beat that? 🚀`;
+
+
+    showFarcasterButtons() {
+        const shareButton = document.getElementById('shareScoreBtn');
+        if (window.isMiniApp && window.sdk && shareButton) {
+            shareButton.style.display = 'block';
+            console.log('✅ Farcaster share button shown');
+        }
+    }
+
                 const url = window.location.origin;
 
                 await window.sdk.actions.composeCast({
@@ -410,8 +423,23 @@ class PinballGame {
     }
 
     gameOver() {
+        console.log('🎮 Game Over! Final Score:', this.gameState.score);
+        
+        // Обновляем high score
+        if (this.gameState.score > this.gameState.highScore) {
+            this.gameState.highScore = this.gameState.score;
+            localStorage.setItem('pinball-highscore', this.gameState.highScore);
+            console.log('🏆 New High Score!', this.gameState.highScore);
+        }
+
+        // Останавливаем игру
         this.gameState.isGameOver = true;
+        
+        // Показываем overlay
         this.gameOverOverlay.show(this.gameState);
+        
+        // Показываем Farcaster кнопки если доступны
+        this.showFarcasterButtons();
 
         // В frame окружении предлагаем поделиться результатом
         if (window.farcasterManager && window.farcasterManager.isInFrame()) {
