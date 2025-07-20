@@ -1,0 +1,34 @@
+Creating global FarcasterIntegration instance...
+SoundManager.js:32 SoundManager: Created
+SoundManager.js:52 SoundManager: AudioContext created, state: running
+SoundManager.js:203 SoundManager: Preloading sounds...
+(index):147 Mini App environment detected: true
+(index):148 Window SDK available: false
+(index):149 Referrer: https://farcaster.xyz/
+(index):150 User agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36
+FarcasterManager.js:19 FarcasterManager: Initializing...
+FarcasterManager.js:35 🔄 Loading Farcaster SDK...
+(index):198 Page loaded, initializing game...
+SoundManager.js:222 SoundManager: Loaded menu (1/9)
+FarcasterManager.js:50 ✅ Farcaster SDK initialized successfully
+FarcasterManager.js:84 📋 Farcaster context received
+FarcasterManager.js:89 👤 User info: {fid: 1022212, username: 'lifeisatape.eth', displayName: 'lifeisatape'}
+FarcasterManager.js:110 🎉 Mini App features setup complete
+PinballGame.js:113 PinballGame: Setting up Farcaster integration...
+PinballGame.js:119 PinballGame: Farcaster SDK ready {user: {…}, location: undefined, client: {…}, features: {…}}
+PinballGame.js:156 PinballGame: Adapting UI for Farcaster frame
+PinballGame.js:128 PinballGame: Farcaster user: {fid: 1022212, username: 'lifeisatape.eth', displayName: 'lifeisatape', pfpUrl: 'https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/605a9487-f80d-4d7c-9e86-6bc884435000/original', location: {…}}
+PinballGame.js:160 PinballGame: Got safe area insets: {top: 0, bottom: 0, left: 0, right: 0}
+PinballGame.js:170 PinballGame: Applied safe area insets to game container
+PinballGame.js:182 PinballGame: Hidden element: .level-select-controls
+PinballGame.js:233 PinballGame: User info displayed
+SoundManager.js:222 SoundManager: Loaded level (2/9)
+SoundManager.js:222 SoundManager: Loaded flipperIn (3/9)
+SoundManager.js:222 SoundManager: Loaded flipperOut (4/9)
+SoundManager.js:222 SoundManager: Loaded bumper (5/9)
+(index):223 Sound Manager Status: {isReady: false, enabled: true, contextState: 'running', buffersLoaded: 5, totalSounds: 9}
+SoundManager.js:222 SoundManager: Loaded spinner (6/9)
+SoundManager.js:222 SoundManager: Loaded targetHit (7/9)
+SoundManager.js:222 SoundManager: Loaded targetIn (8/9)
+SoundManager.js:222 SoundManager: Loaded newGameLaunch (9/9)
+SoundManager.js:234 SoundManager: All sounds preloaded
