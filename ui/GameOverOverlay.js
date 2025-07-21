@@ -4,7 +4,6 @@ class GameOverOverlay {
         this.overlay = document.getElementById('gameOverOverlay');
         this.scoreElement = document.getElementById('finalScore');
         this.highScoreElement = document.getElementById('finalHighScore');
-        this.levelElement = document.getElementById('levelReached');
         this.shareButton = document.getElementById('shareScoreBtn');
         
         // Проверяем существование элементов
@@ -27,10 +26,6 @@ class GameOverOverlay {
         
         if (this.highScoreElement) {
             this.highScoreElement.textContent = gameState.highScore.toLocaleString();
-        }
-        
-        if (this.levelElement) {
-            this.levelElement.textContent = gameState.level || 1;
         }
 
         // Показываем кнопку Share только в Farcaster окружении
