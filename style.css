@@ -62,7 +62,7 @@ body {
     overflow: hidden;
 }
 
-/* Animated Big Bright Falling Stars Background for Score Panel */
+/* Animated Big Five-Pointed Falling Stars Background for Score Panel */
 .score-panel::before {
     content: '';
     position: absolute;
@@ -70,23 +70,31 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: 
-        radial-gradient(8px 8px at 15% 20%, #fff, rgba(255, 255, 255, 0.8) 30%, transparent 70%),
-        radial-gradient(6px 6px at 35% 10%, rgba(14, 165, 233, 1), rgba(14, 165, 233, 0.6) 40%, transparent 80%),
-        radial-gradient(10px 10px at 60% 5%, #fff, rgba(255, 255, 255, 0.9) 25%, transparent 60%),
-        radial-gradient(7px 7px at 80% 15%, rgba(14, 165, 233, 0.9), rgba(14, 165, 233, 0.5) 35%, transparent 75%),
-        radial-gradient(9px 9px at 25% 8%, #fff, rgba(255, 255, 255, 0.7) 30%, transparent 65%),
-        radial-gradient(5px 5px at 70% 3%, rgba(14, 165, 233, 1), rgba(14, 165, 233, 0.4) 50%, transparent 85%),
-        radial-gradient(12px 12px at 45% 12%, #fff, rgba(255, 255, 255, 0.8) 20%, transparent 55%),
-        radial-gradient(6px 6px at 85% 7%, rgba(14, 165, 233, 0.8), rgba(14, 165, 233, 0.3) 45%, transparent 80%);
+    background-image: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpolygon points='20,2 24,14 38,14 28,22 32,34 20,26 8,34 12,22 2,14 16,14' fill='%23ffffff' opacity='0.9'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpolygon points='15,1.5 18,10.5 28.5,10.5 21,16.5 24,25.5 15,19.5 6,25.5 9,16.5 1.5,10.5 12,10.5' fill='%230ea5e9' opacity='0.8'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpolygon points='25,2.5 30,18 48,18 35,28 40,43.5 25,33 10,43.5 15,28 2,18 20,18' fill='%23ffffff' opacity='0.95'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 35 35'%3E%3Cpolygon points='17.5,2 21.5,12.5 33.5,12.5 24.5,20 28.5,30.5 17.5,23 6.5,30.5 10.5,20 1.5,12.5 13.5,12.5' fill='%230ea5e9' opacity='0.7'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 45 45'%3E%3Cpolygon points='22.5,2 27,15 42.5,15 31,24 35.5,37 22.5,28.5 9.5,37 14,24 2.5,15 18,15' fill='%23ffffff' opacity='0.85'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 25'%3E%3Cpolygon points='12.5,1 15,8.5 23.5,8.5 17.5,13.5 20,21 12.5,16 5,21 7.5,13.5 1.5,8.5 10,8.5' fill='%230ea5e9' opacity='0.9'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cpolygon points='30,3 36,21 57,21 42,33 48,51 30,39 12,51 18,33 3,21 24,21' fill='%23ffffff' opacity='0.8'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,1.5 19.5,11 30.5,11 22.5,17.5 26,27 16,21 6,27 9.5,17.5 1.5,11 12.5,11' fill='%230ea5e9' opacity='0.75'/%3E%3C/svg%3E");
+    background-position:
+        15% 0%, 35% 0%, 60% 0%, 80% 0%,
+        25% 0%, 70% 0%, 45% 0%, 85% 0%;
     background-size: 
-        120px 600px, 150px 600px, 100px 600px, 180px 600px,
-        140px 600px, 160px 600px, 110px 600px, 130px 600px;
+        40px 40px, 30px 30px, 50px 50px, 35px 35px,
+        45px 45px, 25px 25px, 60px 60px, 32px 32px;
+    background-repeat: repeat-y;
     animation: 
         starsFall1 4s linear infinite,
         starsFall2 5s linear infinite,
         starsFall3 3.5s linear infinite,
-        starsFall4 4.5s linear infinite;
+        starsFall4 4.5s linear infinite,
+        starsFall5 6s linear infinite,
+        starsFall6 3.8s linear infinite,
+        starsFall7 5.2s linear infinite,
+        starsFall8 4.7s linear infinite;
     z-index: -1;
     opacity: 0.8;
 }
@@ -98,20 +106,27 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: 
-        radial-gradient(7px 7px at 10% 18%, rgba(14, 165, 233, 0.9), rgba(14, 165, 233, 0.6) 35%, transparent 70%),
-        radial-gradient(11px 11px at 40% 2%, #fff, rgba(255, 255, 255, 0.8) 25%, transparent 60%),
-        radial-gradient(5px 5px at 75% 11%, rgba(14, 165, 233, 1), rgba(14, 165, 233, 0.4) 50%, transparent 85%),
-        radial-gradient(8px 8px at 90% 6%, #fff, rgba(255, 255, 255, 0.7) 30%, transparent 65%),
-        radial-gradient(6px 6px at 55% 14%, rgba(14, 165, 233, 0.8), rgba(14, 165, 233, 0.5) 40%, transparent 75%),
-        radial-gradient(13px 13px at 20% 4%, #fff, rgba(255, 255, 255, 0.9) 20%, transparent 55%);
+    background-image: 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 38'%3E%3Cpolygon points='19,2 23,13 36,13 26.5,20.5 30.5,31.5 19,25 7.5,31.5 11.5,20.5 2,13 15,13' fill='%230ea5e9' opacity='0.8'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 55 55'%3E%3Cpolygon points='27.5,2.5 33,19 52.5,19 38.5,30 44,46.5 27.5,36 11,46.5 16.5,30 2.5,19 22,19' fill='%23ffffff' opacity='0.9'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cpolygon points='14,1.5 17,9.5 26.5,9.5 20,15 23,23 14,18.5 5,23 8,15 1.5,9.5 11,9.5' fill='%230ea5e9' opacity='0.85'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Cpolygon points='21,2 25.5,15.5 40,15.5 29,25 33.5,38.5 21,31 8.5,38.5 13,25 2,15.5 16.5,15.5' fill='%23ffffff' opacity='0.75'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 33 33'%3E%3Cpolygon points='16.5,1.5 20,11 31,11 23,17.5 26.5,27 16.5,21 6.5,27 10,17.5 2,11 13,11' fill='%230ea5e9' opacity='0.9'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 65 65'%3E%3Cpolygon points='32.5,3 39,22 62,22 45,35 51.5,54 32.5,42 13.5,54 20,35 3,22 26,22' fill='%23ffffff' opacity='0.8'/%3E%3C/svg%3E");
+    background-position:
+        10% 0%, 40% 0%, 75% 0%, 90% 0%,
+        55% 0%, 20% 0%;
     background-size: 
-        170px 600px, 90px 600px, 200px 600px, 125px 600px,
-        155px 600px, 115px 600px;
+        38px 38px, 55px 55px, 28px 28px, 42px 42px,
+        33px 33px, 65px 65px;
+    background-repeat: repeat-y;
     animation: 
-        starsFall5 6s linear infinite,
-        starsFall6 3.8s linear infinite,
-        starsFall7 5.2s linear infinite;
+        starsFall9 5.5s linear infinite,
+        starsFall10 4.2s linear infinite,
+        starsFall11 6.8s linear infinite,
+        starsFall12 3.7s linear infinite,
+        starsFall13 5.9s linear infinite,
+        starsFall14 4.8s linear infinite;
     z-index: -1;
     opacity: 0.6;
 }
@@ -149,6 +164,41 @@ body {
 @keyframes starsFall7 {
     0% { transform: translateY(-100px); }
     100% { transform: translateY(calc(100vh + 100px)); }
+}
+
+@keyframes starsFall8 {
+    0% { transform: translateY(-120px); }
+    100% { transform: translateY(calc(100vh + 120px)); }
+}
+
+@keyframes starsFall9 {
+    0% { transform: translateY(-95px); }
+    100% { transform: translateY(calc(100vh + 95px)); }
+}
+
+@keyframes starsFall10 {
+    0% { transform: translateY(-140px); }
+    100% { transform: translateY(calc(100vh + 140px)); }
+}
+
+@keyframes starsFall11 {
+    0% { transform: translateY(-75px); }
+    100% { transform: translateY(calc(100vh + 75px)); }
+}
+
+@keyframes starsFall12 {
+    0% { transform: translateY(-160px); }
+    100% { transform: translateY(calc(100vh + 160px)); }
+}
+
+@keyframes starsFall13 {
+    0% { transform: translateY(-85px); }
+    100% { transform: translateY(calc(100vh + 85px)); }
+}
+
+@keyframes starsFall14 {
+    0% { transform: translateY(-125px); }
+    100% { transform: translateY(calc(100vh + 125px)); }
 }
 
 .score-item {
