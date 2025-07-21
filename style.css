@@ -169,7 +169,7 @@ body {
     color: var(--accent-color);
     font-size: 2.5em;
     margin-bottom: 30px;
-    text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+    text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
 }
 
 .final-scores {
@@ -235,7 +235,7 @@ body {
     color: var(--accent-color);
     margin-bottom: 16px;
     letter-spacing: 2px;
-    text-shadow: 0 0 20px rgba(6, 214, 160, 0.5);
+    text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
     animation: glow 2s ease-in-out infinite alternate;
 }
 
@@ -713,7 +713,7 @@ body {
     color: var(--accent-color);
     margin-bottom: 30px;
     letter-spacing: 3px;
-    text-shadow: 0 0 30px rgba(6, 214, 160, 0.6);
+    text-shadow: 0 0 30px rgba(14, 165, 233, 0.6);
     animation: glow 2s ease-in-out infinite alternate;
 }
 
@@ -760,7 +760,7 @@ body {
     color: var(--accent-color);
     margin-bottom: 40px;
     letter-spacing: 3px;
-    text-shadow: 0 0 30px rgba(6, 214, 160, 0.6);
+    text-shadow: 0 0 30px rgba(14, 165, 233, 0.6);
     animation: glow 2s ease-in-out infinite alternate;
 }
 
@@ -828,10 +828,10 @@ body {
 /* Animations */
 @keyframes glow {
     from {
-        text-shadow: 0 0 20px rgba(6, 214, 160, 0.4);
+        text-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
     }
     to {
-        text-shadow: 0 0 30px rgba(6, 214, 160, 0.8), 0 0 40px rgba(6, 214, 160, 0.6);
+        text-shadow: 0 0 30px rgba(14, 165, 233, 0.8), 0 0 40px rgba(14, 165, 233, 0.6);
     }
 }
 
@@ -944,7 +944,7 @@ body {
     color: var(--accent-color);
     font-size: 2.5em;
     margin-bottom: 30px;
-    text-shadow: 0 0 20px rgba(6, 214, 160, 0.5);
+    text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
     animation: glow 2s ease-in-out infinite alternate;
 }
 
@@ -1080,3 +1080,5 @@ body {
 
     border-color: #666;
 }
+
+/* Replaced all instances of green color references in text-shadow properties with blue color references. */
