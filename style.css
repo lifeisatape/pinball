@@ -11,8 +11,8 @@
 :root {
     --primary-color: #0F172A;
     --secondary-color: #1E293B;
-    --accent-color: #06D6A0;
-    --accent-hover: #05C490;
+    --accent-color: #0EA5E9;
+    --accent-hover: #0284C7;
     --text-primary: #F8FAFC;
     --text-secondary: #94A3B8;
     --border-color: #334155;
@@ -1064,7 +1064,7 @@ body {
 #farcasterUserInfo {
     margin: 15px 0;
     text-align: center;
-    color: #00ff00;
+    color: #0EA5E9;
     font-size: 14px;
     background: rgba(0, 0, 0, 0.3);
     padding: 10px;
