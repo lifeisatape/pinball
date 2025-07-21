@@ -59,6 +59,88 @@ body {
     z-index: 100;
     flex: 1;
     min-height: 60px;
+    overflow: hidden;
+}
+
+/* Animated Stars Background for Score Panel */
+.score-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(2px 2px at 20% 30%, #fff, transparent),
+        radial-gradient(2px 2px at 40% 70%, rgba(14, 165, 233, 0.8), transparent),
+        radial-gradient(1px 1px at 90% 40%, #fff, transparent),
+        radial-gradient(1px 1px at 50% 50%, rgba(14, 165, 233, 0.6), transparent),
+        radial-gradient(2px 2px at 80% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 10% 60%, rgba(14, 165, 233, 0.7), transparent),
+        radial-gradient(2px 2px at 60% 90%, #fff, transparent),
+        radial-gradient(1px 1px at 30% 20%, rgba(14, 165, 233, 0.5), transparent),
+        radial-gradient(1px 1px at 70% 80%, #fff, transparent),
+        radial-gradient(2px 2px at 15% 85%, rgba(14, 165, 233, 0.8), transparent);
+    background-size: 
+        200px 100px, 250px 120px, 300px 150px, 400px 200px, 350px 180px,
+        280px 140px, 320px 160px, 380px 190px, 420px 210px, 360px 180px;
+    animation: 
+        starsMove1 15s linear infinite,
+        starsMove2 20s linear infinite,
+        starsMove3 25s linear infinite;
+    z-index: -1;
+    opacity: 0.3;
+}
+
+.score-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(1px 1px at 25% 80%, #fff, transparent),
+        radial-gradient(2px 2px at 75% 20%, rgba(14, 165, 233, 0.9), transparent),
+        radial-gradient(1px 1px at 45% 40%, #fff, transparent),
+        radial-gradient(2px 2px at 85% 60%, rgba(14, 165, 233, 0.7), transparent),
+        radial-gradient(1px 1px at 5% 30%, #fff, transparent),
+        radial-gradient(2px 2px at 95% 90%, rgba(14, 165, 233, 0.6), transparent),
+        radial-gradient(1px 1px at 65% 15%, #fff, transparent),
+        radial-gradient(2px 2px at 35% 75%, rgba(14, 165, 233, 0.8), transparent);
+    background-size: 
+        180px 90px, 220px 110px, 260px 130px, 340px 170px,
+        300px 150px, 240px 120px, 320px 160px, 280px 140px;
+    animation: 
+        starsMove4 18s linear infinite reverse,
+        starsMove5 22s linear infinite reverse;
+    z-index: -1;
+    opacity: 0.2;
+}
+
+@keyframes starsMove1 {
+    0% { transform: translateX(-100px) translateY(0px); }
+    100% { transform: translateX(calc(100vw + 100px)) translateY(-20px); }
+}
+
+@keyframes starsMove2 {
+    0% { transform: translateX(-150px) translateY(10px); }
+    100% { transform: translateX(calc(100vw + 150px)) translateY(-30px); }
+}
+
+@keyframes starsMove3 {
+    0% { transform: translateX(-200px) translateY(-10px); }
+    100% { transform: translateX(calc(100vw + 200px)) translateY(20px); }
+}
+
+@keyframes starsMove4 {
+    0% { transform: translateX(calc(100vw + 100px)) translateY(0px); }
+    100% { transform: translateX(-100px) translateY(30px); }
+}
+
+@keyframes starsMove5 {
+    0% { transform: translateX(calc(100vw + 120px)) translateY(-15px); }
+    100% { transform: translateX(-120px) translateY(25px); }
 }
 
 .score-item {
