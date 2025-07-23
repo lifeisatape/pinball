@@ -197,29 +197,25 @@
         window.addEventListener('load', async () => {
             console.log('🎮 Page loaded, waiting for SDK...');
             
-            // Ждем загрузки SDK
-            let attempts = 0;
-            const maxAttempts = 200;
+            // Сначала определяем среду
+            console.log('🔍 Detecting Mini App environment...');
+            window.isMiniApp = window.sdk?.isInMiniApp?.() || false;
             
-            while (!window.sdk && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-                attempts++;
-            }
-            
-            if (window.sdk && window.isMiniApp) {
-                console.log('✅ SDK ready, creating FarcasterManager...');
+            if (window.isMiniApp && window.sdk) {
+                console.log('📦 Farcaster SDK loaded');
+                console.log('🚀 Calling ready() immediately...');
+                
+                try {
+                    await window.sdk.actions.ready();
+                    console.log('✅ Ready() called successfully');
+                } catch (error) {
+                    console.error('❌ Ready() failed:', error);
+                }
                 
                 // СОЗДАЕМ FarcasterManager ТОЛЬКО ПОСЛЕ загрузки SDK
                 if (typeof FarcasterManager !== 'undefined') {
                     window.farcasterManager = new FarcasterManager();
-                    console.log('✅ FarcasterManager instance created');
-                }
-                
-                // Ждем инициализации FarcasterManager
-                let fmAttempts = 0;
-                while (!window.farcasterManager?.isReady && fmAttempts < 50) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    fmAttempts++;
+                    console.log('✅ FarcasterManager created');
                 }
                 
                 console.log('🎮 Initializing Mini App game...');

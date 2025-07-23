@@ -443,7 +443,7 @@ class PinballGame {
         this.showFarcasterButtons();
 
         // В frame окружении предлагаем поделиться результатом
-        if (window.farcasterManager && window.farcasterManager.isInFrame()) {
+        if (window.farcasterManager && window.farcasterManager.isFrameEnvironment) {
             setTimeout(() => {
                 this.showNotification('Share your score! 📱', 'info');
             }, 1000);

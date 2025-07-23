@@ -54,9 +54,11 @@ class GameOverOverlay {
     }
 
     showFarcasterButtons() {
-        if (window.isMiniApp && window.sdk && this.farcasterActions) {
+        if (window.isMiniApp && window.farcasterManager?.isFrameEnvironment && this.farcasterActions) {
             this.farcasterActions.style.display = 'flex';
             console.log('✅ Farcaster action buttons shown');
+        } else {
+            console.log('ℹ️ Farcaster buttons hidden - not in Mini App or manager not ready');
         }
     }
 
