@@ -21,11 +21,11 @@ class FarcasterManager {
         console.log('FarcasterManager: Initializing...');
 
         // Ждем загрузки SDK если он еще не готов
-        if (!window.sdk && window.isMiniApp === undefined) {
+        if (!window.sdk || window.isMiniApp === undefined) {
             console.log('🔄 Waiting for SDK to load...');
             let attempts = 0;
-            while (!window.sdk && attempts < 100) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+            while ((!window.sdk || window.isMiniApp === undefined) && attempts < 100) {
+                await new Promise(resolve => setTimeout(resolve, 50));
                 attempts++;
             }
         }
