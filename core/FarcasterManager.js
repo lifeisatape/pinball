@@ -297,23 +297,53 @@ class FarcasterManager {
     // === FRAME ACTIONS ===
 
     async addToFavorites() {
-        if (!this.isFrameEnvironment) {
-            console.log('FarcasterManager: addToFavorites called outside frame environment');
-            return false;
-        }
-
-        if (!this.sdk || !this.sdk.actions) {
-            console.error('FarcasterManager: SDK actions not available for addToFavorites');
+        if (!this.isFrameEnvironment || !this.sdk?.actions?.addFrame) {
+            console.log('Farcaster не доступен');
             return false;
         }
 
         try {
-            await this.sdk.actions.addMiniApp();
-            console.log('FarcasterManager: Add frame action triggered successfully');
+            await this.sdk.actions.addFrame();
+            console.log('✅ Приложение добавлено в избранное');
             return true;
         } catch (error) {
-            console.error('FarcasterManager: Failed to add frame:', error);
+            console.error('❌ Ошибка добавления в избранное:', error);
             return false;
+        }
+    }
+
+    // 🎯 Метод для отправки доната через sendToken
+    async sendDonation(amount = '1000000', recipientAddress = '0x7Ea45b01EECaE066f37500c92B10421937571f75') {
+        if (!this.isFrameEnvironment || !this.sdk?.actions?.sendToken) {
+            console.log('Farcaster SDK недоступен для доната');
+            return { success: false, reason: 'sdk_unavailable' };
+        }
+
+        try {
+            console.log('🚀 Инициирую донат через Farcaster SDK...');
+
+            const result = await this.sdk.actions.sendToken({
+                token: 'eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+                amount: amount, // 1 USDC = 1000000 (6 decimals)
+                recipientAddress: recipientAddress
+            });
+
+            if (result.success) {
+                console.log('✅ Донат успешно отправлен:', result.send.transaction);
+                return result;
+            } else {
+                console.log('❌ Ошибка при донате:', result.error);
+                return result;
+            }
+        } catch (error) {
+            console.error('❌ Exception при отправке доната:', error);
+
+            // Обработка специфичных ошибок
+            if (error.name === 'RejectedByUser') {
+                return { success: false, reason: 'rejected_by_user' };
+            }
+
+            return { success: false, reason: 'send_failed', error: error.message };
         }
     }
 

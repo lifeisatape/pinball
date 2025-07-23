@@ -65,7 +65,19 @@
                 <div class="game-over-controls">
                     <button class="restart-btn" id="restartGame">ONE MORE TIME</button>
                     <button class="menu-btn" id="backToMenu">SELECT ROOM</button>
-                    <button id="shareScoreBtn" class="restart-btn farcaster-btn" style="display: none;">⭐SHARE⭐</button>
+                    
+                    <!-- 🎯 НОВЫЕ FARCASTER КНОПКИ -->
+                    <div class="farcaster-actions" id="farcasterActions" style="display: none;">
+                        <button id="shareScoreBtn" class="farcaster-btn share-btn">
+                            ⭐ SHARE SCORE ⭐
+                        </button>
+                        <button id="donateBtn" class="farcaster-btn donate-btn">
+                            💎 DONATE 1 USDC 💎
+                        </button>
+                        <button id="addToAppsBtn" class="farcaster-btn favorite-btn">
+                            ⭐ ADD TO FAVORITES ⭐
+                        </button>
+                    </div>
                 </div>
                 <div id="farcasterUserInfo" style="display: none;"></div>
             </div>

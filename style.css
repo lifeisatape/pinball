@@ -173,6 +173,7 @@ body {
     font-size: 2.5em;
     margin-bottom: 30px;
     text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
+    animation: glow 2s ease-in-out infinite alternate;
 }
 
 .final-scores {
@@ -1056,21 +1057,95 @@ body {
 
 .shape-btn.active {
     background: #555;
+    border-color: #666;
+}
 
+/* 🎯 Farcaster Actions Section */
+.farcaster-actions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
-/* Farcaster кнопка */
 .farcaster-btn {
-    background: linear-gradient(135deg, #7C3AED, #5B21B6) !important;
-    border: 1px solid #7C3AED !important;
-    color: white !important;
+    background: linear-gradient(135deg, #7C3AED, #5B21B6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
 }
 
 .farcaster-btn:hover {
-    background: linear-gradient(135deg, #5B21B6, #4C1D95) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
 }
 
+.farcaster-btn:active {
+    transform: translateY(0);
+}
+
+/* Специальные стили для кнопки доната */
+.donate-btn {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    position: relative;
+    animation: donateGlow 2s ease-in-out infinite alternate;
+}
+
+.donate-btn:hover {
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    transform: translateY(-2px) scale(1.02);
+}
+
+.share-btn {
+    background: linear-gradient(135deg, #06B6D4, #0891B2);
+}
+
+.share-btn:hover {
+    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+}
+
+.favorite-btn {
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+}
+
+.favorite-btn:hover {
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Анимация для кнопки доната */
+@keyframes donateGlow {
+    from {
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+    }
+    to {
+        box-shadow: 0 0 30px rgba(245, 158, 11, 0.6), 0 0 40px rgba(245, 158, 11, 0.4);
+    }
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 480px) {
+    .farcaster-btn {
+        padding: 10px 16px;
+        font-size: 11px;
+    }
+
+    .farcaster-actions {
+        gap: 10px;
+    }
+}
+
+/* Стили для Farcaster элементов */
 #farcasterUserInfo {
     margin: 15px 0;
     text-align: center;
@@ -1086,9 +1161,6 @@ body {
     margin: 0 auto 10px;
     border-radius: 50%;
     border: 2px solid var(--accent-color);
-}
-
-    border-color: #666;
 }
 
 /* Replaced all instances of green color references in text-shadow properties with blue color references. */
