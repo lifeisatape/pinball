@@ -20,9 +20,21 @@ class FarcasterManager {
     async init() {
         console.log('FarcasterManager: Initializing...');
 
+        // Ждем загрузки SDK если он еще не готов
+        if (!window.sdk && window.isMiniApp === undefined) {
+            console.log('🔄 Waiting for SDK to load...');
+            let attempts = 0;
+            while (!window.sdk && attempts < 100) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+        }
+
         // Если не в Mini App окружении, просто не инициализируемся
         if (!window.isMiniApp) {
             console.log('⏭️ Not in Mini App environment, skipping Farcaster initialization');
+            this.isReady = true;
+            console.log('✅ FarcasterManager initialization complete');
             return;
         }
 
@@ -165,6 +177,9 @@ class FarcasterManager {
         } catch (error) {
             console.error('Error setting up Mini App features:', error);
         }
+        
+        this.isReady = true;
+        console.log('✅ FarcasterManager initialization complete');
     }
 
     // ИСПРАВЛЕНО: Отдельный метод для ready() как в рабочем примере
@@ -562,6 +577,20 @@ class FarcasterManager {
         return this.context?.location?.type === 'launcher';
     }
 
+    async reinitialize() {
+        console.log('🔄 Reinitializing FarcasterManager...');
+        
+        // Сброс состояния
+        this.isFrameEnvironment = false;
+        this.isReady = false;
+        this.context = null;
+        this.user = null;
+        this.sdk = null;
+        
+        // Повторная инициализация
+        await this.init();
+    }
+
     // === DEBUG ===
 
     debug() {
@@ -587,11 +616,4 @@ class FarcasterManager {
     }
 }
 
-// Создаем глобальный экземпляр
-try {
-    console.log('Creating global FarcasterManager instance...');
-    window.farcasterManager = new FarcasterManager();
-    console.log('✅ Global FarcasterManager instance created successfully');
-} catch (error) {
-    console.error('❌ Failed to create global FarcasterManager instance:', error);
-}
+console.log('✅ FarcasterManager class ready for initialization');

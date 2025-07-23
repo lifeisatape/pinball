@@ -197,9 +197,9 @@
         window.addEventListener('load', async () => {
             console.log('🎮 Page loaded, waiting for SDK...');
             
-            // Ждем загрузки SDK с увеличенным таймаутом для мобильного
+            // Ждем загрузки SDK
             let attempts = 0;
-            const maxAttempts = 200; // 10 секунд для мобильного
+            const maxAttempts = 200;
             
             while (!window.sdk && attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 50));
@@ -207,16 +207,35 @@
             }
             
             if (window.sdk && window.isMiniApp) {
-                console.log('✅ SDK ready, initializing Mini App game...');
+                console.log('✅ SDK ready, creating FarcasterManager...');
                 
-                // Инициализируем FarcasterManager только после готовности SDK
-                if (window.FarcasterManager) {
+                // СОЗДАЕМ FarcasterManager ТОЛЬКО ПОСЛЕ загрузки SDK
+                if (typeof FarcasterManager !== 'undefined') {
                     window.farcasterManager = new FarcasterManager();
+                    console.log('✅ FarcasterManager instance created');
                 }
                 
+                // Ждем инициализации FarcasterManager
+                let fmAttempts = 0;
+                while (!window.farcasterManager?.isReady && fmAttempts < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    fmAttempts++;
+                }
+                
+                console.log('🎮 Initializing Mini App game...');
                 const game = new PinballGame();
             } else {
                 console.log('🎮 Initializing regular game...');
+                
+                // В обычной среде создаем заглушку
+                window.farcasterManager = {
+                    isFrameEnvironment: false,
+                    isReady: false,
+                    sendDonation: () => ({ success: false, reason: 'not_in_miniapp' }),
+                    shareScore: () => {},
+                    addToFavorites: () => false
+                };
+                
                 const game = new PinballGame();
             }
         });
