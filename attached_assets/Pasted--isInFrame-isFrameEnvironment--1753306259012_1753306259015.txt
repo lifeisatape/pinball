@@ -1,0 +1,78 @@
+Основные проблемы:
+
+Неправильный вызов метода - isInFrame() вместо isFrameEnvironment
+Неправильный порядок инициализации - FarcasterManager создается до загрузки SDK
+Неправильное определение Mini App среды - нужно использовать официальный API
+
+📋 Пошаговое исправление:
+Шаг 1: Исправьте game/PinballGame.js
+Найдите строку 446 и исправьте:
+javascript// БЫЛО (НЕПРАВИЛЬНО):
+if (window.farcasterManager && window.farcasterManager.isInFrame()) {
+
+// ДОЛЖНО БЫТЬ:
+if (window.farcasterManager && window.farcasterManager.isFrameEnvironment) {
+Шаг 2: Полностью переделайте инициализацию в index.html
+Замените секцию инициализации в конце файла:Исправленная инициализация в index.htmlCode // Замените секцию инициализации в index.html
+<script type="module">
+    // Функция определения Mini App среды
+    async function detectMiniApp() {
+        try {
+            console.log('🔍 Detecting Mini App environment...');
+            
+          Strategized refactoring FarcasterManager.js for improved initialization method.1sТеперь нужно также исправить FarcasterManager.js, чтобы убрать автосоздание экземпляра в конце файла и улучшить метод init().Шаг 3: Исправьте core/FarcasterManager.js
+В конце файла FarcasterManager.js найдите и УДАЛИТЕ эти строки:
+javascript// УДАЛИТЕ эти строки в конце файла:
+try {
+    console.log('Creating global FarcasterManager instance...');
+    window.farcasterManager = new FarcasterManager();
+    console.log('✅ Global FarcasterManager instance created successfully');
+} catch (error) {
+    console.error('❌ Failed to create global FarcasterManager instance:', error);
+}
+Замените их на:
+javascriptconsole.log('✅ FarcasterManager class ready for initialization');
+Шаг 4: Улучшите метод init() в FarcasterManager
+В начале метода init() добавьте дополнительную проверку:Улучшенный метод init() для FarcasterManagerCode async init() {
+    console.log('FarcasterManager: Initializing...');
+
+    // Ждем загрузки SDK если он еще не готов
+    if (!window.sdk || window.isMiniApp === undefined) {
+        console.log('🔄 Waiting for SDK to load...');
+        let attempts = Investigated Farcaster button display method in GameOverOverlay.js1sТеперь нужно также убедиться, что метод showFarcasterButtons() в GameOverOverlay.js правильно проверяет состояние.Шаг 5: Исправьте ui/GameOverOverlay.js
+Найдите метод showFarcasterButtons() и обновите его:
+javascriptshowFarcasterButtons() {
+    if (window.isMiniApp && window.farcasterManager?.isFrameEnvironment && this.farcasterActions) {
+        this.farcasterActions.style.display = 'flex';
+        console.log('✅ Farcaster action buttons shown');
+    } else {
+        console.log('ℹ️ Farcaster buttons hidden - not in Mini App or manager not ready');
+    }
+}
+🧪 Тестирование:
+После исправлений, в консоли браузера выполните:
+javascript// Проверка состояния
+function debugFarcaster() {
+    console.log('=== FARCASTER DEBUG ===');
+    console.log('window.isMiniApp:', window.isMiniApp);
+    console.log('window.sdk:', !!window.sdk);
+    console.log('window.farcasterManager:', !!window.farcasterManager);
+    
+    if (window.farcasterManager) {
+        console.log('isFrameEnvironment:', window.farcasterManager.isFrameEnvironment);
+        console.log('isReady:', window.farcasterManager.isReady);
+        console.log('SDK available:', !!window.farcasterManager.sdk);
+    }
+}
+
+debugFarcaster();
+✅ Результат:
+После этих исправлений:
+
+✅ Правильный порядок инициализации - SDK → FarcasterManager → Game
+✅ Официальный API Farcaster - используется sdk.isInMiniApp()
+✅ Корректные проверки методов - isFrameEnvironment вместо isInFrame()
+✅ Graceful fallback - работает в обычном браузере
+✅ Правильный вызов ready() - убирает splash screen
+
+Основная проблема была в том, что вы пытались использовать FarcasterManager до полной загрузки SDK, и вызывали несуществующий метод isInFrame().
