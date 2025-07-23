@@ -244,11 +244,11 @@ class PinballGame {
 
     // ✅ Простое добавление в избранное
     async addToFavorites() {
-        if (window.sdk && window.sdk.actions && window.sdk.actions.addFrame) {
+        if (window.sdk && window.sdk.actions && window.sdk.actions.addMiniApp) {
             try {
-                await window.sdk.actions.addFrame();
+                await window.sdk.actions.addMiniApp();
                 console.log('✅ Add to favorites prompted');
-                this.showNotification('App added to favorites! ⭐');
+                this.showNotification('Added!⭐');
             } catch (error) {
                 console.error('❌ Error adding to favorites:', error);
                 this.showNotification('Failed to add to favorites');

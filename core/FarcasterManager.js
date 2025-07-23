@@ -308,7 +308,7 @@ class FarcasterManager {
         }
 
         try {
-            await this.sdk.actions.addFrame();
+            await this.sdk.actions.addMiniApp();
             console.log('FarcasterManager: Add frame action triggered successfully');
             return true;
         } catch (error) {
