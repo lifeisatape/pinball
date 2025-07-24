@@ -34,6 +34,18 @@ class InputManager {
 
         // Touch events - bind to document for full-screen control
         document.addEventListener('touchstart', (e) => {
+            // Check if any overlay is visible - don't activate flippers if so
+            const gameOverOverlay = document.getElementById('gameOverOverlay');
+            const levelSelectOverlay = document.getElementById('levelSelectScreen');
+            const tapToStartOverlay = document.getElementById('tapToStartScreen');
+            
+            if ((gameOverOverlay && gameOverOverlay.style.display !== 'none') ||
+                (levelSelectOverlay && levelSelectOverlay.style.display !== 'none') ||
+                (tapToStartOverlay && tapToStartOverlay.style.display !== 'none')) {
+                // Don't prevent default or activate flippers when overlays are visible
+                return;
+            }
+            
             e.preventDefault();
             
             // Process all new touches
@@ -55,6 +67,18 @@ class InputManager {
         }, { passive: false });
 
         document.addEventListener('touchend', (e) => {
+            // Check if any overlay is visible - don't handle flipper logic if so
+            const gameOverOverlay = document.getElementById('gameOverOverlay');
+            const levelSelectOverlay = document.getElementById('levelSelectScreen');
+            const tapToStartOverlay = document.getElementById('tapToStartScreen');
+            
+            if ((gameOverOverlay && gameOverOverlay.style.display !== 'none') ||
+                (levelSelectOverlay && levelSelectOverlay.style.display !== 'none') ||
+                (tapToStartOverlay && tapToStartOverlay.style.display !== 'none')) {
+                // Don't prevent default or handle flipper logic when overlays are visible
+                return;
+            }
+            
             e.preventDefault();
 
             // Process ended touches
