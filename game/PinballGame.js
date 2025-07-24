@@ -52,20 +52,20 @@ class PinballGame {
         this.tapToStartScreen.addEventListener('click', async () => {
             console.log('PinballGame: User clicked TAP TO START');
             this.userHasInteracted = true;
-
+            
             // НЕМЕДЛЕННАЯ активация AudioContext
             await this.activateAudioContext();
-
+            
             this.startLoadingProcess();
         });
 
         this.tapToStartScreen.addEventListener('touchstart', async () => {
             console.log('PinballGame: User touched TAP TO START');
             this.userHasInteracted = true;
-
+            
             // НЕМЕДЛЕННАЯ активация AudioContext
             await this.activateAudioContext();
-
+            
             this.startLoadingProcess();
         }, { passive: true });
 
@@ -124,7 +124,7 @@ class PinballGame {
 
     async activateAudioContext() {
         console.log('PinballGame: Activating AudioContext immediately...');
-
+        
         if (!window.soundManager || !window.soundManager.audioContext) {
             console.warn('PinballGame: SoundManager not ready for activation');
             return;
@@ -139,7 +139,7 @@ class PinballGame {
                 try {
                     await context.resume();
                     console.log(`PinballGame: AudioContext activation attempt ${attempt}, state:`, context.state);
-
+                    
                     if (context.state === 'running') {
                         console.log('PinballGame: AudioContext successfully activated!');
                         return;
@@ -147,7 +147,7 @@ class PinballGame {
                 } catch (error) {
                     console.warn(`PinballGame: AudioContext activation attempt ${attempt} failed:`, error);
                 }
-
+                
                 // Небольшая пауза между попытками
                 if (attempt < 2) {
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -213,7 +213,7 @@ class PinballGame {
             try {
                 // Получаем название текущего уровня
                 const levelName = this.gameState.currentLevelName || 'Pinball All Stars';
-
+                
                 // Создаем более красивое название для шаринга
                 let displayLevelName = levelName;
                 if (levelName.toLowerCase() === 'degen') {
@@ -425,7 +425,7 @@ class PinballGame {
 
     gameOver() {
         console.log('🎮 Game Over! Final Score:', this.gameState.score);
-
+        
         // Обновляем high score
         if (this.gameState.score > this.gameState.highScore) {
             this.gameState.highScore = this.gameState.score;
@@ -435,10 +435,10 @@ class PinballGame {
 
         // Останавливаем игру
         this.gameState.isGameOver = true;
-
+        
         // Показываем overlay
         this.gameOverOverlay.show(this.gameState);
-
+        
         // Показываем Farcaster кнопки если доступны
         this.showFarcasterButtons();
 
@@ -787,5 +787,5 @@ class PinballGame {
         });
     }
 
-
+    
 }
