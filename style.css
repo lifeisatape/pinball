@@ -1011,6 +1011,29 @@ body {
     transform: translateY(-1px);
 }
 
+/* Community contact text */
+.community-contact {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.community-contact p {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 400;
+    margin: 2px 0;
+    letter-spacing: 0.3px;
+}
+
+/* Mobile responsive for community contact */
+@media (max-width: 480px) {
+    .community-contact p {
+        font-size: 11px;
+    }
+}
+
 /* Utility classes */
 .hidden {
     display: none !important;
