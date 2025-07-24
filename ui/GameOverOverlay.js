@@ -16,6 +16,7 @@ class GameOverOverlay {
         this.setupEventListeners();
     }
 
+    
     setupEventListeners() {
         // 🎯 Обработчик кнопки доната
         if (this.donateButton) {
