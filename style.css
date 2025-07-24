@@ -57,7 +57,7 @@ body {
     align-items: center;
     position: relative;
     z-index: 100;
-    flex-shrink: 0;
+    flex: 1;
     min-height: 60px;
     overflow: hidden;
 }
