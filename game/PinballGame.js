@@ -321,6 +321,9 @@ class PinballGame {
     async showLevelSelect() {
         this.gameStarted = false;
 
+        // ✅ Скрываем overlay окончания игры
+        this.gameOverOverlay.hide();
+
         // ✅ Выключить touch на весь экран
         if (this.inputManager) {
             this.inputManager.setGameActive(false);
