@@ -1041,7 +1041,7 @@ body {
     .community-contact p {
         font-size: 13px;
     }
-    
+
     .community-contact p:first-child {
         font-size: 14px;
     }
@@ -1203,3 +1203,25 @@ body {
 }
 
 /* Replaced all instances of green color references in text-shadow properties with blue color references. */
+        /* Flipper touch zones for mobile */
+        .flipper-touch-zones {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            display: flex;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .touch-zone {
+            flex: 1;
+            background: transparent;
+            touch-action: none;
+            user-select: none;
+        }
+
+        .touch-zone.left {
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }

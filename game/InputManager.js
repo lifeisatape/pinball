@@ -4,6 +4,14 @@ class InputManager {
         this.canvas = canvas;
         this.flippers = flippers;
         this.activeTouches = new Set();
+
+        // Additional touch zones for mobile
+        this.touchZones = {
+            left: document.getElementById('leftTouchZone'),
+            right: document.getElementById('rightTouchZone'),
+            container: document.getElementById('flipperTouchZones')
+        };
+
         this.setupEventListeners();
     }
 
@@ -93,6 +101,40 @@ class InputManager {
         this.canvas.addEventListener('mouseup', () => {
             this.handleInput(0, false);
         });
+
+        // Prevent context menu on long press
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Additional touch zones for area below the game
+        if (this.touchZones.left && this.touchZones.right) {
+            // Left zone
+            this.touchZones.left.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.activeTouches.add('extra_left');
+                this.flippers[0].activate();
+            });
+
+            this.touchZones.left.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.activeTouches.delete('extra_left');
+                this.flippers[0].deactivate();
+            });
+
+            // Right zone
+            this.touchZones.right.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.activeTouches.add('extra_right');
+                this.flippers[1].activate();
+            });
+
+            this.touchZones.right.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.activeTouches.delete('extra_right');
+                this.flippers[1].deactivate();
+            });
+        }
     }
 
     handleInput(screenX, isPressed) {
