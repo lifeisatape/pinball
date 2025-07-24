@@ -19,7 +19,7 @@ class LevelSelector {
                     levels.push({
                         filename: levelFile,
                         name: levelData.name || levelFile.replace('.json', ''),
-                        description: levelData.description || 'Custom level',
+                        description: levelData.description || 'special room',
                         data: levelData
                     });
                 }
