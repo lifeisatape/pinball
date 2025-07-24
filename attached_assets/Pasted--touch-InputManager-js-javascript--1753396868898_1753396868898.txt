@@ -1,0 +1,130 @@
+Расширить touch-обработку без изменения интерфейса
+Модифицируйте только InputManager.js:
+javascript// ✅ Добавьте в конструктор InputManager
+constructor(canvas, flippers) {
+    this.canvas = canvas;
+    this.flippers = flippers;
+    this.activeTouches = new Set();
+    this.gameActive = false; // ✅ НОВОЕ: флаг активности игры
+    this.setupEventListeners();
+}
+
+// ✅ Добавьте методы управления
+setGameActive(active) {
+    this.gameActive = active;
+}
+
+// ✅ ЗАМЕНИТЕ setupEventListeners полностью на это:
+setupEventListeners() {
+    // Keyboard events (без изменений)
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+            e.preventDefault();
+        }
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+            this.flippers[0].activate();
+        }
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+            this.flippers[1].activate();
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+            this.flippers[0].deactivate();
+        }
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+            this.flippers[1].deactivate();
+        }
+    });
+
+    // ✅ НОВОЕ: Touch events на весь document (но работают только во время игры)
+    document.addEventListener('touchstart', (e) => {
+        if (!this.gameActive) return; // ✅ Работает только во время игры
+        
+        e.preventDefault();
+        
+        for (let i = 0; i < e.touches.length; i++) {
+            const touch = e.touches[i];
+            const screenX = touch.clientX;
+            const screenWidth = window.innerWidth;
+            const isLeft = screenX < screenWidth * 0.5;
+
+            this.activeTouches.add(touch.identifier + (isLeft ? '_left' : '_right'));
+
+            if (isLeft) {
+                this.flippers[0].activate();
+            } else {
+                this.flippers[1].activate();
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        if (!this.gameActive) return; // ✅ Работает только во время игры
+        
+        e.preventDefault();
+        
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            const screenX = touch.clientX;
+            const screenWidth = window.innerWidth;
+            const isLeft = screenX < screenWidth * 0.5;
+
+            this.activeTouches.delete(touch.identifier + (isLeft ? '_left' : '_right'));
+        }
+
+        // Check if any touches are still active for each flipper
+        let leftActive = false;
+        let rightActive = false;
+
+        this.activeTouches.forEach(touchId => {
+            if (touchId.endsWith('_left')) leftActive = true;
+            if (touchId.endsWith('_right')) rightActive = true;
+        });
+
+        if (!leftActive) this.flippers[0].deactivate();
+        if (!rightActive) this.flippers[1].deactivate();
+    });
+
+    // Mouse events (оставляем на canvas как было)
+    this.canvas.addEventListener('mousedown', (e) => {
+        const rect = this.canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        this.handleInput(screenX, true);
+    });
+
+    this.canvas.addEventListener('mouseup', () => {
+        this.handleInput(0, false);
+    });
+}
+В PinballGame.js добавьте управление активностью:
+javascript// ✅ При старте игры
+startGame() {
+    // ваш существующий код...
+    if (this.inputManager) {
+        this.inputManager.setGameActive(true); // ✅ Включить touch на весь экран
+    }
+}
+
+// ✅ При завершении игры  
+endGame() {
+    // ваш существующий код...
+    if (this.inputManager) {
+        this.inputManager.setGameActive(false); // ✅ Выключить touch на весь экран
+    }
+}
+
+// ✅ При показе оверлеев
+showGameOverOverlay() {
+    // ваш существующий код...
+    if (this.inputManager) {
+        this.inputManager.setGameActive(false); // ✅ Выключить во время оверлея
+    }
+}
+Что это дает:
+✅ Никаких визуальных изменений - интерфейс остается прежним
+✅ Touch работает по всему экрану - но только во время игры
+✅ Нет конфликтов с оверлеями - автоматически отключается
+✅ Левая/правая половина экрана - логика определения стороны
+✅ Безопасно - если флаг false, события игнорируются
