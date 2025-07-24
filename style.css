@@ -1013,24 +1013,37 @@ body {
 
 /* Community contact text */
 .community-contact {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 25px;
+    padding: 20px 15px 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
     text-align: center;
+    background: rgba(6, 214, 160, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(6, 214, 160, 0.2);
 }
 
 .community-contact p {
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 400;
-    margin: 2px 0;
-    letter-spacing: 0.3px;
+    color: var(--accent-color);
+    font-size: 15px;
+    font-weight: 600;
+    margin: 4px 0;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(6, 214, 160, 0.3);
+}
+
+.community-contact p:first-child {
+    font-size: 16px;
+    margin-bottom: 8px;
 }
 
 /* Mobile responsive for community contact */
 @media (max-width: 480px) {
     .community-contact p {
-        font-size: 11px;
+        font-size: 13px;
+    }
+    
+    .community-contact p:first-child {
+        font-size: 14px;
     }
 }
 
