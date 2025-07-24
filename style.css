@@ -50,14 +50,14 @@ body {
 .score-panel {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
     padding: 12px 16px;
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
     z-index: 100;
-    flex: 1;
+    flex-shrink: 0;
     min-height: 60px;
     overflow: hidden;
 }
@@ -141,6 +141,7 @@ body {
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
     width: 100%;
+    flex: 1;
 }
 
 /* Game Over Overlay */
