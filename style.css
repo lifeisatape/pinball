@@ -141,7 +141,9 @@ body {
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
     width: 100%;
-    flex: 1;
+    height: auto;
+    aspect-ratio: 400 / 600;
+    flex-shrink: 0;
 }
 
 /* Game Over Overlay */
