@@ -10,6 +10,9 @@ class GameOverOverlay {
         this.donateButton = document.getElementById('donateBtn');
         this.addToAppsButton = document.getElementById('addToAppsBtn');
 
+        // ✅ ДОБАВЛЯЕМ: Сохраняем ссылку на gameState
+        this.currentGameState = null;
+
         this.setupEventListeners();
     }
 
@@ -38,6 +41,9 @@ class GameOverOverlay {
 
     show(gameState) {
         if (!this.overlay) return;
+
+        // ✅ ИСПРАВЛЕНИЕ: Сохраняем gameState для использования в handleShare
+        this.currentGameState = gameState;
 
         this.overlay.style.display = 'flex';
 
@@ -118,7 +124,17 @@ class GameOverOverlay {
             this.showNotification('Sharing only available in Farcaster Mini App', 'error');
             return;
         }
-        await window.farcasterManager.shareScore();
+
+        // ✅ ИСПРАВЛЕНИЕ: Передаем счет и название уровня
+        if (this.currentGameState) {
+            await window.farcasterManager.shareScore(
+                this.currentGameState.score, 
+                this.currentGameState.currentLevelName
+            );
+        } else {
+            // Fallback: используем метод без параметров
+            await window.farcasterManager.shareScore();
+        }
     }
 
     async handleAddToFavorites() {
