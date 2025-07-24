@@ -364,12 +364,20 @@ class PinballGame {
         try {
             this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
             this.gameState.setCurrentLevel(selectedLevel.name);
+            
+            // ✅ Сбрасываем игровое состояние для нового уровня
+            this.gameState.resetGame();
+            
             await this.initializeGame();
             console.log(`Loaded level: ${selectedLevel.name}`);
         } catch (error) {
             console.error('Error loading selected level:', error);
             this.currentLevel = await this.levelManager.createDefaultLevel();
             this.gameState.setCurrentLevel('default');
+            
+            // ✅ Сбрасываем игровое состояние и для fallback уровня
+            this.gameState.resetGame();
+            
             await this.initializeGame();
         }
     }
