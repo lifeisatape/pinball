@@ -4,17 +4,21 @@ class InputManager {
         this.canvas = canvas;
         this.flippers = flippers;
         this.activeTouches = new Set();
+        this.gameActive = false; // ✅ НОВОЕ: флаг активности игры
         this.setupEventListeners();
     }
 
+    // ✅ Добавьте методы управления
+    setGameActive(active) {
+        this.gameActive = active;
+    }
+
     setupEventListeners() {
-        // Keyboard events
+        // Keyboard events (без изменений)
         document.addEventListener('keydown', (e) => {
-            // Prevent default arrow key behavior (scrolling)
             if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
                 e.preventDefault();
             }
-
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
                 this.flippers[0].activate();
             }
@@ -32,21 +36,20 @@ class InputManager {
             }
         });
 
-        // Touch events
-        this.canvas.addEventListener('touchstart', (e) => {
+        // ✅ НОВОЕ: Touch events на весь document (но работают только во время игры)
+        document.addEventListener('touchstart', (e) => {
+            if (!this.gameActive) return; // ✅ Работает только во время игры
+            
             e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-
-            // Process all new touches
+            
             for (let i = 0; i < e.touches.length; i++) {
                 const touch = e.touches[i];
-                const screenX = touch.clientX - rect.left;
-                const isLeft = screenX < this.canvas.width * 0.5;
+                const screenX = touch.clientX;
+                const screenWidth = window.innerWidth;
+                const isLeft = screenX < screenWidth * 0.5;
 
-                // Add touch to active set
                 this.activeTouches.add(touch.identifier + (isLeft ? '_left' : '_right'));
 
-                // Activate appropriate flipper
                 if (isLeft) {
                     this.flippers[0].activate();
                 } else {
@@ -55,17 +58,17 @@ class InputManager {
             }
         });
 
-        this.canvas.addEventListener('touchend', (e) => {
+        document.addEventListener('touchend', (e) => {
+            if (!this.gameActive) return; // ✅ Работает только во время игры
+            
             e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-
-            // Process ended touches
+            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                const screenX = touch.clientX - rect.left;
-                const isLeft = screenX < this.canvas.width * 0.5;
+                const screenX = touch.clientX;
+                const screenWidth = window.innerWidth;
+                const isLeft = screenX < screenWidth * 0.5;
 
-                // Remove touch from active set
                 this.activeTouches.delete(touch.identifier + (isLeft ? '_left' : '_right'));
             }
 
@@ -78,12 +81,11 @@ class InputManager {
                 if (touchId.endsWith('_right')) rightActive = true;
             });
 
-            // Deactivate flippers that have no active touches
             if (!leftActive) this.flippers[0].deactivate();
             if (!rightActive) this.flippers[1].deactivate();
         });
 
-        // Mouse events
+        // Mouse events (оставляем на canvas как было)
         this.canvas.addEventListener('mousedown', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const screenX = e.clientX - rect.left;

@@ -321,6 +321,11 @@ class PinballGame {
     async showLevelSelect() {
         this.gameStarted = false;
 
+        // ✅ Выключить touch на весь экран
+        if (this.inputManager) {
+            this.inputManager.setGameActive(false);
+        }
+
         // Останавливаем игровую музыку и запускаем музыку меню
         if (window.soundManager && window.soundManager.isReady) {
             window.soundManager.stopMusic();
@@ -372,6 +377,7 @@ class PinballGame {
 
             this.hideStartScreen();
             this.inputManager = new InputManager(this.canvas, this.currentLevel.flippers);
+            this.inputManager.setGameActive(true); // ✅ Включить touch на весь экран
             this.resetBall();
             this.updateUI();
             this.gameStarted = true;
@@ -435,6 +441,11 @@ class PinballGame {
 
         // Останавливаем игру
         this.gameState.isGameOver = true;
+        
+        // ✅ Выключить touch на весь экран
+        if (this.inputManager) {
+            this.inputManager.setGameActive(false);
+        }
         
         // Показываем overlay
         this.gameOverOverlay.show(this.gameState);
