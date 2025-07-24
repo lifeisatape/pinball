@@ -217,12 +217,12 @@ class PinballGame {
                 // Создаем более красивое название для шаринга
                 let displayLevelName = levelName;
                 if (levelName.toLowerCase() === 'degen') {
-                    displayLevelName = 'Degen Level 🎯';
+                    displayLevelName = 'Degen room 🎩';
                 } else if (levelName.toLowerCase() === 'farcaster') {
-                    displayLevelName = 'Farcaster Level 🚀';
+                    displayLevelName = 'Farcaster room 💜';
                 }
 
-                const text = `🎮 I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 💥`;
+                const text = `⚪ I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 🚩`;
                 const url = window.location.origin;
 
                 await window.sdk.actions.composeCast({
