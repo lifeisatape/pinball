@@ -409,12 +409,12 @@ class FarcasterManager {
             // Создаем красивое название для шаринга
             let displayLevelName = levelName || 'Pinball All Stars';
             if (levelName && levelName.toLowerCase() === 'degen') {
-                displayLevelName = 'Degen Level 🎯';
+                displayLevelName = 'Degen room 🎩';
             } else if (levelName && levelName.toLowerCase() === 'farcaster') {
-                displayLevelName = 'Farcaster Level 🚀';
+                displayLevelName = 'Farcaster room 💜';
             }
 
-            const text = `🚀 I just scored ${score || 0} points in ${displayLevelName}! Can you beat that? 🎮💥`;
+            const text = `⚪ I just scored ${score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @altagers.eth`;
             const url = window.location.origin;
 
             await this.sdk.actions.composeCast({
