@@ -222,7 +222,7 @@ class PinballGame {
                     displayLevelName = 'Farcaster room 💜';
                 }
 
-                const text = `⚪ I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 🚩`;
+                const text = `⚪ I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @altagers.eth`;
                 const url = window.location.origin;
 
                 await window.sdk.actions.composeCast({
