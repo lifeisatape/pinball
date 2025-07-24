@@ -1,0 +1,82 @@
+/ В файле ui/GameOverOverlay.js
+// Исправляем метод handleShare()
+
+class GameOverOverlay {
+    constructor() {
+        this.overlay = document.getElementById('gameOverOverlay');
+        this.scoreElement = document.getElementById('finalScore');
+        this.highScoreElement = document.getElementById('finalHighScore');
+
+        // 🎯 НОВЫЕ ЭЛЕМЕНТЫ
+        this.farcasterActions = document.getElementById('farcasterActions');
+        this.shareButton = document.getElementById('shareScoreBtn');
+        this.donateButton = document.getElementById('donateBtn');
+        this.addToAppsButton = document.getElementById('addToAppsBtn');
+
+        // ✅ ДОБАВЛЯЕМ: Сохраняем ссылку на gameState
+        this.currentGameState = null;
+
+        this.setupEventListeners();
+    }
+
+    // ✅ ОБНОВЛЯЕМ: Сохраняем gameState при показе overlay
+    show(gameState) {
+        if (!this.overlay) return;
+
+        // ✅ ИСПРАВЛЕНИЕ: Сохраняем gameState для использования в handleShare
+        this.currentGameState = gameState;
+
+        this.overlay.style.display = 'flex';
+
+        if (this.scoreElement) {
+            this.scoreElement.textContent = gameState.score.toLocaleString();
+        }
+
+        if (this.highScoreElement) {
+            this.highScoreElement.textContent = gameState.highScore.toLocaleString();
+        }
+
+        // Показываем Farcaster кнопки только в Mini App среде
+        this.showFarcasterButtons();
+    }
+
+    // ✅ ИСПРАВЛЯЕМ: Передаем правильные параметры в shareScore
+    async handleShare() {
+        if (!window.farcasterManager || !window.farcasterManager.isFrameEnvironment) {
+            this.showNotification('Sharing only available in Farcaster Mini App', 'error');
+            return;
+        }
+
+        // ✅ ИСПРАВЛЕНИЕ: Передаем счет и название уровня
+        if (this.currentGameState) {
+            await window.farcasterManager.shareScore(
+                this.currentGameState.score, 
+                this.currentGameState.currentLevelName
+            );
+        } else {
+            // Fallback: используем метод из PinballGame
+            if (window.game && window.game.shareScore) {
+                await window.game.shareScore();
+            }
+        }
+    }
+
+    // Остальные методы остаются без изменений...
+    async handleDonate() {
+        // ... существующий код доната
+    }
+
+    async handleAddToFavorites() {
+        // ... существующий код добавления в избранное
+    }
+
+    showNotification(message, type = 'info') {
+        // ... существующий код уведомлений
+    }
+
+    hide() {
+        if (this.overlay) {
+            this.overlay.style.display = 'none';
+        }
+    }
+}
