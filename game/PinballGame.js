@@ -421,6 +421,12 @@ class PinballGame {
         this.resetBall();
         this.levelManager.resetLevel(this.currentLevel);
         this.gameOverOverlay.hide();
+        
+        // ✅ Включаем touch-управление при перезапуске
+        if (this.inputManager) {
+            this.inputManager.setGameActive(true);
+        }
+        
         this.updateUI();
     }
 
