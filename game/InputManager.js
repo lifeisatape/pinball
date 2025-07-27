@@ -1,16 +1,22 @@
-// Input Manager Class
+// Input Manager Class - ИСПРАВЛЕННАЯ ВЕРСИЯ
 class InputManager {
     constructor(canvas, flippers) {
         this.canvas = canvas;
         this.flippers = flippers;
-        this.activeTouches = new Set();
-        this.gameActive = false; // ✅ НОВОЕ: флаг активности игры
+        this.activeTouches = new Map(); // ✅ Изменено: Map вместо Set для хранения позиций
+        this.gameActive = false;
         this.setupEventListeners();
     }
 
-    // ✅ Добавьте методы управления
     setGameActive(active) {
         this.gameActive = active;
+        
+        // ✅ НОВОЕ: При деактивации сбрасываем все touches и флипперы
+        if (!active) {
+            this.activeTouches.clear();
+            this.flippers[0].deactivate();
+            this.flippers[1].deactivate();
+        }
     }
 
     setupEventListeners() {
@@ -36,9 +42,9 @@ class InputManager {
             }
         });
 
-        // ✅ НОВОЕ: Touch events на весь document (но работают только во время игры)
+        // ✅ ИСПРАВЛЕННЫЕ Touch events
         document.addEventListener('touchstart', (e) => {
-            if (!this.gameActive) return; // ✅ Работает только во время игры
+            if (!this.gameActive) return;
             
             e.preventDefault();
             
@@ -48,7 +54,8 @@ class InputManager {
                 const screenWidth = window.innerWidth;
                 const isLeft = screenX < screenWidth * 0.5;
 
-                this.activeTouches.add(touch.identifier + (isLeft ? '_left' : '_right'));
+                // ✅ ИСПРАВЛЕНИЕ: Сохраняем исходную позицию каждого touch
+                this.activeTouches.set(touch.identifier, isLeft);
 
                 if (isLeft) {
                     this.flippers[0].activate();
@@ -59,30 +66,30 @@ class InputManager {
         });
 
         document.addEventListener('touchend', (e) => {
-            if (!this.gameActive) return; // ✅ Работает только во время игры
+            if (!this.gameActive) return;
             
             e.preventDefault();
             
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                const screenX = touch.clientX;
-                const screenWidth = window.innerWidth;
-                const isLeft = screenX < screenWidth * 0.5;
-
-                this.activeTouches.delete(touch.identifier + (isLeft ? '_left' : '_right'));
+                // ✅ ИСПРАВЛЕНИЕ: Удаляем по ID, не зависимо от текущей позиции
+                this.activeTouches.delete(touch.identifier);
             }
 
-            // Check if any touches are still active for each flipper
-            let leftActive = false;
-            let rightActive = false;
+            // ✅ ИСПРАВЛЕНИЕ: Пересчитываем состояние флипперов
+            this.updateFlipperStates();
+        });
 
-            this.activeTouches.forEach(touchId => {
-                if (touchId.endsWith('_left')) leftActive = true;
-                if (touchId.endsWith('_right')) rightActive = true;
-            });
+        // ✅ НОВОЕ: Обработка touchcancel (важно для предотвращения залипания)
+        document.addEventListener('touchcancel', (e) => {
+            if (!this.gameActive) return;
+            
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                this.activeTouches.delete(touch.identifier);
+            }
 
-            if (!leftActive) this.flippers[0].deactivate();
-            if (!rightActive) this.flippers[1].deactivate();
+            this.updateFlipperStates();
         });
 
         // Mouse events (оставляем на canvas как было)
@@ -95,6 +102,34 @@ class InputManager {
         this.canvas.addEventListener('mouseup', () => {
             this.handleInput(0, false);
         });
+    }
+
+    // ✅ НОВЫЙ МЕТОД: Пересчет состояния флипперов на основе активных touches
+    updateFlipperStates() {
+        let leftActive = false;
+        let rightActive = false;
+
+        // Проверяем все активные touches
+        for (let isLeft of this.activeTouches.values()) {
+            if (isLeft) {
+                leftActive = true;
+            } else {
+                rightActive = true;
+            }
+        }
+
+        // Устанавливаем состояние флипперов
+        if (leftActive) {
+            this.flippers[0].activate();
+        } else {
+            this.flippers[0].deactivate();
+        }
+
+        if (rightActive) {
+            this.flippers[1].activate();
+        } else {
+            this.flippers[1].deactivate();
+        }
     }
 
     handleInput(screenX, isPressed) {
