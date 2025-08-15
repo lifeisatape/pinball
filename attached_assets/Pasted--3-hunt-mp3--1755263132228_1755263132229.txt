@@ -1,0 +1,89 @@
+Что нужно сделать
+Вам нужно внести изменения в 3 файла, чтобы добавить поддержку hunt.mp3 для уровня hunt.json.
+1. SoundManager.js
+Найдите раздел soundFiles (примерно строка 15) и добавьте строку с hunt:
+javascript// Список звуков для предзагрузки
+this.soundFiles = {
+    menu: 'sounds/menu.mp3',
+    level: 'sounds/level.mp3',
+    hunt: 'sounds/hunt.mp3',  // ← ДОБАВИТЬ ЭТУ СТРОКУ
+    flipperIn: 'sounds/Flipper_In.mp3',
+    // ... остальные звуки
+};
+Найдите метод playSound (примерно строка 90) и в трех местах добавьте 'hunt':
+javascript// В строке с определением громкости:
+const volume = options.volume !== undefined ? options.volume : 
+              (['menu', 'level', 'hunt'].includes(name) ? this.musicVolume : this.sfxVolume);
+
+// В строке с зацикливанием:
+source.loop = options.loop || ['menu', 'level', 'hunt'].includes(name);
+
+// В строке с сохранением ссылки на музыку:
+if (['menu', 'level', 'hunt'].includes(name)) {
+2. LevelSelector.js
+Найдите массив knownLevels (примерно строка 9) и добавьте hunt.json:
+javascriptconst knownLevels = ['degen.json', 'farcaster.json', 'hunt.json']; // ← ДОБАВИТЬ hunt.json
+3. PinballGame.js
+Добавьте новый метод getMusicForLevel где-то в классе PinballGame:
+javascriptgetMusicForLevel(levelName, levelFilename) {
+    // Проверяем по имени уровня или по имени файла
+    if (levelName === 'hunt' || levelFilename === 'hunt.json') {
+        return 'hunt';
+    }
+    // Для всех остальных уровней используем стандартную музыку
+    return 'level';
+}
+Найдите метод hideStartScreen и замените строку с playMusic:
+javascripthideStartScreen() {
+    this.canvas.style.display = 'block';
+    document.querySelector('.score-panel').style.display = 'flex';
+    this.levelSelectScreen.style.display = 'none';
+
+    // ЗАМЕНИТЬ ЭТУ ЧАСТЬ:
+    if (window.soundManager && window.soundManager.isReady) {
+        // Определяем какую музыку играть для текущего уровня
+        const currentLevel = this.levelSelector.getCurrentLevel();
+        const musicTrack = this.getMusicForLevel(
+            currentLevel?.name, 
+            currentLevel?.filename
+        );
+        
+        console.log(`🎵 Playing music track: ${musicTrack} for level: ${currentLevel?.name || 'unknown'}`);
+        window.soundManager.playMusic(musicTrack);
+        window.soundManager.playSound('newGameLaunch');
+    }
+}
+Найдите метод loadSelectedLevel и добавьте сохранение информации об уровне:
+javascriptasync loadSelectedLevel(selectedLevel) {
+    try {
+        this.currentLevel = this.levelManager.loadLevelFromData(selectedLevel.data);
+        this.gameState.setCurrentLevel(selectedLevel.name);
+        
+        // ДОБАВИТЬ ЭТИ СТРОКИ:
+        this.currentLevelInfo = {
+            name: selectedLevel.name,
+            filename: selectedLevel.filename
+        };
+        
+        this.gameState.resetGame();
+        await this.initializeGame();
+        console.log(`Loaded level: ${selectedLevel.name} (${selectedLevel.filename})`);
+    } catch (error) {
+        // ... обработка ошибок
+        
+        // ДОБАВИТЬ И ЗДЕСЬ:
+        this.currentLevelInfo = {
+            name: 'default',
+            filename: 'default.json'
+        };
+        
+        // ... остальной код
+    }
+}
+Результат
+После этих изменений:
+
+✅ hunt.mp3 будет загружаться вместе с остальными звуками
+✅ hunt.json появится в списке доступных уровней
+✅ При игре на уровне hunt.json будет играть hunt.mp3
+✅ На всех остальных уровнях будет играть level.mp3 как раньше
