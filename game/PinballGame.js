@@ -218,8 +218,10 @@ class PinballGame {
                 let displayLevelName = levelName;
                 if (levelName.toLowerCase() === 'degen') {
                     displayLevelName = 'Degen room 🎩';
-                } else if (levelName.toLowerCase() === 'farcaster') {
-                    displayLevelName = 'Farcaster room 💜';
+                } else if (levelName && levelName.toLowerCase() === 'farcaster') {
+                    displayLevelName = 'Farcaster level 💜';
+                } else if (levelName && levelName.toLowerCase() === 'hunt') {
+                    displayLevelName = 'Hunt level 🎯';
                 }
 
                 const text = `⚪ I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @altagers.eth`;
