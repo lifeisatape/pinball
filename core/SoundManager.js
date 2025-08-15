@@ -17,6 +17,7 @@ class SoundManager {
         this.soundFiles = {
             menu: 'sounds/menu.mp3',
             level: 'sounds/level.mp3',
+            hunt: 'sounds/hunt.mp3',
             flipperIn: 'sounds/Flipper_In.mp3',
             flipperOut: 'sounds/Flipper_Out.mp3',
             bumper: 'sounds/Bamper.mp3',
@@ -167,17 +168,17 @@ class SoundManager {
 
             // Настраиваем громкость
             const volume = options.volume !== undefined ? options.volume : 
-                          (['menu', 'level'].includes(name) ? this.musicVolume : this.sfxVolume);
+                          (['menu', 'level', 'hunt'].includes(name) ? this.musicVolume : this.sfxVolume);
             gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
 
             // Настраиваем зацикливание
-            source.loop = options.loop || ['menu', 'level'].includes(name);
+            source.loop = options.loop || ['menu', 'level', 'hunt'].includes(name);
 
             // Запускаем воспроизведение
             source.start(0);
 
             // Сохраняем ссылку для музыки
-            if (['menu', 'level'].includes(name)) {
+            if (['menu', 'level', 'hunt'].includes(name)) {
                 this.stopMusic(); // Останавливаем предыдущую музыку
                 this.currentMusic = { source, gainNode };
             }
