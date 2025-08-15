@@ -3,7 +3,7 @@ class GameState {
     constructor() {
         this.score = 0;
         this.highScore = 0;
-        this.balls = 3;
+        this.balls = 5;
         this.isGameOver = false;
         this.ballInPlay = false;
         this.currentLevelName = null;
@@ -36,7 +36,7 @@ class GameState {
 
     reset() {
         this.score = 0;
-        this.balls = 3;
+        this.balls = 5;
         this.isGameOver = false;
         this.ballInPlay = false;
         // Не сбрасываем highScore - он остается для текущего уровня
