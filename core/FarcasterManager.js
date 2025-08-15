@@ -409,9 +409,11 @@ class FarcasterManager {
             // Создаем красивое название для шаринга
             let displayLevelName = levelName || 'Pinball All Stars';
             if (levelName && levelName.toLowerCase() === 'degen') {
-                displayLevelName = 'Degen room 🎩';
+                displayLevelName = 'Degen level 🎩';
             } else if (levelName && levelName.toLowerCase() === 'farcaster') {
-                displayLevelName = 'Farcaster room 💜';
+                displayLevelName = 'Farcaster level 💜';
+            } else if (levelName && levelName.toLowerCase() === 'hunt') {
+                displayLevelName = 'Hunt level 🎯';
             }
 
             const text = `⚪ I just scored ${score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @altagers.eth`;
