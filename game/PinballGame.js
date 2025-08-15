@@ -353,9 +353,17 @@ class PinballGame {
         document.querySelector('.score-panel').style.display = 'flex';
         this.levelSelectScreen.style.display = 'none';
 
-        // Простое переключение музыки
+        // ✅ УМНОЕ переключение музыки в зависимости от уровня
         if (window.soundManager && window.soundManager.isReady) {
-            window.soundManager.playMusic('level');
+            // Определяем какую музыку играть для текущего уровня
+            const currentLevel = this.levelSelector.getCurrentLevel();
+            const musicTrack = this.getMusicForLevel(
+                currentLevel?.name, 
+                currentLevel?.filename
+            );
+            
+            console.log(`🎵 Playing music track: ${musicTrack} for level: ${currentLevel?.name || 'unknown'}`);
+            window.soundManager.playMusic(musicTrack);
             window.soundManager.playSound('newGameLaunch');
         }
     }
@@ -499,6 +507,15 @@ class PinballGame {
                 console.warn('⚠️ Sound playback failed:', error);
             }
         }
+    }
+
+    getMusicForLevel(levelName, levelFilename) {
+        // Проверяем по имени уровня или по имени файла
+        if (levelName === 'hunt' || levelFilename === 'hunt.json') {
+            return 'hunt';
+        }
+        // Для всех остальных уровней используем стандартную музыку
+        return 'level';
     }
 
     // Simple Collision Grid System
