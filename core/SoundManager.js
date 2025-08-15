@@ -3,8 +3,8 @@ class SoundManager {
         this.audioContext = null;
         this.buffers = new Map();
         this.sounds = new Map();
-        this.musicVolume = 0.3;
-        this.sfxVolume = 0.5;
+        this.musicVolume = 0.7;
+        this.sfxVolume = 0.3;
         this.enabled = true;
         this.isReady = false;
         this.currentMusic = null;
