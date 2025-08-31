@@ -4,6 +4,9 @@
     "payload": "eyJkb21haW4iOiJwaW5iYWxsbGwuc3BhY2UifQ",
     "signature": "MHg3OTJlNDdlZTk0YTNjZmI3M2FlZGVmNmJiZGZjMjNhMDc5ZjVlZWZmYzc2Mzg5OGU2NTJlYzFmYmMwZmQzYjQwNjdkNzVjNzY0YmNlZmU1MmRiODYzMWQ4YzRmYzYwNDg0NjhmMzI4YTQ1MThkMDg2MThhY2EyMDc2NGUyNDM4NjFj"
   },
+  "baseBuilder": {
+    "allowedAddresses": ["0xE5D96ae43C0680b2bE6C26166235572a48C8AC1d"]
+  },
   "frame": {
     "version": "next",
     "name": "Pinball: all stars",
