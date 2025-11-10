@@ -486,7 +486,7 @@ class FarcasterManager {
             const result = await this.sdk.actions.sendToken({
                 token: 'eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
                 amount: amount, // 1 USDC = 1000000 (6 decimals)
-                recipientAddress: 'пцпцпцпцпцпц'
+                recipientAddress: '0x5eB862EB3372328bbe769b9487AC2733077B9b1D'
             });
 
             if (result.success) {
