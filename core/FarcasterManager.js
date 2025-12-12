@@ -416,7 +416,7 @@ class FarcasterManager {
                 displayLevelName = 'Hunt level 🎯';
             }
 
-            const text = `⚪ I just scored ${score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @altagers.eth`;
+            const text = `⚪ I just scored ${score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @duckfacts.eth`;
             const url = window.location.origin;
 
             await this.sdk.actions.composeCast({
