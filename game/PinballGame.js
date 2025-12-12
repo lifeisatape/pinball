@@ -224,7 +224,7 @@ class PinballGame {
                     displayLevelName = 'Hunt level 🎯';
                 }
 
-                const text = `⚪ I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @altagers.eth`;
+                const text = `⚪ I just scored ${this.gameState.score || 0} points in ${displayLevelName}! Can you beat that? 🚩 Pinball: all stars ⭐ made by @lifeisatape.eth & @duckfacts.eth`;
                 const url = window.location.origin;
 
                 await window.sdk.actions.composeCast({
